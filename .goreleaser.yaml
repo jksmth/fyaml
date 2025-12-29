@@ -40,7 +40,8 @@ checksum:
   name_template: 'checksums.txt'
 
 signs:
-  - cmd: cosign
+  - id: checksum
+    cmd: cosign
     signature: "${artifact}.sigstore"
     args:
       - sign-blob
@@ -50,7 +51,8 @@ signs:
     artifacts: checksum
     env:
       - COSIGN_EXPERIMENTAL=1
-  - cmd: cosign
+  - id: archive
+    cmd: cosign
     signature: "${artifact}.sigstore"
     args:
       - sign-blob
