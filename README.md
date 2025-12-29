@@ -127,6 +127,8 @@ COPY config/ /config/
 RUN fyaml pack /config > /app/config.yml
 ```
 
+Releases are cryptographically signed. See [Verification](#verification) below.
+
 ## Verification
 
 fyaml releases are signed with [cosign](https://github.com/sigstore/cosign) using keyless signing, providing cryptographic proof that artifacts are authentic and haven't been tampered with.
