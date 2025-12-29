@@ -1,0 +1,7 @@
+name: cache
+type: redis
+settings:
+  host: localhost
+  port: 6379
+  ttl: 3600
+

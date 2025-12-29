@@ -1,0 +1,6 @@
+name: api
+version: v1
+endpoints:
+  - /health
+  - /status
+

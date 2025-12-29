@@ -1,0 +1,9 @@
+services:
+    api:
+        actions:
+            - command: build.sh
+              type: execute
+        name: api
+    runtime:
+        image: base:latest
+        type: container

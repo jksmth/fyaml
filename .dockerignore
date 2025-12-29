@@ -1,0 +1,46 @@
+# Git
+.git
+.gitignore
+.github
+
+# Documentation (keep README.md for Docker image)
+*.md
+!README.md
+LICENSE
+NOTICE
+plan.md
+
+# CI/CD
+.github
+
+# Examples and test data
+examples/
+testdata/
+
+# Build artifacts
+# dist/ - needed for Docker builds (contains GoReleaser binaries)
+build/
+bin/
+*.exe
+fyaml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Go
+vendor/
+go.work
+go.work.sum
+*.out
+coverage.txt
+
+# Other
+*.tmp
+tmp/
+

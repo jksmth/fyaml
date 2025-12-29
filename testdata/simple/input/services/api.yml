@@ -1,0 +1,6 @@
+name: api
+enabled: true
+settings:
+  timeout: 300
+  retries: 3
+

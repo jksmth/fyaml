@@ -1,0 +1,4 @@
+runtime:
+  type: container
+  image: base:latest
+

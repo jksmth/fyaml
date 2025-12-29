@@ -1,0 +1,19 @@
+# Codecov configuration
+# Exclude entry points and constants that don't need testing
+
+coverage:
+  status:
+    project:
+      default:
+        target: 70%
+        threshold: 1%
+    patch:
+      default:
+        target: 70%
+
+# Ignore files that don't need coverage
+ignore:
+  - "main.go"                      # Entry point, tested via integration
+  - "internal/version/version.go" # Constants and simple getters, no logic to test
+  - "cmd/root.go"                  # Thin wrapper, tested via CLI integration
+

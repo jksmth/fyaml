@@ -1,0 +1,8 @@
+alpha:
+    file:
+        value: first
+zebra:
+    alpha:
+        value: alpha
+    beta:
+        value: beta

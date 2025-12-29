@@ -1,0 +1,13 @@
+services:
+    api:
+        enabled: true
+        name: api
+        settings:
+            retries: 3
+            timeout: 300
+    db:
+        enabled: true
+        name: db
+        settings:
+            retries: 5
+            timeout: 600

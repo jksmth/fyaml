@@ -1,0 +1,26 @@
+NOTICE
+
+This project includes code derived from the CircleCI CLI project.
+
+Portions of the filesystem traversal and YAML packing logic in this project
+are based on code from:
+
+  https://github.com/CircleCI-Public/circleci-cli
+
+Specifically, the filetree implementation in internal/filetree/filetree.go is adapted
+from:
+
+  https://github.com/CircleCI-Public/circleci-cli/blob/main/filetree/filetree.go
+
+Original copyright: Copyright (c) 2018 Circle Internet Services, Inc.
+Original license: MIT License
+
+The CircleCI CLI is licensed under the MIT License. A copy of the MIT License
+is included in the LICENSE file of this project.
+
+This project also implements the FYAML specification:
+
+  https://github.com/CircleCI-Public/fyaml
+
+The FYAML specification is licensed under the MIT License.
+

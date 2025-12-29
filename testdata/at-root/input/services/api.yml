@@ -1,0 +1,5 @@
+name: api
+actions:
+  - type: execute
+    command: deploy.sh
+
