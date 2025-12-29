@@ -1,6 +1,7 @@
 # fyaml
 
 [![CI](https://github.com/jksmth/fyaml/actions/workflows/ci.yml/badge.svg)](https://github.com/jksmth/fyaml/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/jksmth/fyaml/actions/workflows/codeql.yml/badge.svg)](https://github.com/jksmth/fyaml/actions/workflows/codeql.yml)
 [![codecov](https://codecov.io/gh/jksmth/fyaml/graph/badge.svg?token=YZOTQL769O)](https://codecov.io/gh/jksmth/fyaml)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/jksmth/fyaml/badge)](https://securityscorecards.dev/viewer/?uri=github.com/jksmth/fyaml)
 [![Signed Releases](https://img.shields.io/badge/releases-signed-green)](https://github.com/jksmth/fyaml#verification)
@@ -8,20 +9,75 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Release](https://img.shields.io/github/v/release/jksmth/fyaml?include_prereleases&sort=semver)](https://github.com/jksmth/fyaml/releases)
 
-**fyaml** compiles a directory of YAML/JSON files into a single document. Organize your configuration across multiple files and directories, then use fyaml to combine them into one file.
+**fyaml** compiles a directory tree of YAML or JSON files into a single deterministic document.
+
+It exists to solve a common, recurring problem:
+
+> Some tools expect configuration to live in a single YAML file, even as that file grows to thousands of lines.
+
+fyaml lets you work with structure and small files, while still producing the single file those tools expect.
+
+---
+
+## What problem this solves
+
+Many systems are designed around a **single YAML configuration file**:
+
+- CI/CD platforms
+- API specifications (such as OpenAPI)
+- Tools that do not support includes or composition
+
+As configurations grow, this becomes difficult to manage:
+
+- Files reach thousands of lines
+- Merge conflicts become common
+- Reviews get harder, not easier
+- Structure is implied by indentation and comments
+- Confidence in changes drops over time
+
+fyaml solves this by separating how configuration is **authored** (as files and directories) from how it is **consumed** (as a single document).
+
+You organize configuration as directories and files.
+fyaml compiles that structure into the single document the target system expects.
+
+There is no logic, templating, or execution model involved.
+
+---
+
+## What fyaml does
+
+fyaml is intentionally limited in scope to keep output predictable and diffs trustworthy.
+
+- Maps directory structure directly to YAML structure
+- Lets you split large configs into small, focused files
+- Produces a single, predictable output document
+- Runs as a build-time step
 
 **How it works:**
 - Directory names become map keys
 - File names (without extension) become nested keys
-- Files starting with `@` merge their contents into the parent directory
+- Files starting with `@` merge into the parent directory
 - Root-level files merge directly into the output
 - Output is deterministic with keys sorted alphabetically
 
-**Use cases:**
-- Organize large YAML configurations (CI/CD, Kubernetes, OpenAPI, etc.)
-- Split complex configs into manageable files
-- Compose hierarchical YAML structures
-- Generate single-file configs from directory trees
+---
+
+## When to use this
+
+Use fyaml when:
+
+- You need to produce a single YAML or JSON file
+- The configuration is large enough to benefit from structure
+- Readable diffs and predictable output matter
+- You want organization without adding logic
+
+fyaml is not a good fit if you need:
+- conditionals
+- loops
+- variable resolution
+- runtime behavior
+
+Those concerns are better handled by other tools.
 
 ## Installation
 
@@ -81,13 +137,13 @@ fyaml releases are signed with [cosign](https://github.com/sigstore/cosign) usin
 # Download the release and signature files
 VERSION="v1.0.0"
 wget https://github.com/jksmth/fyaml/releases/download/${VERSION}/checksums.txt
-wget https://github.com/jksmth/fyaml/releases/download/${VERSION}/checksums.txt.sigstore.json
+wget https://github.com/jksmth/fyaml/releases/download/${VERSION}/checksums.txt.sigstore
 
 # Verify signature
 cosign verify-blob --certificate-identity-regexp '^https://github.com/jksmth/fyaml' \
   --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
   checksums.txt \
-  --bundle checksums.txt.sigstore.json
+  --bundle checksums.txt.sigstore
 ```
 
 ### Verify Docker Images
@@ -255,6 +311,32 @@ This approach:
 - Makes each resource easy to find and edit
 - Allows you to use directory names to group related resources
 - Produces clear, predictable output structure
+
+### File Content Requirements
+
+**Each YAML/JSON file must contain a map (object/dictionary) at the top level.** The file itself must be a map, but nested values within that map can be any YAML type (scalars, arrays, nested maps, etc.).
+
+This requirement exists because fyaml merges file contents into the parent directory map structure. Only maps can be merged into other maps.
+
+**Examples:**
+
+```yaml
+# ✅ Supported - top-level is a map
+name: api
+items: [1, 2, 3]           # Array nested in map
+value: 42                   # Scalar nested in map
+settings:                   # Nested map
+  timeout: 30
+  retries: 3
+
+# ❌ Not supported - top-level is not a map
+hello                       # Scalar
+- item1                     # Array
+- item2
+- item3
+```
+
+If you attempt to pack a file containing a top-level scalar or array, fyaml will return an error: `expected a map, got a <type> which is not supported at this time for "<filepath>"`.
 
 ## Exit Codes
 

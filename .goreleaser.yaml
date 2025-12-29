@@ -41,13 +41,23 @@ checksum:
 
 signs:
   - cmd: cosign
-    signature: "${artifact}.sigstore.json"
+    signature: "${artifact}.sigstore"
     args:
       - sign-blob
       - "--bundle=${signature}"
       - "--yes"
       - "${artifact}"
     artifacts: checksum
+    env:
+      - COSIGN_EXPERIMENTAL=1
+  - cmd: cosign
+    signature: "${artifact}.sigstore"
+    args:
+      - sign-blob
+      - "--bundle=${signature}"
+      - "--yes"
+      - "${artifact}"
+    artifacts: archive
     env:
       - COSIGN_EXPERIMENTAL=1
 
