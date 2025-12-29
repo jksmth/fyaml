@@ -65,6 +65,6 @@ jobs:
           govulncheck ./...
 
       - name: Run gosec
-        uses: securego/gosec@v2.19.1
+        uses: securego/gosec@v2.22.11
         with:
           args: ./...
