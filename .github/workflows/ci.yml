@@ -17,15 +17,15 @@ jobs:
       contents: read
       pull-requests: read
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v6.0.0
+      - uses: actions/checkout@v6
 
       - name: Set up Go
-        uses: actions/setup-go@0c52d547c9bc32b1c9adc2ad7b51ed1bad4499f3 # v6.0.0
+        uses: actions/setup-go@v6
         with:
           go-version: '1.25'
 
       - name: Run linter
-        uses: golangci/golangci-lint-action@a4f60bb28d2a2e337a467d8f69d2c889d1f8ff1e # v9.0.0
+        uses: golangci/golangci-lint-action@v9
         with:
           version: latest
 
@@ -33,7 +33,7 @@ jobs:
         run: go test -v -race -coverprofile=coverage.txt ./...
 
       - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@eaaf4bedf32dbdc6f7204c6c1bd742a7ef9adcc8 # v5.0.0
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
@@ -52,10 +52,10 @@ jobs:
       contents: read
       pull-requests: read
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v6.0.0
+      - uses: actions/checkout@v6
 
       - name: Set up Go
-        uses: actions/setup-go@0c52d547c9bc32b1c9adc2ad7b51ed1bad4499f3 # v6.0.0
+        uses: actions/setup-go@v6
         with:
           go-version: '1.25'
 
