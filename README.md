@@ -1,6 +1,7 @@
 # fyaml
 
 [![CI](https://github.com/jksmth/fyaml/actions/workflows/ci.yml/badge.svg)](https://github.com/jksmth/fyaml/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/jksmth/fyaml/actions/workflows/codeql.yml/badge.svg)](https://github.com/jksmth/fyaml/actions/workflows/codeql.yml)
 [![codecov](https://codecov.io/gh/jksmth/fyaml/graph/badge.svg?token=YZOTQL769O)](https://codecov.io/gh/jksmth/fyaml)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/jksmth/fyaml/badge)](https://securityscorecards.dev/viewer/?uri=github.com/jksmth/fyaml)
 [![Signed Releases](https://img.shields.io/badge/releases-signed-green)](https://github.com/jksmth/fyaml#verification)
