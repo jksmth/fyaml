@@ -19,6 +19,54 @@ func TestPack_InvalidYAML(t *testing.T) {
 	}
 }
 
+func TestPack_ScalarFile(t *testing.T) {
+	// Test that files containing only a scalar (not a map) return an error
+	tests := []struct {
+		name    string
+		content string
+	}{
+		{"string", "hello"},
+		{"number", "42"},
+		{"boolean", "true"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			scalarFile := filepath.Join(tmpDir, "value.yml")
+			if err := os.WriteFile(scalarFile, []byte(tt.content), 0600); err != nil {
+				t.Fatalf("Failed to create scalar file: %v", err)
+			}
+
+			_, err := pack(tmpDir, "yaml")
+			if err == nil {
+				t.Error("pack() expected error for scalar file")
+			}
+			if err != nil && !strings.Contains(err.Error(), "expected a map") {
+				t.Errorf("pack() error = %v, want error containing 'expected a map'", err)
+			}
+		})
+	}
+}
+
+func TestPack_ArrayFile(t *testing.T) {
+	// Test that files containing only an array (not a map) return an error
+	tmpDir := t.TempDir()
+	arrayFile := filepath.Join(tmpDir, "items.yml")
+	arrayContent := "- item1\n- item2\n- item3"
+	if err := os.WriteFile(arrayFile, []byte(arrayContent), 0600); err != nil {
+		t.Fatalf("Failed to create array file: %v", err)
+	}
+
+	_, err := pack(tmpDir, "yaml")
+	if err == nil {
+		t.Error("pack() expected error for array file")
+	}
+	if err != nil && !strings.Contains(err.Error(), "expected a map") {
+		t.Errorf("pack() error = %v, want error containing 'expected a map'", err)
+	}
+}
+
 func TestPack_Golden(t *testing.T) {
 	tests := []struct {
 		name     string

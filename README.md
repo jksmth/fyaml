@@ -311,6 +311,32 @@ This approach:
 - Allows you to use directory names to group related resources
 - Produces clear, predictable output structure
 
+### File Content Requirements
+
+**Each YAML/JSON file must contain a map (object/dictionary) at the top level.** The file itself must be a map, but nested values within that map can be any YAML type (scalars, arrays, nested maps, etc.).
+
+This requirement exists because fyaml merges file contents into the parent directory map structure. Only maps can be merged into other maps.
+
+**Examples:**
+
+```yaml
+# ✅ Supported - top-level is a map
+name: api
+items: [1, 2, 3]           # Array nested in map
+value: 42                   # Scalar nested in map
+settings:                   # Nested map
+  timeout: 30
+  retries: 3
+
+# ❌ Not supported - top-level is not a map
+hello                       # Scalar
+- item1                     # Array
+- item2
+- item3
+```
+
+If you attempt to pack a file containing a top-level scalar or array, fyaml will return an error: `expected a map, got a <type> which is not supported at this time for "<filepath>"`.
+
 ## Exit Codes
 
 - `0` - Success
