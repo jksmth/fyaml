@@ -8,20 +8,75 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Release](https://img.shields.io/github/v/release/jksmth/fyaml?include_prereleases&sort=semver)](https://github.com/jksmth/fyaml/releases)
 
-**fyaml** compiles a directory of YAML/JSON files into a single document. Organize your configuration across multiple files and directories, then use fyaml to combine them into one file.
+**fyaml** compiles a directory tree of YAML or JSON files into a single deterministic document.
+
+It exists to solve a common, recurring problem:
+
+> Some tools expect configuration to live in a single YAML file, even as that file grows to thousands of lines.
+
+fyaml lets you work with structure and small files, while still producing the single file those tools expect.
+
+---
+
+## What problem this solves
+
+Many systems are designed around a **single YAML configuration file**:
+
+- CI/CD platforms
+- API specifications (such as OpenAPI)
+- Tools that do not support includes or composition
+
+As configurations grow, this becomes difficult to manage:
+
+- Files reach thousands of lines
+- Merge conflicts become common
+- Reviews get harder, not easier
+- Structure is implied by indentation and comments
+- Confidence in changes drops over time
+
+fyaml solves this by separating how configuration is **authored** (as files and directories) from how it is **consumed** (as a single document).
+
+You organize configuration as directories and files.
+fyaml compiles that structure into the single document the target system expects.
+
+There is no logic, templating, or execution model involved.
+
+---
+
+## What fyaml does
+
+fyaml is intentionally limited in scope to keep output predictable and diffs trustworthy.
+
+- Maps directory structure directly to YAML structure
+- Lets you split large configs into small, focused files
+- Produces a single, predictable output document
+- Runs as a build-time step
 
 **How it works:**
 - Directory names become map keys
 - File names (without extension) become nested keys
-- Files starting with `@` merge their contents into the parent directory
+- Files starting with `@` merge into the parent directory
 - Root-level files merge directly into the output
 - Output is deterministic with keys sorted alphabetically
 
-**Use cases:**
-- Organize large YAML configurations (CI/CD, Kubernetes, OpenAPI, etc.)
-- Split complex configs into manageable files
-- Compose hierarchical YAML structures
-- Generate single-file configs from directory trees
+---
+
+## When to use this
+
+Use fyaml when:
+
+- You need to produce a single YAML or JSON file
+- The configuration is large enough to benefit from structure
+- Readable diffs and predictable output matter
+- You want organization without adding logic
+
+fyaml is not a good fit if you need:
+- conditionals
+- loops
+- variable resolution
+- runtime behavior
+
+Those concerns are better handled by other tools.
 
 ## Installation
 
