@@ -1,0 +1,10 @@
+{
+  "packages": {
+    ".": {
+      "release-type": "go",
+      "include-v-in-tag": true,
+      "pull-request-title-pattern": "chore(main): release v{{version}}"
+    }
+  }
+}
+

@@ -20,9 +20,5 @@ jobs:
         id: release
         with:
           token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
-          release-type: go
-          package-name: fyaml
-          changelog-path: CHANGELOG.md
-          include-v-in-tag: true
-          pull-request-title-pattern: "chore(main): release v{{version}}"
+          config-file: .release-please-config.json
 
