@@ -109,7 +109,7 @@ cosign verify-blob \
   --certificate-identity-regexp '^https://github.com/jksmth/fyaml' \
   --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
   checksums.txt \
-  --bundle checksums.txt.sigstore
+  --bundle checksums.txt.sigstore.json
 
 # Verify Docker image
 cosign verify \

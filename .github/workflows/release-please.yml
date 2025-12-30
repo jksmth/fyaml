@@ -21,4 +21,5 @@ jobs:
         with:
           token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
           release-type: go
+          skip-github-release: true
 

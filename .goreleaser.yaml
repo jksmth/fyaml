@@ -42,7 +42,7 @@ checksum:
 signs:
   - id: checksum
     cmd: cosign
-    signature: "${artifact}.sigstore"
+    signature: "${artifact}.sigstore.json"
     args:
       - sign-blob
       - "--bundle=${signature}"
@@ -53,7 +53,7 @@ signs:
       - COSIGN_EXPERIMENTAL=1
   - id: archive
     cmd: cosign
-    signature: "${artifact}.sigstore"
+    signature: "${artifact}.sigstore.json"
     args:
       - sign-blob
       - "--bundle=${signature}"
@@ -73,6 +73,51 @@ sboms:
       - "--output"
       - "spdx-json=$document"
 
+dockers_v2:
+  - images:
+      - "ghcr.io/jksmth/fyaml"
+    tags:
+      - "{{ .Version }}"
+      - latest
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    sbom: true
+
+docker_signs:
+  - cmd: cosign
+    artifacts: images
+    args:
+      - sign
+      - "--yes"
+      - "${artifact}"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - Merge pull request
+      - Merge branch
+
 release:
-  mode: keep-existing
+  mode: replace
+  header: |
+    ## Changes in {{ .Tag }}
+
+  footer: |
+    ## Installation
+
+    **Quick Install (Linux/macOS):**
+    ```bash
+    curl -sSL https://raw.githubusercontent.com/jksmth/fyaml/main/install.sh | bash
+    ```
+
+    **From Source (Go):**
+    ```bash
+    go install github.com/jksmth/fyaml@{{ .Tag }}
+    ```
+
+    Download the latest release from the [GitHub releases page](https://github.com/jksmth/fyaml/releases).
 
