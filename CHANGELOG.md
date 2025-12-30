@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.7](https://github.com/jksmth/fyaml/compare/v1.0.6...v1.0.7) (2025-12-30)
+
+
+### Bug Fixes
+
+* update license date ([#24](https://github.com/jksmth/fyaml/issues/24)) ([9a668b4](https://github.com/jksmth/fyaml/commit/9a668b481307b4e9088fa60bd77f939bfc42bff0))
+
 ## [1.0.6](https://github.com/jksmth/fyaml/compare/v1.0.5...v1.0.6) (2025-12-30)
 
 
