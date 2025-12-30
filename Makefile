@@ -8,8 +8,8 @@ test:
 	go test -v ./...
 
 test-coverage:
-	go test -coverprofile=coverage.out ./...
-	go tool cover -html=coverage.out -o coverage.html
+	go test -coverprofile=coverage.txt ./...
+	go tool cover -html=coverage.txt -o coverage.html
 
 lint:
 	@if command -v golangci-lint >/dev/null 2>&1; then \
@@ -19,7 +19,7 @@ lint:
 	fi
 
 clean:
-	rm -f fyaml fyaml.exe coverage.out coverage.html
+	rm -f fyaml fyaml.exe coverage.txt coverage.html
 	rm -rf dist/ build/
 
 install:

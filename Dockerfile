@@ -1,7 +1,7 @@
 FROM scratch
 
-ARG TARGETARCH
+ARG TARGETPLATFORM
 
-COPY dist/fyaml_linux_${TARGETARCH}_*/fyaml /fyaml
+COPY $TARGETPLATFORM/fyaml /fyaml
 
 ENTRYPOINT ["/fyaml"]

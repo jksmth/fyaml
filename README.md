@@ -141,13 +141,13 @@ fyaml releases are signed with [cosign](https://github.com/sigstore/cosign) usin
 # Download the release and signature files
 VERSION="v1.0.0"
 wget https://github.com/jksmth/fyaml/releases/download/${VERSION}/checksums.txt
-wget https://github.com/jksmth/fyaml/releases/download/${VERSION}/checksums.txt.sigstore
+wget https://github.com/jksmth/fyaml/releases/download/${VERSION}/checksums.txt.sigstore.json
 
 # Verify signature
 cosign verify-blob --certificate-identity-regexp '^https://github.com/jksmth/fyaml' \
   --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
   checksums.txt \
-  --bundle checksums.txt.sigstore
+  --bundle checksums.txt.sigstore.json
 ```
 
 ### Verify Docker Images

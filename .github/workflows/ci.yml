@@ -19,7 +19,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
         with:
-          go-version: '1.25'
+          go-version-file: go.mod
 
       - name: Run linter
         uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # v9.2.0
@@ -35,13 +35,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Verify testdata
-        run: |
-          go build -o fyaml .
-          ./fyaml pack testdata/simple/input -o testdata/simple/expected.yml --check || exit 2
-          ./fyaml pack testdata/nested/input -o testdata/nested/expected.yml --check || exit 2
-          ./fyaml pack testdata/at-root/input -o testdata/at-root/expected.yml --check || exit 2
-          ./fyaml pack testdata/at-files/input -o testdata/at-files/expected.yml --check || exit 2
-          ./fyaml pack testdata/ordering/input -o testdata/ordering/expected.yml --check || exit 2
+        run: make verify-testdata
 
   security:
     runs-on: ubuntu-latest
@@ -51,7 +45,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
         with:
-          go-version: '1.25'
+          go-version-file: go.mod
 
       - name: Run govulncheck
         run: |
