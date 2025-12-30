@@ -74,5 +74,5 @@ sboms:
       - "spdx-json=$document"
 
 release:
-  disable: true
+  mode: keep-existing
 
