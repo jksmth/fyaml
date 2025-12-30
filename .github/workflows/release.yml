@@ -75,12 +75,12 @@ jobs:
 
       - name: Attest build provenance for checksums
         if: ${{ steps.rp.outputs.release_created == 'true' }}
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
         with:
           subject-checksums: ./dist/checksums.txt
 
       - name: Attest build provenance for Docker images
         if: ${{ steps.rp.outputs.release_created == 'true' }}
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
         with:
           subject-checksums: ./dist/digests.txt
