@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.4](https://github.com/jksmth/fyaml/compare/v1.0.3...v1.0.4) (2025-12-30)
+
+
+### Bug Fixes
+
+* use keep-existing mode for goreleaser release ([#16](https://github.com/jksmth/fyaml/issues/16)) ([ef67007](https://github.com/jksmth/fyaml/commit/ef67007a3f548d8a96980ba3f84ec9de28211bd6))
+
 ## [1.0.3](https://github.com/jksmth/fyaml/compare/v1.0.2...v1.0.3) (2025-12-29)
 
 
