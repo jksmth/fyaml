@@ -9,6 +9,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Release](https://img.shields.io/github/v/release/jksmth/fyaml?include_prereleases&sort=semver)](https://github.com/jksmth/fyaml/releases)
 
+📖 **[Documentation](https://jksmth.github.io/fyaml)** | 🐛 [Report Bug](https://github.com/jksmth/fyaml/issues) | 💡 [Request Feature](https://github.com/jksmth/fyaml/issues)
+
 **fyaml** compiles a directory tree of YAML or JSON files into a single deterministic document.
 
 It exists to solve a common, recurring problem:
@@ -292,20 +294,20 @@ Instead of using multi-document files, organize your resources using separate fi
 
 ```yaml
 # Instead of this (multi-document):
-resources.yml:
+config.yml:
   ---
-  kind: Deployment
-  metadata:
-    name: api
+  database:
+    host: localhost
+    port: 5432
   ---
-  kind: Service
-  metadata:
-    name: api
+  cache:
+    host: localhost
+    port: 6379
 
 # Use this (fyaml's filesystem-based approach):
-resources/
-  deployment.yml    # Contains the Deployment
-  service.yml       # Contains the Service
+config/
+  database.yml    # Contains the database config
+  cache.yml       # Contains the cache config
 ```
 
 This approach:
