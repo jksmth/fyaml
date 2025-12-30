@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.6](https://github.com/jksmth/fyaml/compare/v1.0.5...v1.0.6) (2025-12-30)
+
+
+### Bug Fixes
+
+* update release workflow to use goreleaser for the GH release ([#21](https://github.com/jksmth/fyaml/issues/21)) ([674e12b](https://github.com/jksmth/fyaml/commit/674e12b173c0eb20c73494ce9489052032db6539))
+
 ## [1.0.5](https://github.com/jksmth/fyaml/compare/v1.0.4...v1.0.5) (2025-12-30)
 
 
