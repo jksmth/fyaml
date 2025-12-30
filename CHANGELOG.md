@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.5](https://github.com/jksmth/fyaml/compare/v1.0.4...v1.0.5) (2025-12-30)
+
+
+### Bug Fixes
+
+* use config file for release-please ([#18](https://github.com/jksmth/fyaml/issues/18)) ([b35d2fe](https://github.com/jksmth/fyaml/commit/b35d2fe9d053d456f4fdc256668a4661ee16d2aa))
+* use default options for release-please ([#19](https://github.com/jksmth/fyaml/issues/19)) ([d1663ee](https://github.com/jksmth/fyaml/commit/d1663ee9d58647ee1612df63c206993d80c41226))
+
 ## [1.0.4](https://github.com/jksmth/fyaml/compare/v1.0.3...v1.0.4) (2025-12-30)
 
 
