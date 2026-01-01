@@ -418,9 +418,10 @@ fyaml pack config/ --enable-includes
 **Syntax:** `<<include(path/to/file)>>`
 
 - The include directive must be the **entire value** (not embedded in text)
-- File paths are **relative to the YAML file** containing the directive (absolute paths also supported)
+- **The directory passed to `pack` (the pack root) defines the include boundary; includes outside this directory are rejected.**
+- File paths are **relative to the YAML file** containing the directive
+- Both absolute and relative paths are allowed, but must resolve to a path within the pack root directory
 - Only **one include per value** is allowed
-- Included file content is returned exactly as-is (no modification)
 
 **Example:**
 
@@ -466,6 +467,7 @@ commands:
 - `echo <<include(f)>>` — Error: entire string must be include statement
 - `<<include(a)>> <<include(b)>>` — Error: multiple include statements
 - File not found — Error: could not open path for inclusion
+- Path escapes pack root — Error: include path escapes pack root
 
 **Note:** This feature is adapted from CircleCI's orb pack command. Without `--enable-includes`, directives are passed through unchanged.
 

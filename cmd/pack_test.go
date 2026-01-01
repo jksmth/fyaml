@@ -5,14 +5,12 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/jksmth/fyaml/internal/filetree"
 )
 
 func TestPack_InvalidYAML(t *testing.T) {
 	// Test error handling for invalid YAML
 	// Other successful cases are covered by TestPack_Golden
-	_, err := pack("../testdata/invalid-yaml", "yaml")
+	_, err := pack("../testdata/invalid-yaml", "yaml", false)
 	if err == nil {
 		t.Error("pack() expected error for invalid YAML")
 	}
@@ -40,7 +38,7 @@ func TestPack_ScalarFile(t *testing.T) {
 				t.Fatalf("Failed to create scalar file: %v", err)
 			}
 
-			_, err := pack(tmpDir, "yaml")
+			_, err := pack(tmpDir, "yaml", false)
 			if err == nil {
 				t.Error("pack() expected error for scalar file")
 			}
@@ -60,7 +58,7 @@ func TestPack_ArrayFile(t *testing.T) {
 		t.Fatalf("Failed to create array file: %v", err)
 	}
 
-	_, err := pack(tmpDir, "yaml")
+	_, err := pack(tmpDir, "yaml", false)
 	if err == nil {
 		t.Error("pack() expected error for array file")
 	}
@@ -109,7 +107,7 @@ func TestPack_Golden(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := pack(tt.dir, "yaml")
+			result, err := pack(tt.dir, "yaml", false)
 			if err != nil {
 				t.Fatalf("pack() error = %v", err)
 			}
@@ -129,12 +127,12 @@ func TestPack_Golden(t *testing.T) {
 func TestPack_Deterministic(t *testing.T) {
 	dir := "../testdata/ordering/input"
 
-	result1, err := pack(dir, "yaml")
+	result1, err := pack(dir, "yaml", false)
 	if err != nil {
 		t.Fatalf("pack() error = %v", err)
 	}
 
-	result2, err := pack(dir, "yaml")
+	result2, err := pack(dir, "yaml", false)
 	if err != nil {
 		t.Fatalf("pack() error = %v", err)
 	}
@@ -145,7 +143,7 @@ func TestPack_Deterministic(t *testing.T) {
 }
 
 func TestPack_NonexistentDir(t *testing.T) {
-	_, err := pack("nonexistent/dir", "yaml")
+	_, err := pack("nonexistent/dir", "yaml", false)
 	if err == nil {
 		t.Error("pack() expected error for nonexistent directory")
 	}
@@ -157,7 +155,7 @@ func TestPack_EmptyDir(t *testing.T) {
 
 	// Test YAML format - should return empty bytes (aligns with yq)
 	t.Run("yaml", func(t *testing.T) {
-		result, err := pack(tmpDir, "yaml")
+		result, err := pack(tmpDir, "yaml", false)
 		if err != nil {
 			t.Fatalf("pack() error = %v, expected no error for empty directory", err)
 		}
@@ -169,7 +167,7 @@ func TestPack_EmptyDir(t *testing.T) {
 
 	// Test JSON format - should return "null\n" (aligns with jq/yq)
 	t.Run("json", func(t *testing.T) {
-		result, err := pack(tmpDir, "json")
+		result, err := pack(tmpDir, "json", false)
 		if err != nil {
 			t.Fatalf("pack() error = %v, expected no error for empty directory", err)
 		}
@@ -195,7 +193,7 @@ func TestPack_EmptySubdirs(t *testing.T) {
 		t.Fatalf("Failed to create database directory: %v", err)
 	}
 
-	result, err := pack(tmpDir, "yaml")
+	result, err := pack(tmpDir, "yaml", false)
 	if err != nil {
 		t.Fatalf("pack() error = %v, expected no error for directories with empty subdirs", err)
 	}
@@ -228,7 +226,7 @@ func TestPack_JSONInput(t *testing.T) {
 	}
 
 	// Pack should process JSON files the same as YAML
-	result, err := pack(tmpDir, "yaml")
+	result, err := pack(tmpDir, "yaml", false)
 	if err != nil {
 		t.Fatalf("pack() error = %v", err)
 	}
@@ -244,7 +242,7 @@ func TestPack_JSONOutput(t *testing.T) {
 	// Test JSON output format
 	dir := "../testdata/simple/input"
 
-	result, err := pack(dir, "json")
+	result, err := pack(dir, "json", false)
 	if err != nil {
 		t.Fatalf("pack() error = %v", err)
 	}
@@ -265,7 +263,7 @@ func TestPack_JSONOutput_EmptyDir(t *testing.T) {
 	// Test JSON output for empty directory - should return "null\n"
 	tmpDir := t.TempDir()
 
-	result, err := pack(tmpDir, "json")
+	result, err := pack(tmpDir, "json", false)
 	if err != nil {
 		t.Fatalf("pack() error = %v, expected no error for empty directory", err)
 	}
@@ -280,7 +278,7 @@ func TestPack_InvalidFormat(t *testing.T) {
 	// Test invalid format parameter
 	dir := "../testdata/simple/input"
 
-	_, err := pack(dir, "invalid")
+	_, err := pack(dir, "invalid", false)
 	if err == nil {
 		t.Error("pack() expected error for invalid format")
 	}
@@ -294,7 +292,7 @@ func TestPack_YAMLAnchors(t *testing.T) {
 	dir := "../testdata/anchors/input"
 	expectedFile := "../testdata/anchors/expected.yml"
 
-	result, err := pack(dir, "yaml")
+	result, err := pack(dir, "yaml", false)
 	if err != nil {
 		t.Fatalf("pack() error = %v", err)
 	}
@@ -475,8 +473,7 @@ steps:
 	}
 
 	// Test WITHOUT includes enabled - directive should remain as-is
-	filetree.ProcessIncludes = false
-	result, err := pack(tmpDir, "yaml")
+	result, err := pack(tmpDir, "yaml", false)
 	if err != nil {
 		t.Fatalf("pack() without includes error = %v", err)
 	}
@@ -486,8 +483,7 @@ steps:
 	}
 
 	// Test WITH includes enabled - directive should be replaced
-	filetree.ProcessIncludes = true
-	result, err = pack(tmpDir, "yaml")
+	result, err = pack(tmpDir, "yaml", true)
 	if err != nil {
 		t.Fatalf("pack() with includes error = %v", err)
 	}
@@ -498,9 +494,6 @@ steps:
 	if !strings.Contains(resultStr, "echo 'Hello World'") {
 		t.Errorf("pack() with --enable-includes should contain included content. Got:\n%s", resultStr)
 	}
-
-	// Reset for other tests
-	filetree.ProcessIncludes = false
 }
 
 func TestPack_EnableIncludes_ErrorFileNotFound(t *testing.T) {
@@ -519,17 +512,13 @@ func TestPack_EnableIncludes_ErrorFileNotFound(t *testing.T) {
 		t.Fatalf("Failed to create YAML file: %v", err)
 	}
 
-	filetree.ProcessIncludes = true
-	_, err := pack(tmpDir, "yaml")
+	_, err := pack(tmpDir, "yaml", true)
 	if err == nil {
 		t.Error("pack() expected error for missing include file")
 	}
 	if !strings.Contains(err.Error(), "could not open") {
 		t.Errorf("pack() error = %v, want error containing 'could not open'", err)
 	}
-
-	// Reset for other tests
-	filetree.ProcessIncludes = false
 }
 
 func TestPack_EnableIncludes_RelativePathWithParent(t *testing.T) {
@@ -559,8 +548,7 @@ func TestPack_EnableIncludes_RelativePathWithParent(t *testing.T) {
 		t.Fatalf("Failed to create YAML file: %v", err)
 	}
 
-	filetree.ProcessIncludes = true
-	result, err := pack(tmpDir, "yaml")
+	result, err := pack(tmpDir, "yaml", true)
 	if err != nil {
 		t.Fatalf("pack() with relative path error = %v", err)
 	}
@@ -569,9 +557,6 @@ func TestPack_EnableIncludes_RelativePathWithParent(t *testing.T) {
 	if !strings.Contains(resultStr, "echo 'relative path with ..'") {
 		t.Errorf("pack() should contain included content from relative path. Got:\n%s", resultStr)
 	}
-
-	// Reset
-	filetree.ProcessIncludes = false
 }
 
 func TestPack_EnableIncludes_InvalidYAMLWithIncludes(t *testing.T) {
@@ -585,14 +570,10 @@ func TestPack_EnableIncludes_InvalidYAMLWithIncludes(t *testing.T) {
 		t.Fatalf("Failed to create file: %v", err)
 	}
 
-	filetree.ProcessIncludes = true
-	_, err := pack(tmpDir, "yaml")
+	_, err := pack(tmpDir, "yaml", true)
 	if err == nil {
 		t.Error("pack() expected error for invalid YAML even with includes enabled")
 	}
-
-	// Reset
-	filetree.ProcessIncludes = false
 }
 
 func min(a, b int) int {
