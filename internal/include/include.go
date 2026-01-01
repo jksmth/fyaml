@@ -30,7 +30,7 @@ var includeRegex = regexp.MustCompile(`<<[\s]*include\(([-\w\/\.]+)\)[\s]*>>`)
 // The entire string must be an include statement - partial includes are not allowed.
 // Only one include per value is permitted.
 //
-// File paths are resolved relative to baseDir.
+// File paths are resolved relative to baseDir. Absolute paths are also supported.
 //
 // Based on CircleCI CLI: https://github.com/CircleCI-Public/circleci-cli
 func MaybeIncludeFile(s string, baseDir string) (string, error) {
@@ -50,6 +50,8 @@ func MaybeIncludeFile(s string, baseDir string) (string, error) {
 		}
 
 		includePath := filepath.Join(baseDir, subMatch)
+
+		// #nosec G304 - user-controlled paths are expected for CLI tools
 		file, err := os.ReadFile(includePath)
 		if err != nil {
 			return "", fmt.Errorf("could not open %s for inclusion", includePath)

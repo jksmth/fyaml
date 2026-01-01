@@ -150,6 +150,35 @@ func TestMaybeIncludeFile_ErrorFileNotFound(t *testing.T) {
 	}
 }
 
+func TestMaybeIncludeFile_RelativePathsWithParent(t *testing.T) {
+	// Test that relative paths with ../ work (sibling directory access)
+	tmpDir := t.TempDir()
+	baseDir := filepath.Join(tmpDir, "config", "commands")
+	scriptsDir := filepath.Join(tmpDir, "config", "scripts")
+	if err := os.MkdirAll(baseDir, 0700); err != nil {
+		t.Fatalf("Failed to create base directory: %v", err)
+	}
+	if err := os.MkdirAll(scriptsDir, 0700); err != nil {
+		t.Fatalf("Failed to create scripts directory: %v", err)
+	}
+
+	// Create a file in the scripts directory (sibling to commands)
+	scriptFile := filepath.Join(scriptsDir, "script.sh")
+	scriptContent := "echo 'relative path with ..'"
+	if err := os.WriteFile(scriptFile, []byte(scriptContent), 0600); err != nil {
+		t.Fatalf("Failed to create script: %v", err)
+	}
+
+	// Include from commands to scripts (../scripts/script.sh)
+	result, err := MaybeIncludeFile("<<include(../scripts/script.sh)>>", baseDir)
+	if err != nil {
+		t.Errorf("MaybeIncludeFile() error = %v, expected relative path to work", err)
+	}
+	if result != scriptContent {
+		t.Errorf("MaybeIncludeFile() = %q, want %q", result, scriptContent)
+	}
+}
+
 func TestInlineIncludes_ScalarNode(t *testing.T) {
 	tmpDir := t.TempDir()
 	testFile := filepath.Join(tmpDir, "script.sh")

@@ -362,7 +362,9 @@ func TestMarshalLeaf_FileReadError(t *testing.T) {
 	if err := os.Chmod(yamlFile, 0000); err != nil {
 		t.Fatalf("Failed to chmod file: %v", err)
 	}
-	defer os.Chmod(yamlFile, 0600) // Restore for cleanup
+	defer func() {
+		_ = os.Chmod(yamlFile, 0600) // Restore for cleanup
+	}()
 
 	_, err = testNode.marshalLeaf()
 	if err == nil {
