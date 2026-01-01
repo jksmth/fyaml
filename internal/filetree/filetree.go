@@ -227,9 +227,9 @@ func (n *Node) marshalLeaf() (interface{}, error) {
 	return content, err
 }
 
-// isEmptyContent checks if a value is nil or an empty map.
+// IsEmptyContent checks if a value is nil or an empty map.
 // Used to skip directories/files with no YAML content.
-func isEmptyContent(v interface{}) bool {
+func IsEmptyContent(v interface{}) bool {
 	if v == nil {
 		return true
 	}
@@ -273,7 +273,7 @@ func (n *Node) marshalParent() (interface{}, error) {
 		}
 
 		// Skip directories/files with no YAML content
-		if isEmptyContent(c) {
+		if IsEmptyContent(c) {
 			continue
 		}
 

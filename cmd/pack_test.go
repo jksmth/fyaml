@@ -532,6 +532,69 @@ func TestPack_EnableIncludes_ErrorFileNotFound(t *testing.T) {
 	filetree.ProcessIncludes = false
 }
 
+func TestPack_EnableIncludes_RelativePathWithParent(t *testing.T) {
+	// Test that relative paths with ../ work in include directives
+	tmpDir := t.TempDir()
+
+	// Create structure: tmpDir/commands/test.yml and tmpDir/scripts/script.sh
+	commandsDir := filepath.Join(tmpDir, "commands")
+	scriptsDir := filepath.Join(tmpDir, "scripts")
+	if err := os.MkdirAll(commandsDir, 0700); err != nil {
+		t.Fatalf("Failed to create commands directory: %v", err)
+	}
+	if err := os.MkdirAll(scriptsDir, 0700); err != nil {
+		t.Fatalf("Failed to create scripts directory: %v", err)
+	}
+
+	scriptFile := filepath.Join(scriptsDir, "script.sh")
+	scriptContent := "echo 'relative path with ..'"
+	if err := os.WriteFile(scriptFile, []byte(scriptContent), 0600); err != nil {
+		t.Fatalf("Failed to create script: %v", err)
+	}
+
+	// Create YAML with relative path using ../
+	yamlFile := filepath.Join(commandsDir, "test.yml")
+	yamlContent := `command: <<include(../scripts/script.sh)>>`
+	if err := os.WriteFile(yamlFile, []byte(yamlContent), 0600); err != nil {
+		t.Fatalf("Failed to create YAML file: %v", err)
+	}
+
+	filetree.ProcessIncludes = true
+	result, err := pack(tmpDir, "yaml")
+	if err != nil {
+		t.Fatalf("pack() with relative path error = %v", err)
+	}
+
+	resultStr := string(result)
+	if !strings.Contains(resultStr, "echo 'relative path with ..'") {
+		t.Errorf("pack() should contain included content from relative path. Got:\n%s", resultStr)
+	}
+
+	// Reset
+	filetree.ProcessIncludes = false
+}
+
+func TestPack_EnableIncludes_InvalidYAMLWithIncludes(t *testing.T) {
+	// Test that invalid YAML still fails even with includes enabled
+	tmpDir := t.TempDir()
+
+	yamlFile := filepath.Join(tmpDir, "invalid.yml")
+	// Invalid YAML that would fail Unmarshal
+	invalidContent := "key: [unclosed"
+	if err := os.WriteFile(yamlFile, []byte(invalidContent), 0600); err != nil {
+		t.Fatalf("Failed to create file: %v", err)
+	}
+
+	filetree.ProcessIncludes = true
+	_, err := pack(tmpDir, "yaml")
+	if err == nil {
+		t.Error("pack() expected error for invalid YAML even with includes enabled")
+	}
+
+	// Reset
+	filetree.ProcessIncludes = false
+}
+
 func min(a, b int) int {
 	if a < b {
 		return a
