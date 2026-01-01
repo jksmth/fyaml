@@ -28,7 +28,7 @@ func TestNewTree(t *testing.T) {
 		t.Fatalf("Failed to create empty directory: %v", err)
 	}
 
-	tree, err := NewTree(tmpDir)
+	tree, err := NewTree(tmpDir, nil)
 	if err != nil {
 		t.Fatalf("NewTree() error = %v", err)
 	}
@@ -64,7 +64,7 @@ func TestMarshalYAML_RendersToYAML(t *testing.T) {
 		t.Fatalf("Failed to create empty directory: %v", err)
 	}
 
-	tree, err := NewTree(tmpDir)
+	tree, err := NewTree(tmpDir, nil)
 	if err != nil {
 		t.Fatalf("NewTree() error = %v", err)
 	}
@@ -114,7 +114,7 @@ func TestMarshalYAML_InvalidYAML(t *testing.T) {
 	}
 
 	// NewTree should succeed - it doesn't validate YAML content
-	tree, err := NewTree(tmpDir)
+	tree, err := NewTree(tmpDir, nil)
 	if err != nil {
 		t.Fatalf("NewTree() error = %v, expected no error", err)
 	}
@@ -147,7 +147,7 @@ func TestNewTree_JSONFiles(t *testing.T) {
 		t.Fatalf("Failed to create JSON file: %v", err)
 	}
 
-	tree, err := NewTree(tmpDir)
+	tree, err := NewTree(tmpDir, nil)
 	if err != nil {
 		t.Fatalf("NewTree() error = %v", err)
 	}
@@ -206,7 +206,7 @@ func TestNewTree_JSONSpecialCase(t *testing.T) {
 		t.Fatalf("Failed to create api.yml file: %v", err)
 	}
 
-	tree, err := NewTree(tmpDir)
+	tree, err := NewTree(tmpDir, nil)
 	if err != nil {
 		t.Fatalf("NewTree() error = %v", err)
 	}
@@ -262,7 +262,17 @@ func TestMarshalLeaf_WithIncludes(t *testing.T) {
 		t.Fatalf("Failed to create YAML file: %v", err)
 	}
 
-	tree, err := NewTree(tmpDir)
+	absDir, err := filepath.Abs(tmpDir)
+	if err != nil {
+		t.Fatalf("Failed to get absolute path: %v", err)
+	}
+
+	opts := &IncludeOptions{
+		Enabled:  true,
+		PackRoot: absDir,
+	}
+
+	tree, err := NewTree(tmpDir, opts)
 	if err != nil {
 		t.Fatalf("NewTree() error = %v", err)
 	}
@@ -285,8 +295,7 @@ func TestMarshalLeaf_WithIncludes(t *testing.T) {
 	}
 
 	// Test with includes enabled
-	ProcessIncludes = true
-	result, err := testNode.marshalLeaf()
+	result, err := testNode.marshalLeaf(opts)
 	if err != nil {
 		t.Fatalf("marshalLeaf() with includes error = %v", err)
 	}
@@ -308,9 +317,6 @@ func TestMarshalLeaf_WithIncludes(t *testing.T) {
 	if strings.Contains(commandVal, "<<include") {
 		t.Error("marshalLeaf() should not contain include directive after processing")
 	}
-
-	// Reset
-	ProcessIncludes = false
 }
 
 func TestMarshalLeaf_WithIncludes_ErrorCases(t *testing.T) {
@@ -323,24 +329,30 @@ func TestMarshalLeaf_WithIncludes_ErrorCases(t *testing.T) {
 		t.Fatalf("Failed to create YAML file: %v", err)
 	}
 
-	tree, err := NewTree(tmpDir)
+	absDir, err := filepath.Abs(tmpDir)
+	if err != nil {
+		t.Fatalf("Failed to get absolute path: %v", err)
+	}
+
+	opts := &IncludeOptions{
+		Enabled:  true,
+		PackRoot: absDir,
+	}
+
+	tree, err := NewTree(tmpDir, opts)
 	if err != nil {
 		t.Fatalf("NewTree() error = %v", err)
 	}
 
 	testNode := tree.Children[0]
 
-	ProcessIncludes = true
-	_, err = testNode.marshalLeaf()
+	_, err = testNode.marshalLeaf(opts)
 	if err == nil {
 		t.Error("marshalLeaf() expected error for missing include file")
 	}
 	if !strings.Contains(err.Error(), "could not open") {
 		t.Errorf("marshalLeaf() error = %v, want 'could not open'", err)
 	}
-
-	// Reset
-	ProcessIncludes = false
 }
 
 func TestMarshalLeaf_FileReadError(t *testing.T) {
@@ -351,7 +363,7 @@ func TestMarshalLeaf_FileReadError(t *testing.T) {
 		t.Fatalf("Failed to create file: %v", err)
 	}
 
-	tree, err := NewTree(tmpDir)
+	tree, err := NewTree(tmpDir, nil)
 	if err != nil {
 		t.Fatalf("NewTree() error = %v", err)
 	}
@@ -366,7 +378,7 @@ func TestMarshalLeaf_FileReadError(t *testing.T) {
 		_ = os.Chmod(yamlFile, 0600) // Restore for cleanup
 	}()
 
-	_, err = testNode.marshalLeaf()
+	_, err = testNode.marshalLeaf(nil)
 	if err == nil {
 		t.Error("marshalLeaf() expected error for unreadable file")
 	}
@@ -420,7 +432,7 @@ func TestMarshalParent_WithEmptyMaps(t *testing.T) {
 		t.Fatalf("Failed to create file: %v", err)
 	}
 
-	tree, err := NewTree(tmpDir)
+	tree, err := NewTree(tmpDir, nil)
 	if err != nil {
 		t.Fatalf("NewTree() error = %v", err)
 	}

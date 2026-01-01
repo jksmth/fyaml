@@ -38,10 +38,7 @@ Use --enable-includes to process <<include(file)>> directives.`,
 		format, _ := cmd.Flags().GetString("format")
 		enableIncludes, _ := cmd.Flags().GetBool("enable-includes")
 
-		// Set the global flag for include processing
-		filetree.ProcessIncludes = enableIncludes
-
-		result, err := pack(dir, format)
+		result, err := pack(dir, format, enableIncludes)
 		if err != nil {
 			return fmt.Errorf("pack error: %w", err)
 		}
@@ -129,14 +126,29 @@ func writeOutput(output string, result []byte) error {
 
 // pack compiles a directory-structured YAML/JSON tree into a single document.
 // It follows the FYAML specification exactly for YAML, with JSON as an extension.
-func pack(dir string, format string) ([]byte, error) {
+func pack(dir string, format string, enableIncludes bool) ([]byte, error) {
 	// Validate format early
 	if format != "yaml" && format != "json" {
 		return nil, fmt.Errorf("invalid format: %s (must be 'yaml' or 'json')", format)
 	}
 
+	// Resolve dir to absolute path to use as pack root
+	absDir, err := filepath.Abs(dir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve directory path: %w", err)
+	}
+
+	// Create include options
+	var opts *filetree.IncludeOptions
+	if enableIncludes {
+		opts = &filetree.IncludeOptions{
+			Enabled:  true,
+			PackRoot: absDir,
+		}
+	}
+
 	// Build the filetree
-	tree, err := filetree.NewTree(dir)
+	tree, err := filetree.NewTree(dir, opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build filetree: %w", err)
 	}
@@ -147,7 +159,7 @@ func pack(dir string, format string) ([]byte, error) {
 	}
 
 	// Get the marshaled data structure (avoids circular references)
-	marshaledData, err := tree.MarshalYAML()
+	marshaledData, err := tree.MarshalYAMLWithOptions(opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal tree: %w", err)
 	}

@@ -170,10 +170,11 @@ fyaml pack config/ --enable-includes
 
 **Behavior:**
 - When enabled, `<<include(path)>>` directives in YAML values are replaced with file contents
-- File paths are resolved relative to the YAML file containing the directive (absolute paths are also supported)
+- **The directory passed to `pack` (the pack root) defines the include boundary; includes outside this directory are rejected.**
+- File paths are resolved relative to the YAML file containing the directive
+- Both absolute and relative paths are allowed, but must resolve to a path within the pack root directory
 - The include directive must be the **entire value** (not embedded in other text)
 - Only one include per value is allowed
-- Included file content is returned exactly as-is (no modification or escaping)
 
 **Examples:**
 ```bash
@@ -198,6 +199,8 @@ When packed with `--enable-includes`, the `<<include(...)>>` is replaced with th
 - `echo <<include(f)>>` — "entire string must be include statement"
 - `<<include(a)>> <<include(b)>>` — "multiple include statements"
 - Missing file — "could not open path/to/file for inclusion"
+- Path escapes pack root — "include path escapes pack root"
+- Path escapes pack root — "include path escapes pack root"
 
 **Note:** Without this flag, include directives are passed through unchanged. This preserves backward compatibility and keeps the default behavior spec-compliant.
 

@@ -26,9 +26,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// ProcessIncludes controls whether <<include(file)>> directives are processed.
-// This is an extension to the FYAML spec and must be explicitly enabled.
-var ProcessIncludes bool
+// IncludeOptions controls include processing behavior.
+type IncludeOptions struct {
+	Enabled  bool
+	PackRoot string // Absolute path to pack root (confinement boundary)
+}
 
 // Node represents a node in the filetree
 type Node struct {
@@ -46,7 +48,7 @@ type PathNodes struct {
 
 // NewTree creates a new filetree starting at the root.
 // It collects all YAML files and directories, skipping dotfiles and dotfolders.
-func NewTree(rootPath string) (*Node, error) {
+func NewTree(rootPath string, opts *IncludeOptions) (*Node, error) {
 	absRootPath, err := filepath.Abs(rootPath)
 	if err != nil {
 		return nil, err
@@ -180,15 +182,22 @@ func (n *Node) specialCase() bool {
 	return re.MatchString(n.basename())
 }
 
-// MarshalYAML serializes the tree into YAML
+// MarshalYAML serializes the tree into YAML.
+// Implements yaml.Marshaler interface (called by yaml.Marshal).
 func (n *Node) MarshalYAML() (interface{}, error) {
-	if len(n.Children) == 0 {
-		return n.marshalLeaf()
-	}
-	return n.marshalParent()
+	return n.MarshalYAMLWithOptions(nil)
 }
 
-func (n *Node) marshalLeaf() (interface{}, error) {
+// MarshalYAMLWithOptions serializes the tree into YAML with include options.
+// If opts is nil, includes are disabled.
+func (n *Node) MarshalYAMLWithOptions(opts *IncludeOptions) (interface{}, error) {
+	if len(n.Children) == 0 {
+		return n.marshalLeaf(opts)
+	}
+	return n.marshalParent(opts)
+}
+
+func (n *Node) marshalLeaf(opts *IncludeOptions) (interface{}, error) {
 	var content interface{}
 
 	if n.Info.IsDir() {
@@ -204,7 +213,7 @@ func (n *Node) marshalLeaf() (interface{}, error) {
 	}
 
 	// If includes are enabled, parse to yaml.Node to allow walking and replacing
-	if ProcessIncludes {
+	if opts != nil && opts.Enabled {
 		var node yaml.Node
 		if err := yaml.Unmarshal(buf, &node); err != nil {
 			return content, err
@@ -212,7 +221,7 @@ func (n *Node) marshalLeaf() (interface{}, error) {
 
 		// Process include directives relative to the file's directory
 		baseDir := filepath.Dir(n.FullPath)
-		if err := include.InlineIncludes(&node, baseDir); err != nil {
+		if err := include.InlineIncludes(&node, baseDir, opts.PackRoot); err != nil {
 			return content, err
 		}
 
@@ -263,11 +272,11 @@ func mergeTree(trees ...interface{}) map[string]interface{} {
 	return result
 }
 
-func (n *Node) marshalParent() (interface{}, error) {
+func (n *Node) marshalParent(opts *IncludeOptions) (interface{}, error) {
 	subtree := map[string]interface{}{}
 
 	for _, child := range n.Children {
-		c, err := child.MarshalYAML()
+		c, err := child.MarshalYAMLWithOptions(opts)
 		if err != nil {
 			return nil, err
 		}

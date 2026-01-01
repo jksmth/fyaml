@@ -1,6 +1,7 @@
 package include
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -20,8 +21,9 @@ func TestMaybeIncludeFile_NoInclude(t *testing.T) {
 		"include(file.txt)",
 	}
 
+	packRoot := "/tmp"
 	for _, s := range tests {
-		result, err := MaybeIncludeFile(s, "/tmp")
+		result, err := MaybeIncludeFile(s, "/tmp", packRoot)
 		if err != nil {
 			t.Errorf("MaybeIncludeFile(%q) error = %v", s, err)
 		}
@@ -50,8 +52,13 @@ func TestMaybeIncludeFile_ValidInclude(t *testing.T) {
 		{"<<  include(test.sh)  >>", testContent},
 	}
 
+	absTmpDir, err := filepath.Abs(tmpDir)
+	if err != nil {
+		t.Fatalf("Failed to get absolute path: %v", err)
+	}
+
 	for _, tt := range tests {
-		result, err := MaybeIncludeFile(tt.input, tmpDir)
+		result, err := MaybeIncludeFile(tt.input, tmpDir, absTmpDir)
 		if err != nil {
 			t.Errorf("MaybeIncludeFile(%q) error = %v", tt.input, err)
 		}
@@ -76,7 +83,12 @@ func TestMaybeIncludeFile_SubdirectoryInclude(t *testing.T) {
 		t.Fatalf("Failed to write test file: %v", err)
 	}
 
-	result, err := MaybeIncludeFile("<<include(scripts/hello.sh)>>", tmpDir)
+	absTmpDir, err := filepath.Abs(tmpDir)
+	if err != nil {
+		t.Fatalf("Failed to get absolute path: %v", err)
+	}
+
+	result, err := MaybeIncludeFile("<<include(scripts/hello.sh)>>", tmpDir, absTmpDir)
 	if err != nil {
 		t.Errorf("MaybeIncludeFile() error = %v", err)
 	}
@@ -96,7 +108,12 @@ func TestMaybeIncludeFile_PreservesDoubleAngleBrackets(t *testing.T) {
 		t.Fatalf("Failed to write test file: %v", err)
 	}
 
-	result, err := MaybeIncludeFile("<<include(test.sh)>>", tmpDir)
+	absTmpDir, err := filepath.Abs(tmpDir)
+	if err != nil {
+		t.Fatalf("Failed to get absolute path: %v", err)
+	}
+
+	result, err := MaybeIncludeFile("<<include(test.sh)>>", tmpDir, absTmpDir)
 	if err != nil {
 		t.Errorf("MaybeIncludeFile() error = %v", err)
 	}
@@ -111,7 +128,7 @@ func TestMaybeIncludeFile_PreservesDoubleAngleBrackets(t *testing.T) {
 func TestMaybeIncludeFile_ErrorMultipleIncludes(t *testing.T) {
 	input := "<<include(a.sh)>> <<include(b.sh)>>"
 
-	_, err := MaybeIncludeFile(input, "/tmp")
+	_, err := MaybeIncludeFile(input, "/tmp", "/tmp")
 	if err == nil {
 		t.Error("MaybeIncludeFile() expected error for multiple includes")
 	}
@@ -128,7 +145,7 @@ func TestMaybeIncludeFile_ErrorPartialMatch(t *testing.T) {
 	}
 
 	for _, input := range tests {
-		_, err := MaybeIncludeFile(input, "/tmp")
+		_, err := MaybeIncludeFile(input, "/tmp", "/tmp")
 		if err == nil {
 			t.Errorf("MaybeIncludeFile(%q) expected error for partial match", input)
 		}
@@ -141,7 +158,12 @@ func TestMaybeIncludeFile_ErrorPartialMatch(t *testing.T) {
 func TestMaybeIncludeFile_ErrorFileNotFound(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	_, err := MaybeIncludeFile("<<include(nonexistent.sh)>>", tmpDir)
+	absTmpDir, err := filepath.Abs(tmpDir)
+	if err != nil {
+		t.Fatalf("Failed to get absolute path: %v", err)
+	}
+
+	_, err = MaybeIncludeFile("<<include(nonexistent.sh)>>", tmpDir, absTmpDir)
 	if err == nil {
 		t.Error("MaybeIncludeFile() expected error for missing file")
 	}
@@ -170,7 +192,12 @@ func TestMaybeIncludeFile_RelativePathsWithParent(t *testing.T) {
 	}
 
 	// Include from commands to scripts (../scripts/script.sh)
-	result, err := MaybeIncludeFile("<<include(../scripts/script.sh)>>", baseDir)
+	absTmpDir, err := filepath.Abs(tmpDir)
+	if err != nil {
+		t.Fatalf("Failed to get absolute path: %v", err)
+	}
+
+	result, err := MaybeIncludeFile("<<include(../scripts/script.sh)>>", baseDir, absTmpDir)
 	if err != nil {
 		t.Errorf("MaybeIncludeFile() error = %v, expected relative path to work", err)
 	}
@@ -193,7 +220,12 @@ func TestInlineIncludes_ScalarNode(t *testing.T) {
 		Value: "<<include(script.sh)>>",
 	}
 
-	err := InlineIncludes(node, tmpDir)
+	absTmpDir, err := filepath.Abs(tmpDir)
+	if err != nil {
+		t.Fatalf("Failed to get absolute path: %v", err)
+	}
+
+	err = InlineIncludes(node, tmpDir, absTmpDir)
 	if err != nil {
 		t.Errorf("InlineIncludes() error = %v", err)
 	}
@@ -225,7 +257,12 @@ steps:
 		t.Fatalf("Failed to unmarshal YAML: %v", err)
 	}
 
-	err := InlineIncludes(&node, tmpDir)
+	absTmpDir, err := filepath.Abs(tmpDir)
+	if err != nil {
+		t.Fatalf("Failed to get absolute path: %v", err)
+	}
+
+	err = InlineIncludes(&node, tmpDir, absTmpDir)
 	if err != nil {
 		t.Errorf("InlineIncludes() error = %v", err)
 	}
@@ -246,7 +283,7 @@ steps:
 
 func TestInlineIncludes_NilNode(t *testing.T) {
 	// Should not panic on nil node
-	err := InlineIncludes(nil, "/tmp")
+	err := InlineIncludes(nil, "/tmp", "/tmp")
 	if err != nil {
 		t.Errorf("InlineIncludes(nil) error = %v", err)
 	}
@@ -259,7 +296,7 @@ func TestInlineIncludes_EmptyScalar(t *testing.T) {
 		Value: "",
 	}
 
-	err := InlineIncludes(node, "/tmp")
+	err := InlineIncludes(node, "/tmp", "/tmp")
 	if err != nil {
 		t.Errorf("InlineIncludes() error = %v", err)
 	}
@@ -275,11 +312,109 @@ func TestInlineIncludes_PreservesNonIncludeValues(t *testing.T) {
 		Value: "echo 'Hello World'",
 	}
 
-	err := InlineIncludes(node, "/tmp")
+	err := InlineIncludes(node, "/tmp", "/tmp")
 	if err != nil {
 		t.Errorf("InlineIncludes() error = %v", err)
 	}
 	if node.Value != "echo 'Hello World'" {
 		t.Errorf("InlineIncludes() node.Value = %q, want 'echo 'Hello World''", node.Value)
+	}
+}
+
+func TestMaybeIncludeFile_AbsolutePathWithinPackRoot(t *testing.T) {
+	// Test that absolute paths within pack root are allowed
+	tmpDir := t.TempDir()
+	absTmpDir, err := filepath.Abs(tmpDir)
+	if err != nil {
+		t.Fatalf("Failed to get absolute path: %v", err)
+	}
+
+	scriptFile := filepath.Join(tmpDir, "script.sh")
+	scriptContent := "echo 'absolute path within root'"
+	if err := os.WriteFile(scriptFile, []byte(scriptContent), 0600); err != nil {
+		t.Fatalf("Failed to create script: %v", err)
+	}
+
+	absScriptFile, err := filepath.Abs(scriptFile)
+	if err != nil {
+		t.Fatalf("Failed to get absolute script path: %v", err)
+	}
+
+	// Use absolute path in include - should work since it's within pack root
+	result, err := MaybeIncludeFile(fmt.Sprintf("<<include(%s)>>", absScriptFile), tmpDir, absTmpDir)
+	if err != nil {
+		t.Errorf("MaybeIncludeFile() with absolute path within root error = %v", err)
+	}
+	if result != scriptContent {
+		t.Errorf("MaybeIncludeFile() = %q, want %q", result, scriptContent)
+	}
+}
+
+func TestMaybeIncludeFile_AbsolutePathOutsidePackRoot(t *testing.T) {
+	// Test that absolute paths outside pack root are rejected
+	tmpDir := t.TempDir()
+	absTmpDir, err := filepath.Abs(tmpDir)
+	if err != nil {
+		t.Fatalf("Failed to get absolute path: %v", err)
+	}
+
+	// Create a file outside the pack root
+	outsideDir := t.TempDir()
+	scriptFile := filepath.Join(outsideDir, "script.sh")
+	scriptContent := "echo 'outside root'"
+	if err := os.WriteFile(scriptFile, []byte(scriptContent), 0600); err != nil {
+		t.Fatalf("Failed to create script: %v", err)
+	}
+
+	absScriptFile, err := filepath.Abs(scriptFile)
+	if err != nil {
+		t.Fatalf("Failed to get absolute script path: %v", err)
+	}
+
+	// Use absolute path outside pack root - should fail
+	_, err = MaybeIncludeFile(fmt.Sprintf("<<include(%s)>>", absScriptFile), tmpDir, absTmpDir)
+	if err == nil {
+		t.Error("MaybeIncludeFile() expected error for absolute path outside pack root")
+	}
+	if !strings.Contains(err.Error(), "escapes pack root") {
+		t.Errorf("MaybeIncludeFile() error = %v, want 'escapes pack root'", err)
+	}
+}
+
+func TestMaybeIncludeFile_RelativePathEscapesPackRoot(t *testing.T) {
+	// Test that relative paths that escape pack root are rejected
+	tmpDir := t.TempDir()
+	absTmpDir, err := filepath.Abs(tmpDir)
+	if err != nil {
+		t.Fatalf("Failed to get absolute path: %v", err)
+	}
+
+	// Create a file outside the pack root
+	outsideDir := t.TempDir()
+	scriptFile := filepath.Join(outsideDir, "script.sh")
+	scriptContent := "echo 'outside root'"
+	if err := os.WriteFile(scriptFile, []byte(scriptContent), 0600); err != nil {
+		t.Fatalf("Failed to create script: %v", err)
+	}
+
+	// Create a subdirectory in pack root
+	subDir := filepath.Join(tmpDir, "subdir")
+	if err := os.MkdirAll(subDir, 0700); err != nil {
+		t.Fatalf("Failed to create subdir: %v", err)
+	}
+
+	// Try to include file outside using ../ - should fail
+	// Calculate relative path that would escape
+	relPath, err := filepath.Rel(subDir, scriptFile)
+	if err != nil {
+		t.Fatalf("Failed to calculate relative path: %v", err)
+	}
+
+	_, err = MaybeIncludeFile(fmt.Sprintf("<<include(%s)>>", relPath), subDir, absTmpDir)
+	if err == nil {
+		t.Error("MaybeIncludeFile() expected error for path escaping pack root")
+	}
+	if !strings.Contains(err.Error(), "escapes pack root") {
+		t.Errorf("MaybeIncludeFile() error = %v, want 'escapes pack root'", err)
 	}
 }
