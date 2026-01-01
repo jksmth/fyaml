@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/jksmth/fyaml/compare/v1.0.7...v1.1.0) (2026-01-01)
+
+
+### Features
+
+* add support for file includes ([#29](https://github.com/jksmth/fyaml/issues/29)) ([674aca0](https://github.com/jksmth/fyaml/commit/674aca08bb61c949333868d2beaab427b4adb310))
+
 ## [1.0.7](https://github.com/jksmth/fyaml/compare/v1.0.6...v1.0.7) (2025-12-30)
 
 
