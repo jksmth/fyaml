@@ -418,3 +418,41 @@ func TestMaybeIncludeFile_RelativePathEscapesPackRoot(t *testing.T) {
 		t.Errorf("MaybeIncludeFile() error = %v, want 'escapes pack root'", err)
 	}
 }
+
+func TestMaybeIncludeFile_OpenRootError(t *testing.T) {
+	// Test error when pack root doesn't exist
+	// The path validation catches this before os.OpenRoot, resulting in "escapes pack root" error
+	tmpDir := t.TempDir()
+	nonexistentRoot := filepath.Join(tmpDir, "nonexistent")
+
+	_, err := MaybeIncludeFile("<<include(test.sh)>>", tmpDir, nonexistentRoot)
+	if err == nil {
+		t.Error("MaybeIncludeFile() expected error for non-existent pack root")
+	}
+	// When pack root doesn't exist, the relative path calculation results in ".." prefix
+	// which triggers the "escapes pack root" validation error
+	if !strings.Contains(err.Error(), "escapes pack root") {
+		t.Errorf("MaybeIncludeFile() error = %v, want 'escapes pack root'", err)
+	}
+}
+
+func TestInlineIncludes_ErrorPropagation(t *testing.T) {
+	// Test that errors from MaybeIncludeFile are propagated correctly
+	tmpDir := t.TempDir()
+	nonexistentRoot := filepath.Join(tmpDir, "nonexistent")
+
+	node := &yaml.Node{
+		Kind:  yaml.ScalarNode,
+		Value: "<<include(nonexistent.sh)>>",
+	}
+
+	err := InlineIncludes(node, tmpDir, nonexistentRoot)
+	if err == nil {
+		t.Error("InlineIncludes() expected error for invalid include")
+	}
+	// Error should be propagated from MaybeIncludeFile
+	// When pack root doesn't exist, this results in "escapes pack root" error
+	if !strings.Contains(err.Error(), "escapes pack root") {
+		t.Errorf("InlineIncludes() error = %v, want 'escapes pack root'", err)
+	}
+}
