@@ -108,6 +108,7 @@ version: 1.0.0
 ```
 
 **Key points:**
+
 - `@defaults.yml` at root merges `project` and `version` into the top level
 - `services/@common.yml` merges `environment` and `region` into the `services` map
 - Deep nesting (3 levels: `services/api/server.yml`) works naturally

@@ -62,6 +62,7 @@ fyaml pack config/ -o output.yml --check
 This is useful in CI/CD pipelines to ensure configuration hasn't changed unexpectedly.
 
 **Exit codes:**
+
 - `0` - Output matches the file
 - `2` - Output differs from the file
 - `1` - Error occurred during packing
@@ -270,6 +271,7 @@ The filename (without extension) becomes the key in the output:
 - `config.json` → key: `config`
 
 **Exceptions:**
+
 - Root-level files: filename is ignored, contents merge directly
 - `@` files: `@` prefix is removed, contents merge into parent
 

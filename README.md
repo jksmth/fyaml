@@ -56,6 +56,7 @@ fyaml is intentionally limited in scope to keep output predictable and diffs tru
 - Runs as a build-time step
 
 **How it works:**
+
 - Directory names become map keys
 - File names (without extension) become nested keys
 - Files starting with `@` merge into the parent directory
@@ -402,6 +403,7 @@ fyaml pack config/ -f json -o output.json
 The default output format is YAML. JSON output is formatted with 2-space indentation.
 
 **Empty Output Behavior:**
+
 - YAML format: Returns empty output (0 bytes) when no files found (aligns with yq)
 - JSON format: Returns `null` when no files found (aligns with jq)
 
@@ -464,6 +466,7 @@ commands:
 ```
 
 **Error Cases:**
+
 - `echo <<include(f)>>` — Error: entire string must be include statement
 - `<<include(a)>> <<include(b)>>` — Error: multiple include statements
 - File not found — Error: could not open path for inclusion
