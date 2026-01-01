@@ -200,7 +200,6 @@ When packed with `--enable-includes`, the `<<include(...)>>` is replaced with th
 - `<<include(a)>> <<include(b)>>` — "multiple include statements"
 - Missing file — "could not open path/to/file for inclusion"
 - Path escapes pack root — "include path escapes pack root"
-- Path escapes pack root — "include path escapes pack root"
 
 **Note:** Without this flag, include directives are passed through unchanged. This preserves backward compatibility and keeps the default behavior spec-compliant.
 
