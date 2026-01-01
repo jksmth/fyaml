@@ -85,7 +85,9 @@ func MaybeIncludeFile(s string, baseDir string, packRoot string) (string, error)
 		if err != nil {
 			return "", fmt.Errorf("could not open pack root %s: %w", packRoot, err)
 		}
-		defer root.Close()
+		defer func() {
+			_ = root.Close() // Ignore error in defer - resource cleanup
+		}()
 
 		file, err := root.ReadFile(relPath)
 		if err != nil {
