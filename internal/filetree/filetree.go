@@ -10,6 +10,7 @@
 // - Removed SpecialCase global variable
 // - Added deterministic key sorting for reproducible output
 // - Refactored for internal use
+// - Added optional include file processing
 package filetree
 
 import (
@@ -20,9 +21,14 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/jksmth/fyaml/internal/include"
 	"github.com/mitchellh/mapstructure"
 	"gopkg.in/yaml.v3"
 )
+
+// ProcessIncludes controls whether <<include(file)>> directives are processed.
+// This is an extension to the FYAML spec and must be explicitly enabled.
+var ProcessIncludes bool
 
 // Node represents a node in the filetree
 type Node struct {
@@ -197,8 +203,43 @@ func (n *Node) marshalLeaf() (interface{}, error) {
 		return content, err
 	}
 
+	// If includes are enabled, parse to yaml.Node to allow walking and replacing
+	if ProcessIncludes {
+		var node yaml.Node
+		if err := yaml.Unmarshal(buf, &node); err != nil {
+			return content, err
+		}
+
+		// Process include directives relative to the file's directory
+		baseDir := filepath.Dir(n.FullPath)
+		if err := include.InlineIncludes(&node, baseDir); err != nil {
+			return content, err
+		}
+
+		// Decode the processed node back to interface{}
+		if err := node.Decode(&content); err != nil {
+			return content, err
+		}
+		return content, nil
+	}
+
 	err = yaml.Unmarshal(buf, &content)
 	return content, err
+}
+
+// isEmptyContent checks if a value is nil or an empty map.
+// Used to skip directories/files with no YAML content.
+func isEmptyContent(v interface{}) bool {
+	if v == nil {
+		return true
+	}
+	switch m := v.(type) {
+	case map[string]interface{}:
+		return len(m) == 0
+	case map[interface{}]interface{}:
+		return len(m) == 0
+	}
+	return false
 }
 
 // mergeTree merges multiple interface{} values into a single map[string]interface{}.
@@ -225,32 +266,36 @@ func mergeTree(trees ...interface{}) map[string]interface{} {
 func (n *Node) marshalParent() (interface{}, error) {
 	subtree := map[string]interface{}{}
 
-	// Process children in sorted order (already sorted by buildTree)
 	for _, child := range n.Children {
 		c, err := child.MarshalYAML()
+		if err != nil {
+			return nil, err
+		}
+
+		// Skip directories/files with no YAML content
+		if isEmptyContent(c) {
+			continue
+		}
 
 		switch c.(type) {
-		case map[string]interface{}, map[interface{}]interface{}, nil:
-			if err != nil {
-				return subtree, err
-			}
-
+		case map[string]interface{}, map[interface{}]interface{}:
 			if child.rootFile() {
-				merged := mergeTree(subtree, c)
-				subtree = merged
+				subtree = mergeTree(subtree, c)
 			} else if child.specialCase() {
-				merged := mergeTree(subtree, subtree[child.Parent.name()], c)
-				subtree = merged
+				subtree = mergeTree(subtree, subtree[child.Parent.name()], c)
 			} else {
-				merged := mergeTree(subtree[child.name()], c)
-				subtree[child.name()] = merged
+				subtree[child.name()] = mergeTree(subtree[child.name()], c)
 			}
 		default:
 			return nil, fmt.Errorf("expected a map, got a `%T` which is not supported at this time for \"%s\"", c, child.FullPath)
 		}
 	}
 
-	// Sort keys for deterministic output
+	// Return nil for directories with no YAML content
+	if len(subtree) == 0 {
+		return nil, nil
+	}
+
 	return sortMapKeys(subtree), nil
 }
 

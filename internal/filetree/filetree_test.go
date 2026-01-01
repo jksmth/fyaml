@@ -92,8 +92,9 @@ func TestMarshalYAML_RendersToYAML(t *testing.T) {
 	if _, ok := resultMap["sub_dir"]; !ok {
 		t.Error("MarshalYAML() result missing 'sub_dir' key")
 	}
-	if _, ok := resultMap["empty_dir"]; !ok {
-		t.Error("MarshalYAML() result missing 'empty_dir' key")
+	// Empty directories (with no YAML files) should not appear in output
+	if _, ok := resultMap["empty_dir"]; ok {
+		t.Error("MarshalYAML() result should not contain 'empty_dir' key (empty directories are ignored)")
 	}
 }
 

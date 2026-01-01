@@ -157,6 +157,50 @@ fyaml pack config/ -f json -o config.json
 - YAML format: Returns empty output (0 bytes) when no files found
 - JSON format: Returns `null` when no files found
 
+### `--enable-includes`
+
+Enable processing of `<<include(file)>>` directives. This is an extension to the FYAML specification.
+
+**Usage:**
+```bash
+fyaml pack config/ --enable-includes
+```
+
+**Default:** `false` (disabled)
+
+**Behavior:**
+- When enabled, `<<include(path)>>` directives in YAML values are replaced with file contents
+- File paths are resolved relative to the YAML file containing the directive (absolute paths are also supported)
+- The include directive must be the **entire value** (not embedded in other text)
+- Only one include per value is allowed
+- Included file content is returned exactly as-is (no modification or escaping)
+
+**Examples:**
+```bash
+# Process includes
+fyaml pack config/ --enable-includes
+
+# Combine with other flags
+fyaml pack config/ --enable-includes -o output.yml
+fyaml pack config/ --enable-includes --format json
+```
+
+**Example YAML with include:**
+```yaml
+steps:
+  - run:
+      command: <<include(scripts/deploy.sh)>>
+```
+
+When packed with `--enable-includes`, the `<<include(...)>>` is replaced with the contents of `scripts/deploy.sh` (relative to the YAML file).
+
+**Error Cases:**
+- `echo <<include(f)>>` — "entire string must be include statement"
+- `<<include(a)>> <<include(b)>>` — "multiple include statements"
+- Missing file — "could not open path/to/file for inclusion"
+
+**Note:** Without this flag, include directives are passed through unchanged. This preserves backward compatibility and keeps the default behavior spec-compliant.
+
 ## Exit Codes
 
 fyaml uses the following exit codes:

@@ -23,7 +23,9 @@ DIR defaults to the current working directory if not specified.
 The output is deterministic - identical directory structures always produce
 identical output, with keys sorted alphabetically.
 
-By default, output is YAML. Use --format json to output JSON instead.`,
+By default, output is YAML. Use --format json to output JSON instead.
+
+Use --enable-includes to process <<include(file)>> directives.`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		dir := "."
@@ -34,6 +36,10 @@ By default, output is YAML. Use --format json to output JSON instead.`,
 		output, _ := cmd.Flags().GetString("output")
 		check, _ := cmd.Flags().GetBool("check")
 		format, _ := cmd.Flags().GetString("format")
+		enableIncludes, _ := cmd.Flags().GetBool("enable-includes")
+
+		// Set the global flag for include processing
+		filetree.ProcessIncludes = enableIncludes
 
 		result, err := pack(dir, format)
 		if err != nil {
@@ -53,6 +59,7 @@ func init() {
 	packCmd.Flags().StringP("output", "o", "", "Write output to file (default: stdout)")
 	packCmd.Flags().Bool("check", false, "Compare generated output to --output, exit non-zero if different")
 	packCmd.Flags().StringP("format", "f", "yaml", "Output format: yaml or json (default: yaml)")
+	packCmd.Flags().Bool("enable-includes", false, "Process <<include(file)>> directives (extension)")
 }
 
 // handleCheck compares the generated output with an existing file.

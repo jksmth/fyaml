@@ -407,6 +407,68 @@ The default output format is YAML. JSON output is formatted with 2-space indenta
 
 **Note:** These extensions are not part of the FYAML specification. For spec-compliant behavior, use only `.yml` and `.yaml` files with YAML output (default).
 
+### File Includes
+
+Use the `--enable-includes` flag to process `<<include(file)>>` directives. This replaces the directive with the contents of the referenced file.
+
+```bash
+fyaml pack config/ --enable-includes
+```
+
+**Syntax:** `<<include(path/to/file)>>`
+
+- The include directive must be the **entire value** (not embedded in text)
+- File paths are **relative to the YAML file** containing the directive (absolute paths also supported)
+- Only **one include per value** is allowed
+- Included file content is returned exactly as-is (no modification)
+
+**Example:**
+
+Given this structure:
+```
+config/
+  commands/
+    hello.yml
+    scripts/
+      hello.sh
+```
+
+**`commands/hello.yml`:**
+```yaml
+description: A command that imports a script.
+steps:
+  - run:
+      name: Hello Greeting
+      command: <<include(scripts/hello.sh)>>
+```
+
+**`commands/scripts/hello.sh`:**
+```bash
+#!/bin/bash
+echo "Hello World"
+```
+
+Running `fyaml pack config/ --enable-includes` produces:
+
+```yaml
+commands:
+  hello:
+    description: A command that imports a script.
+    steps:
+      - run:
+          name: Hello Greeting
+          command: |
+            #!/bin/bash
+            echo "Hello World"
+```
+
+**Error Cases:**
+- `echo <<include(f)>>` — Error: entire string must be include statement
+- `<<include(a)>> <<include(b)>>` — Error: multiple include statements
+- File not found — Error: could not open path for inclusion
+
+**Note:** This feature is adapted from CircleCI's orb pack command. Without `--enable-includes`, directives are passed through unchanged.
+
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
