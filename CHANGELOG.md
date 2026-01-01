@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/jksmth/fyaml/compare/v1.1.0...v1.2.0) (2026-01-01)
+
+
+### Features
+
+* Include path confinement ([#31](https://github.com/jksmth/fyaml/issues/31)) ([7980b7d](https://github.com/jksmth/fyaml/commit/7980b7d68776d3d0f884b1938679437b27976a83))
+
 ## [1.1.0](https://github.com/jksmth/fyaml/compare/v1.0.7...v1.1.0) (2026-01-01)
 
 
