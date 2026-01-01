@@ -14,9 +14,11 @@ fyaml pack [DIR] [flags]
 ```
 
 **Arguments:**
+
 - `DIR` - Directory to pack (default: current directory)
 
 **Flags:**
+
 - `-o, --output string` - Write output to file (default: stdout)
 - `--check` - Compare generated output to `--output`, exit non-zero if different
 - `-f, --format string` - Output format: `yaml` or `json` (default: `yaml`)
@@ -40,6 +42,7 @@ fyaml pack config/ -o output.yml --check
 ```
 
 **Exit Codes:**
+
 - `0` - Success
 - `1` - Pack or IO error
 - `2` - `--check` mismatch (output differs from file)
@@ -59,6 +62,7 @@ fyaml version
 ```
 
 **Exit Codes:**
+
 - `0` - Success
 
 ## Flags Reference
@@ -74,6 +78,7 @@ fyaml pack config/ --output /path/to/output.yml
 ```
 
 **Behavior:**
+
 - File is written atomically (creates temp file, then renames)
 - File permissions are set to `0644`
 - If the file exists, it's overwritten
@@ -101,6 +106,7 @@ fyaml pack config/ -o output.yml --check
 ```
 
 **Behavior:**
+
 - Requires `--output` to be specified
 - Reads the existing file (if it exists)
 - Compares byte-by-byte with generated output
@@ -108,6 +114,7 @@ fyaml pack config/ -o output.yml --check
 - Useful in CI/CD to verify configuration hasn't changed
 
 **Exit Codes:**
+
 - `0` - Output matches the file
 - `2` - Output differs from the file
 - `1` - Error (file read error, etc.)
@@ -137,6 +144,7 @@ fyaml pack config/ -f yaml
 **Default:** `yaml`
 
 **Behavior:**
+
 - `yaml` - Outputs YAML format (default)
 - `json` - Outputs JSON format with 2-space indentation
 - Empty output behavior differs by format (see below)
@@ -154,6 +162,7 @@ fyaml pack config/ -f json -o config.json
 ```
 
 **Empty Output:**
+
 - YAML format: Returns empty output (0 bytes) when no files found
 - JSON format: Returns `null` when no files found
 
@@ -169,6 +178,7 @@ fyaml pack config/ --enable-includes
 **Default:** `false` (disabled)
 
 **Behavior:**
+
 - When enabled, `<<include(path)>>` directives in YAML values are replaced with file contents
 - **The directory passed to `pack` (the pack root) defines the include boundary; includes outside this directory are rejected.**
 - File paths are resolved relative to the YAML file containing the directive
@@ -196,6 +206,7 @@ steps:
 When packed with `--enable-includes`, the `<<include(...)>>` is replaced with the contents of `scripts/deploy.sh` (relative to the YAML file).
 
 **Error Cases:**
+
 - `echo <<include(f)>>` — "entire string must be include statement"
 - `<<include(a)>> <<include(b)>>` — "multiple include statements"
 - Missing file — "could not open path/to/file for inclusion"
