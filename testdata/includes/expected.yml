@@ -1,0 +1,11 @@
+commands:
+    hello:
+        description: A simple command that imports from a file when packed.
+        steps:
+            - run:
+                command: |+
+                    # This is a bash file, but could really be any text-based file
+                    echo "Hello World"
+
+                name: Hello Greeting
+

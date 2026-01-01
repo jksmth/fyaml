@@ -1,0 +1,6 @@
+description: A simple command that imports from a file when packed.
+steps:
+  - run:
+      name: Hello Greeting
+      command: <<include(scripts/hello.sh)>>
+

@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/jksmth/fyaml/internal/filetree"
 )
 
 func TestPack_InvalidYAML(t *testing.T) {
@@ -179,8 +181,8 @@ func TestPack_EmptyDir(t *testing.T) {
 }
 
 func TestPack_EmptySubdirs(t *testing.T) {
-	// Test that directories with only empty subdirectories are valid
-	// This aligns with the spec: directory names become keys
+	// Test that directories with only empty subdirectories (no YAML files) are ignored
+	// Empty directories don't appear in output - only directories with YAML content
 	tmpDir := t.TempDir()
 
 	servicesDir := filepath.Join(tmpDir, "services")
@@ -198,14 +200,14 @@ func TestPack_EmptySubdirs(t *testing.T) {
 		t.Fatalf("pack() error = %v, expected no error for directories with empty subdirs", err)
 	}
 
-	// Should produce YAML with empty map values for the directories
-	if len(result) == 0 {
-		t.Error("pack() returned empty result")
-	}
-	// Result should contain the directory names as keys
+	// Empty directories should not appear in output
 	resultStr := string(result)
-	if !strings.Contains(resultStr, "services") || !strings.Contains(resultStr, "database") {
-		t.Errorf("pack() result missing expected keys. Got: %s", resultStr)
+	if strings.Contains(resultStr, "services") || strings.Contains(resultStr, "database") {
+		t.Errorf("pack() result should not contain empty directory keys. Got: %s", resultStr)
+	}
+	// Result should be empty since there are no YAML files
+	if len(result) != 0 {
+		t.Errorf("pack() should return empty result for directories with no YAML files. Got: %s", resultStr)
 	}
 }
 
@@ -441,6 +443,156 @@ func TestHandleCheck_ReadFileError(t *testing.T) {
 	if !strings.Contains(err.Error(), "failed to read output file") {
 		t.Errorf("handleCheck() error = %v, want error about reading file", err)
 	}
+}
+
+func TestPack_EnableIncludes(t *testing.T) {
+	// Test the --enable-includes extension feature
+	tmpDir := t.TempDir()
+
+	// Create directory structure
+	commandsDir := filepath.Join(tmpDir, "commands")
+	scriptsDir := filepath.Join(commandsDir, "scripts")
+	if err := os.MkdirAll(scriptsDir, 0700); err != nil {
+		t.Fatalf("Failed to create directories: %v", err)
+	}
+
+	// Create a script file to include
+	scriptFile := filepath.Join(scriptsDir, "hello.sh")
+	scriptContent := "#!/bin/bash\necho 'Hello World'"
+	if err := os.WriteFile(scriptFile, []byte(scriptContent), 0600); err != nil {
+		t.Fatalf("Failed to create script file: %v", err)
+	}
+
+	// Create a YAML file with include directive
+	yamlFile := filepath.Join(commandsDir, "hello.yml")
+	yamlContent := `description: A test command
+steps:
+  - run:
+      name: Hello
+      command: <<include(scripts/hello.sh)>>`
+	if err := os.WriteFile(yamlFile, []byte(yamlContent), 0600); err != nil {
+		t.Fatalf("Failed to create YAML file: %v", err)
+	}
+
+	// Test WITHOUT includes enabled - directive should remain as-is
+	filetree.ProcessIncludes = false
+	result, err := pack(tmpDir, "yaml")
+	if err != nil {
+		t.Fatalf("pack() without includes error = %v", err)
+	}
+	resultStr := string(result)
+	if !strings.Contains(resultStr, "<<include(scripts/hello.sh)>>") {
+		t.Error("pack() without --enable-includes should preserve include directive")
+	}
+
+	// Test WITH includes enabled - directive should be replaced
+	filetree.ProcessIncludes = true
+	result, err = pack(tmpDir, "yaml")
+	if err != nil {
+		t.Fatalf("pack() with includes error = %v", err)
+	}
+	resultStr = string(result)
+	if strings.Contains(resultStr, "<<include") {
+		t.Error("pack() with --enable-includes should replace include directive")
+	}
+	if !strings.Contains(resultStr, "echo 'Hello World'") {
+		t.Errorf("pack() with --enable-includes should contain included content. Got:\n%s", resultStr)
+	}
+
+	// Reset for other tests
+	filetree.ProcessIncludes = false
+}
+
+func TestPack_EnableIncludes_ErrorFileNotFound(t *testing.T) {
+	// Test error handling when included file doesn't exist
+	tmpDir := t.TempDir()
+
+	commandsDir := filepath.Join(tmpDir, "commands")
+	if err := os.MkdirAll(commandsDir, 0700); err != nil {
+		t.Fatalf("Failed to create directories: %v", err)
+	}
+
+	// Create a YAML file with include directive pointing to non-existent file
+	yamlFile := filepath.Join(commandsDir, "hello.yml")
+	yamlContent := `command: <<include(nonexistent.sh)>>`
+	if err := os.WriteFile(yamlFile, []byte(yamlContent), 0600); err != nil {
+		t.Fatalf("Failed to create YAML file: %v", err)
+	}
+
+	filetree.ProcessIncludes = true
+	_, err := pack(tmpDir, "yaml")
+	if err == nil {
+		t.Error("pack() expected error for missing include file")
+	}
+	if !strings.Contains(err.Error(), "could not open") {
+		t.Errorf("pack() error = %v, want error containing 'could not open'", err)
+	}
+
+	// Reset for other tests
+	filetree.ProcessIncludes = false
+}
+
+func TestPack_EnableIncludes_RelativePathWithParent(t *testing.T) {
+	// Test that relative paths with ../ work in include directives
+	tmpDir := t.TempDir()
+
+	// Create structure: tmpDir/commands/test.yml and tmpDir/scripts/script.sh
+	commandsDir := filepath.Join(tmpDir, "commands")
+	scriptsDir := filepath.Join(tmpDir, "scripts")
+	if err := os.MkdirAll(commandsDir, 0700); err != nil {
+		t.Fatalf("Failed to create commands directory: %v", err)
+	}
+	if err := os.MkdirAll(scriptsDir, 0700); err != nil {
+		t.Fatalf("Failed to create scripts directory: %v", err)
+	}
+
+	scriptFile := filepath.Join(scriptsDir, "script.sh")
+	scriptContent := "echo 'relative path with ..'"
+	if err := os.WriteFile(scriptFile, []byte(scriptContent), 0600); err != nil {
+		t.Fatalf("Failed to create script: %v", err)
+	}
+
+	// Create YAML with relative path using ../
+	yamlFile := filepath.Join(commandsDir, "test.yml")
+	yamlContent := `command: <<include(../scripts/script.sh)>>`
+	if err := os.WriteFile(yamlFile, []byte(yamlContent), 0600); err != nil {
+		t.Fatalf("Failed to create YAML file: %v", err)
+	}
+
+	filetree.ProcessIncludes = true
+	result, err := pack(tmpDir, "yaml")
+	if err != nil {
+		t.Fatalf("pack() with relative path error = %v", err)
+	}
+
+	resultStr := string(result)
+	if !strings.Contains(resultStr, "echo 'relative path with ..'") {
+		t.Errorf("pack() should contain included content from relative path. Got:\n%s", resultStr)
+	}
+
+	// Reset
+	filetree.ProcessIncludes = false
+}
+
+func TestPack_EnableIncludes_InvalidYAMLWithIncludes(t *testing.T) {
+	// Test that invalid YAML still fails even with includes enabled
+	tmpDir := t.TempDir()
+
+	yamlFile := filepath.Join(tmpDir, "invalid.yml")
+	// Invalid YAML that would fail Unmarshal
+	invalidContent := "key: [unclosed"
+	if err := os.WriteFile(yamlFile, []byte(invalidContent), 0600); err != nil {
+		t.Fatalf("Failed to create file: %v", err)
+	}
+
+	filetree.ProcessIncludes = true
+	_, err := pack(tmpDir, "yaml")
+	if err == nil {
+		t.Error("pack() expected error for invalid YAML even with includes enabled")
+	}
+
+	// Reset
+	filetree.ProcessIncludes = false
 }
 
 func min(a, b int) int {
