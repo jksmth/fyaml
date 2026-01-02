@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/jksmth/fyaml/internal/include"
+	"github.com/jksmth/fyaml/internal/logger"
 	"github.com/mitchellh/mapstructure"
 	"gopkg.in/yaml.v3"
 )
@@ -29,7 +30,16 @@ import (
 // IncludeOptions controls include processing behavior.
 type IncludeOptions struct {
 	Enabled  bool
-	PackRoot string // Absolute path to pack root (confinement boundary)
+	PackRoot string        // Absolute path to pack root (confinement boundary)
+	Logger   logger.Logger // Logger for verbose output (nil-safe: defaults to Nop())
+}
+
+// log returns the logger, defaulting to Nop() if nil.
+func (o *IncludeOptions) log() logger.Logger {
+	if o == nil || o.Logger == nil {
+		return logger.Nop()
+	}
+	return o.Logger
 }
 
 // Node represents a node in the filetree
@@ -207,32 +217,37 @@ func (n *Node) marshalLeaf(opts *IncludeOptions) (interface{}, error) {
 		return content, nil
 	}
 
+	opts.log().Debugf("Processing: %s", n.FullPath)
+
 	buf, err := os.ReadFile(n.FullPath)
 	if err != nil {
-		return content, err
+		return content, fmt.Errorf("failed to read file %s: %w", n.FullPath, err)
 	}
 
 	// If includes are enabled, parse to yaml.Node to allow walking and replacing
 	if opts != nil && opts.Enabled {
 		var node yaml.Node
 		if err := yaml.Unmarshal(buf, &node); err != nil {
-			return content, err
+			return content, fmt.Errorf("failed to parse YAML in %s: %w", n.FullPath, err)
 		}
 
 		// Process include directives relative to the file's directory
 		baseDir := filepath.Dir(n.FullPath)
 		if err := include.InlineIncludes(&node, baseDir, opts.PackRoot); err != nil {
-			return content, err
+			return content, fmt.Errorf("failed to process includes in %s: %w", n.FullPath, err)
 		}
 
 		// Decode the processed node back to interface{}
 		if err := node.Decode(&content); err != nil {
-			return content, err
+			return content, fmt.Errorf("failed to decode YAML node in %s: %w", n.FullPath, err)
 		}
 		return content, nil
 	}
 
 	err = yaml.Unmarshal(buf, &content)
+	if err != nil {
+		return content, fmt.Errorf("failed to parse YAML in %s: %w", n.FullPath, err)
+	}
 	return content, err
 }
 
@@ -278,6 +293,7 @@ func (n *Node) marshalParent(opts *IncludeOptions) (interface{}, error) {
 	for _, child := range n.Children {
 		c, err := child.MarshalYAMLWithOptions(opts)
 		if err != nil {
+			// Error already includes file path from marshalLeaf, just propagate it
 			return nil, err
 		}
 

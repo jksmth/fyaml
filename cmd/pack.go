@@ -11,6 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/jksmth/fyaml/internal/filetree"
+	"github.com/jksmth/fyaml/internal/logger"
 )
 
 var packCmd = &cobra.Command{
@@ -37,8 +38,12 @@ Use --enable-includes to process <<include(file)>> directives.`,
 		check, _ := cmd.Flags().GetBool("check")
 		format, _ := cmd.Flags().GetString("format")
 		enableIncludes, _ := cmd.Flags().GetBool("enable-includes")
+		verbose, _ := cmd.Flags().GetBool("verbose")
 
-		result, err := pack(dir, format, enableIncludes)
+		// Create logger - always writes to stderr to avoid interfering with stdout
+		log := logger.New(os.Stderr, verbose)
+
+		result, err := pack(dir, format, enableIncludes, log)
 		if err != nil {
 			return fmt.Errorf("pack error: %w", err)
 		}
@@ -57,6 +62,7 @@ func init() {
 	packCmd.Flags().Bool("check", false, "Compare generated output to --output, exit non-zero if different")
 	packCmd.Flags().StringP("format", "f", "yaml", "Output format: yaml or json (default: yaml)")
 	packCmd.Flags().Bool("enable-includes", false, "Process <<include(file)>> directives (extension)")
+	packCmd.Flags().BoolP("verbose", "v", false, "Show files being processed (output to stderr)")
 }
 
 // handleCheck compares the generated output with an existing file.
@@ -126,7 +132,13 @@ func writeOutput(output string, result []byte) error {
 
 // pack compiles a directory-structured YAML/JSON tree into a single document.
 // It follows the FYAML specification exactly for YAML, with JSON as an extension.
-func pack(dir string, format string, enableIncludes bool) ([]byte, error) {
+// If log is nil, a no-op logger is used.
+func pack(dir string, format string, enableIncludes bool, log logger.Logger) ([]byte, error) {
+	// Default to no-op logger if not provided
+	if log == nil {
+		log = logger.Nop()
+	}
+
 	// Validate format early
 	if format != "yaml" && format != "json" {
 		return nil, fmt.Errorf("invalid format: %s (must be 'yaml' or 'json')", format)
@@ -138,13 +150,11 @@ func pack(dir string, format string, enableIncludes bool) ([]byte, error) {
 		return nil, fmt.Errorf("failed to resolve directory path: %w", err)
 	}
 
-	// Create include options
-	var opts *filetree.IncludeOptions
-	if enableIncludes {
-		opts = &filetree.IncludeOptions{
-			Enabled:  true,
-			PackRoot: absDir,
-		}
+	// Create include options with logger
+	opts := &filetree.IncludeOptions{
+		Enabled:  enableIncludes,
+		PackRoot: absDir,
+		Logger:   log,
 	}
 
 	// Build the filetree
@@ -155,7 +165,7 @@ func pack(dir string, format string, enableIncludes bool) ([]byte, error) {
 
 	// Handle empty directory
 	if tree == nil {
-		return handleEmptyOutput(dir, format)
+		return handleEmptyOutput(dir, format, log)
 	}
 
 	// Get the marshaled data structure (avoids circular references)
@@ -172,15 +182,15 @@ func pack(dir string, format string, enableIncludes bool) ([]byte, error) {
 
 	// Check if result is effectively empty and handle accordingly
 	if strings.TrimSpace(string(result)) == "null" {
-		return handleEmptyOutput(dir, format)
+		return handleEmptyOutput(dir, format, log)
 	}
 
 	return result, nil
 }
 
 // handleEmptyOutput returns the appropriate empty output for the given format.
-func handleEmptyOutput(dir, format string) ([]byte, error) {
-	fmt.Fprintf(os.Stderr, "warning: no YAML/JSON files found in directory: %s\n", dir)
+func handleEmptyOutput(dir, format string, log logger.Logger) ([]byte, error) {
+	log.Warnf("no YAML/JSON files found in directory: %s", dir)
 	if format == "json" {
 		return []byte("null\n"), nil
 	}
