@@ -20,7 +20,7 @@ func TestPack_InvalidYAML(t *testing.T) {
 	if err != nil && !strings.Contains(err.Error(), "yaml") {
 		t.Errorf("pack() error = %v, want error containing 'yaml'", err)
 	}
-	// Verify error includes file path for better debugging (addresses CircleCI issue #572)
+	// Verify error includes file path for better debugging
 	if err != nil && !strings.Contains(err.Error(), "failed to parse YAML in") {
 		t.Errorf("pack() error = %v, want error to include file path context", err)
 	}

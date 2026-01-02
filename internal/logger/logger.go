@@ -45,11 +45,11 @@ func Nop() Logger {
 // Debugf logs a debug message if verbose is enabled.
 func (l *StdLogger) Debugf(format string, args ...interface{}) {
 	if l.verbose {
-		fmt.Fprintf(l.w, "[DEBUG] "+format+"\n", args...)
+		_, _ = fmt.Fprintf(l.w, "[DEBUG] "+format+"\n", args...)
 	}
 }
 
 // Warnf logs a warning message (always shown).
 func (l *StdLogger) Warnf(format string, args ...interface{}) {
-	fmt.Fprintf(l.w, "[WARN] "+format+"\n", args...)
+	_, _ = fmt.Fprintf(l.w, "[WARN] "+format+"\n", args...)
 }
