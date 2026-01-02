@@ -1,7 +1,19 @@
 package cmd
 
 import (
+	"os"
+
 	"github.com/spf13/cobra"
+
+	"github.com/jksmth/fyaml/internal/logger"
+)
+
+var (
+	// Global flags
+	verbose bool
+
+	// Global logger, initialized in PersistentPreRun
+	log logger.Logger
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -21,6 +33,11 @@ Examples:
   fyaml pack config/ --format json  # Output as JSON
   fyaml pack config/ -o out.yml --check  # Verify output matches file`,
 	Args: cobra.MaximumNArgs(1),
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		// Initialize logger based on global verbose flag
+		// Always writes to stderr to avoid interfering with stdout
+		log = logger.New(os.Stderr, verbose)
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return packCmd.RunE(cmd, args)
 	},
@@ -33,6 +50,10 @@ func Execute() error {
 }
 
 func init() {
+	// Global flags (persistent = available to all subcommands)
+	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false,
+		"Show debug output (applies to all commands)")
+
 	rootCmd.AddCommand(packCmd)
 	rootCmd.AddCommand(versionCmd)
 }

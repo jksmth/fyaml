@@ -2,6 +2,41 @@
 
 Complete reference for all fyaml commands, flags, and options.
 
+## Global Flags
+
+These flags apply to all commands:
+
+### `-v, --verbose`
+
+Show debug output. All verbose output is written to stderr, so it doesn't interfere with piped stdout.
+
+**Usage:**
+```bash
+fyaml -v pack config/
+fyaml --verbose pack config/ -o output.yml
+```
+
+**Default:** `false` (disabled)
+
+**Behavior:**
+
+- When enabled, shows `[DEBUG] Processing: <filepath>` for each YAML/JSON file processed
+- Warnings (e.g., empty directory) are always shown with `[WARN]` prefix, regardless of verbose flag
+- All output goes to stderr, so stdout remains clean for piping
+- Useful for debugging which files are being processed
+
+**Output Example:**
+```bash
+$ fyaml -v pack config/
+[DEBUG] Processing: /path/to/config/services/api.yml
+[DEBUG] Processing: /path/to/config/services/db.yml
+services:
+  api:
+    name: api
+  db:
+    name: db
+```
+
 ## Commands
 
 ### `fyaml pack [DIR]`
@@ -10,7 +45,7 @@ Compile a directory of YAML/JSON files into a single document.
 
 **Synopsis:**
 ```bash
-fyaml pack [DIR] [flags]
+fyaml [global flags] pack [DIR] [flags]
 ```
 
 **Arguments:**
@@ -22,7 +57,8 @@ fyaml pack [DIR] [flags]
 - `-o, --output string` - Write output to file (default: stdout)
 - `--check` - Compare generated output to `--output`, exit non-zero if different
 - `-f, --format string` - Output format: `yaml` or `json` (default: `yaml`)
-- `-v, --verbose` - Show files being processed (output to stderr)
+- `--enable-includes` - Process `<<include(file)>>` directives (extension)
+- `--convert-booleans` - Convert unquoted YAML 1.1 booleans to `true`/`false`
 
 **Examples:**
 ```bash
@@ -40,6 +76,9 @@ fyaml pack config/ --format json -o output.json
 
 # Verify output matches file
 fyaml pack config/ -o output.yml --check
+
+# With verbose output
+fyaml -v pack config/
 ```
 
 **Exit Codes:**
@@ -167,53 +206,6 @@ fyaml pack config/ -f json -o config.json
 - YAML format: Returns empty output (0 bytes) when no files found
 - JSON format: Returns `null` when no files found
 
-### `--verbose`, `-v`
-
-Show verbose output including files being processed. All verbose output is written to stderr, so it doesn't interfere with piped stdout.
-
-**Usage:**
-```bash
-fyaml pack config/ --verbose
-fyaml pack config/ -v
-```
-
-**Default:** `false` (disabled)
-
-**Behavior:**
-
-- When enabled, shows `[DEBUG] Processing: <filepath>` for each YAML/JSON file processed
-- Warnings (e.g., empty directory) are always shown with `[WARN]` prefix, regardless of verbose flag
-- All output goes to stderr, so stdout remains clean for piping
-- Useful for debugging which files are being processed
-
-**Examples:**
-```bash
-# Show processing details
-fyaml pack config/ --verbose
-
-# Verbose output with other flags
-fyaml pack config/ --verbose -o output.yml
-fyaml pack config/ -v --format json
-
-# Pipe output while seeing verbose info
-fyaml pack config/ --verbose 2>&1 | grep DEBUG
-fyaml pack config/ --verbose 2>/dev/null | yq  # Only YAML to stdout
-```
-
-**Output Example:**
-```bash
-$ fyaml pack config/ --verbose
-[DEBUG] Processing: /path/to/config/services/api.yml
-[DEBUG] Processing: /path/to/config/services/db.yml
-services:
-  api:
-    name: api
-  db:
-    name: db
-```
-
-**Note:** Without `--verbose`, only warnings are shown. Debug output is completely silent.
-
 ### `--enable-includes`
 
 Enable processing of `<<include(file)>>` directives. This is an extension to the FYAML specification.
@@ -261,6 +253,65 @@ When packed with `--enable-includes`, the `<<include(...)>>` is replaced with th
 - Path escapes pack root — "include path escapes pack root"
 
 **Note:** Without this flag, include directives are passed through unchanged. This preserves backward compatibility and keeps the default behavior spec-compliant.
+
+### `--convert-booleans`
+
+Convert `on`/`off` and `yes`/`no` values to `true`/`false` booleans.
+
+**Usage:**
+```bash
+fyaml pack config/ --convert-booleans
+```
+
+**Default:** `false` (disabled)
+
+**When to use:**
+
+If your YAML files use `on`/`off` or `yes`/`no` for boolean values, they'll be treated as strings by default. Use this flag to convert them to actual boolean values.
+
+**Behavior:**
+- Unquoted values (`on`, `off`, `yes`, `no`, `y`, `n`, etc.) are converted to `true`/`false`
+- Quoted strings (`"on"`, `'yes'`) are preserved as strings
+- Non-boolean strings are unchanged
+
+**Conversions:**
+
+| Input | Output |
+|-------|--------|
+| `on`, `On`, `ON` | `true` |
+| `off`, `Off`, `OFF` | `false` |
+| `yes`, `Yes`, `YES` | `true` |
+| `no`, `No`, `NO` | `false` |
+| `y`, `Y` | `true` |
+| `n`, `N` | `false` |
+
+**Examples:**
+```bash
+# Convert on/off to true/false
+fyaml pack config/ --convert-booleans
+
+# Combine with other flags
+fyaml pack config/ --convert-booleans --enable-includes
+fyaml pack config/ --convert-booleans -o output.yml
+```
+
+**Example transformation:**
+
+Input (`config/settings.yml`):
+```yaml
+enabled: on
+debug: off
+name: "on_call_service"
+```
+
+Output with `--convert-booleans`:
+```yaml
+debug: false
+enabled: true
+name: on_call_service
+```
+
+**Note:** fyaml always outputs YAML 1.2 format where only `true` and `false` are booleans. For more details and examples, see the [Usage Guide](usage.md).
 
 ## Exit Codes
 

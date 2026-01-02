@@ -469,6 +469,79 @@ config/
   cache.yml       # Contains the cache config
 ```
 
+### Converting `on`/`off` and `yes`/`no` to `true`/`false`
+
+If your YAML files use `on`/`off` or `yes`/`no` for boolean values, fyaml will treat them as strings by default. This can cause issues if your tools expect actual boolean values.
+
+**The Problem:**
+
+If your source file contains:
+```yaml
+parameters:
+  enabled:
+    type: boolean
+    default: on
+```
+
+The output will be:
+```yaml
+parameters:
+    enabled:
+        default: "on"  # String, not boolean
+        type: boolean
+```
+
+This can cause validation errors or unexpected behavior in tools that expect boolean values.
+
+**The Solution:**
+
+Use the `--convert-booleans` flag to automatically convert these values:
+
+```bash
+fyaml pack config/ --convert-booleans
+```
+
+Now the output will be:
+```yaml
+parameters:
+    enabled:
+        default: true  # Boolean, not string
+        type: boolean
+```
+
+**What Gets Converted:**
+
+The flag converts unquoted values to booleans:
+
+| Input | Output (with `--convert-booleans`) |
+|-------|-----------------------------------|
+| `enabled: on` | `enabled: true` |
+| `enabled: off` | `enabled: false` |
+| `enabled: yes` | `enabled: true` |
+| `enabled: no` | `enabled: false` |
+| `enabled: y` | `enabled: true` |
+| `enabled: n` | `enabled: false` |
+
+**Important:** Quoted values are preserved as strings. If you want a value to remain a string, quote it:
+
+| Input | Output |
+|-------|--------|
+| `enabled: "on"` | `enabled: "on"` (string) |
+| `name: on_call` | `name: on_call` (string) |
+
+**Best Practice:**
+
+For new files, use `true`/`false` directly in your source files. This avoids the need for the conversion flag:
+
+```yaml
+parameters:
+  enabled:
+    type: boolean
+    default: true  # Recommended: use true/false directly
+```
+
+**Technical Note:** fyaml outputs YAML 1.2 format, which only recognizes `true`/`false` as booleans. Values like `on`/`off` and `yes`/`no` were valid booleans in YAML 1.1 but are treated as strings in YAML 1.2. The `--convert-booleans` flag converts these legacy values to their YAML 1.2 equivalents.
+
 ### Large Files
 
 fyaml processes files in memory. For very large files (hundreds of MB), this could consume significant memory. However, for typical configuration files (KB to low MB range), performance is excellent. Keep individual files focused and reasonably sized.

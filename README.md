@@ -182,6 +182,9 @@ fyaml pack /path/to/config --format json -o output.json
 
 # Check if output matches existing file
 fyaml pack /path/to/config -o output.yml --check
+
+# Verbose output (show files being processed)
+fyaml -v pack /path/to/config
 ```
 
 ### Examples
@@ -474,12 +477,24 @@ commands:
 
 **Note:** This feature is adapted from CircleCI's orb pack command. Without `--enable-includes`, directives are passed through unchanged.
 
-### Verbose Output
+### Boolean Conversion
 
-Use the `--verbose` (or `-v`) flag to see which files are being processed:
+Use the `--convert-booleans` flag to convert `on`/`off` and `yes`/`no` values to `true`/`false` booleans:
 
 ```bash
-fyaml pack config/ --verbose
+fyaml pack config/ --convert-booleans
+```
+
+This is useful when your source files use YAML 1.1-style boolean values (`on`, `off`, `yes`, `no`) but your tools expect YAML 1.2 booleans (`true`, `false`). Quoted values like `"on"` remain as strings.
+
+For more details, see the [Usage Guide](https://jksmth.github.io/fyaml/usage/).
+
+### Verbose Output
+
+Use the `-v` (or `--verbose`) global flag to see which files are being processed:
+
+```bash
+fyaml -v pack config/
 ```
 
 **Behavior:**
@@ -491,7 +506,7 @@ fyaml pack config/ --verbose
 
 **Example:**
 ```bash
-$ fyaml pack config/ --verbose
+$ fyaml -v pack config/
 [DEBUG] Processing: /path/to/config/services/api.yml
 [DEBUG] Processing: /path/to/config/services/db.yml
 services:
@@ -504,10 +519,10 @@ services:
 **Piping:** Since verbose output goes to stderr, you can still pipe YAML output:
 ```bash
 # Only YAML to stdout (verbose to stderr)
-fyaml pack config/ --verbose 2>/dev/null | yq
+fyaml -v pack config/ 2>/dev/null | yq
 
 # Capture verbose output
-fyaml pack config/ --verbose 2>&1 | grep DEBUG
+fyaml -v pack config/ 2>&1 | grep DEBUG
 ```
 
 ## License
