@@ -743,3 +743,169 @@ script: <<include(scripts/test.sh)>>`
 		t.Errorf("pack() should include script content. Got:\n%s", resultStr)
 	}
 }
+
+func TestPack_ConvertBooleans_AllVariants(t *testing.T) {
+	// Test all boolean variants (y, Y, yes, Yes, YES, on, On, ON, n, N, no, No, NO, off, Off, OFF)
+	tmpDir := t.TempDir()
+
+	yamlFile := filepath.Join(tmpDir, "config.yml")
+	yamlContent := `true_values:
+  y: y
+  Y: Y
+  yes: yes
+  Yes: Yes
+  YES: YES
+  on: on
+  On: On
+  ON: ON
+false_values:
+  n: n
+  N: N
+  no: no
+  No: No
+  NO: NO
+  off: off
+  Off: Off
+  OFF: OFF`
+	if err := os.WriteFile(yamlFile, []byte(yamlContent), 0600); err != nil {
+		t.Fatalf("Failed to create YAML file: %v", err)
+	}
+
+	result, err := pack(testOpts(tmpDir, "yaml", false, true), nil)
+	if err != nil {
+		t.Fatalf("pack() error = %v", err)
+	}
+	resultStr := string(result)
+
+	// All true variants should become true
+	trueVariants := []string{"y: true", "Y: true", "yes: true", "Yes: true", "YES: true", "on: true", "On: true", "ON: true"}
+	for _, variant := range trueVariants {
+		if !strings.Contains(resultStr, variant) {
+			t.Errorf("pack() should convert %q to true. Got:\n%s", variant, resultStr)
+		}
+	}
+
+	// All false variants should become false
+	falseVariants := []string{"n: false", "N: false", "no: false", "No: false", "NO: false", "off: false", "Off: false", "OFF: false"}
+	for _, variant := range falseVariants {
+		if !strings.Contains(resultStr, variant) {
+			t.Errorf("pack() should convert %q to false. Got:\n%s", variant, resultStr)
+		}
+	}
+}
+
+func TestPack_ConvertBooleans_AlreadyBoolean(t *testing.T) {
+	// Test that already-boolean values (true/false) are not double-converted
+	tmpDir := t.TempDir()
+
+	yamlFile := filepath.Join(tmpDir, "config.yml")
+	yamlContent := `enabled: true
+disabled: false`
+	if err := os.WriteFile(yamlFile, []byte(yamlContent), 0600); err != nil {
+		t.Fatalf("Failed to create YAML file: %v", err)
+	}
+
+	result, err := pack(testOpts(tmpDir, "yaml", false, true), nil)
+	if err != nil {
+		t.Fatalf("pack() error = %v", err)
+	}
+	resultStr := string(result)
+
+	// Already boolean values should remain as booleans
+	if !strings.Contains(resultStr, "enabled: true") {
+		t.Errorf("pack() should preserve already-boolean true. Got:\n%s", resultStr)
+	}
+	if !strings.Contains(resultStr, "disabled: false") {
+		t.Errorf("pack() should preserve already-boolean false. Got:\n%s", resultStr)
+	}
+}
+
+func TestPack_ConvertBooleans_DeeplyNested(t *testing.T) {
+	// Test convert-booleans in deeply nested structures
+	tmpDir := t.TempDir()
+
+	subDir := filepath.Join(tmpDir, "level1", "level2", "level3")
+	if err := os.MkdirAll(subDir, 0700); err != nil {
+		t.Fatalf("Failed to create nested directories: %v", err)
+	}
+
+	yamlFile := filepath.Join(subDir, "config.yml")
+	yamlContent := `enabled: on
+settings:
+  debug: off
+  nested:
+    verbose: yes
+    quiet: no`
+	if err := os.WriteFile(yamlFile, []byte(yamlContent), 0600); err != nil {
+		t.Fatalf("Failed to create YAML file: %v", err)
+	}
+
+	result, err := pack(testOpts(tmpDir, "yaml", false, true), nil)
+	if err != nil {
+		t.Fatalf("pack() error = %v", err)
+	}
+	resultStr := string(result)
+
+	// All nested boolean values should be converted
+	if !strings.Contains(resultStr, "enabled: true") {
+		t.Errorf("pack() should convert nested 'on' to true. Got:\n%s", resultStr)
+	}
+	if !strings.Contains(resultStr, "debug: false") {
+		t.Errorf("pack() should convert nested 'off' to false. Got:\n%s", resultStr)
+	}
+	if !strings.Contains(resultStr, "verbose: true") {
+		t.Errorf("pack() should convert nested 'yes' to true. Got:\n%s", resultStr)
+	}
+	if !strings.Contains(resultStr, "quiet: false") {
+		t.Errorf("pack() should convert nested 'no' to false. Got:\n%s", resultStr)
+	}
+}
+
+func TestPack_WithNilLogger(t *testing.T) {
+	// Test that pack() works correctly with nil logger (should use Nop logger)
+	tmpDir := t.TempDir()
+
+	yamlFile := filepath.Join(tmpDir, "test.yml")
+	if err := os.WriteFile(yamlFile, []byte("key: value"), 0600); err != nil {
+		t.Fatalf("Failed to create YAML file: %v", err)
+	}
+
+	// Should not panic with nil logger
+	result, err := pack(testOpts(tmpDir, "yaml", false, false), nil)
+	if err != nil {
+		t.Fatalf("pack() with nil logger error = %v", err)
+	}
+	if len(result) == 0 {
+		t.Error("pack() should return result even with nil logger")
+	}
+}
+
+func TestPack_WithLogger_VerboseOutput(t *testing.T) {
+	// Test that pack() uses the provided logger for verbose output
+	tmpDir := t.TempDir()
+
+	yamlFile := filepath.Join(tmpDir, "test.yml")
+	if err := os.WriteFile(yamlFile, []byte("key: value"), 0600); err != nil {
+		t.Fatalf("Failed to create YAML file: %v", err)
+	}
+
+	var buf bytes.Buffer
+	testLogger := logger.New(&buf, true) // verbose enabled
+
+	result, err := pack(testOpts(tmpDir, "yaml", false, false), testLogger)
+	if err != nil {
+		t.Fatalf("pack() error = %v", err)
+	}
+	if len(result) == 0 {
+		t.Error("pack() should return result")
+	}
+
+	// Logger should have been used
+	output := buf.String()
+	if !strings.Contains(output, "[DEBUG] Processing:") {
+		t.Errorf("pack() should log processing messages, got: %s", output)
+	}
+	if !strings.Contains(output, "test.yml") {
+		t.Errorf("pack() should log file paths, got: %s", output)
+	}
+}

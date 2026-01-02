@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jksmth/fyaml/internal/logger"
 	"go.yaml.in/yaml/v4"
 )
 
@@ -767,5 +768,54 @@ func TestMarshalParent_WithEmptyMaps(t *testing.T) {
 	// Directory with content should appear
 	if _, ok := resultMap["has_content"]; !ok {
 		t.Error("MarshalYAML() should contain 'has_content' key")
+	}
+}
+
+func TestOptions_Log_NilOptions(t *testing.T) {
+	// Test that Options.log() returns Nop logger when options is nil
+	var opts *Options
+	log := opts.log()
+	if log == nil {
+		t.Error("Options.log() should return a logger, not nil")
+	}
+	// Should be a NoOpLogger
+	log.Debugf("test") // Should not panic
+	log.Warnf("test")  // Should not panic
+}
+
+func TestOptions_Log_NilLogger(t *testing.T) {
+	// Test that Options.log() returns Nop logger when Logger is nil
+	opts := &Options{
+		EnableIncludes:  false,
+		PackRoot:        "/tmp",
+		ConvertBooleans: false,
+		Logger:          nil,
+	}
+	log := opts.log()
+	if log == nil {
+		t.Error("Options.log() should return a logger, not nil")
+	}
+	// Should be a NoOpLogger
+	log.Debugf("test") // Should not panic
+	log.Warnf("test")  // Should not panic
+}
+
+func TestOptions_Log_WithLogger(t *testing.T) {
+	// Test that Options.log() returns the configured logger
+	var buf strings.Builder
+	testLogger := logger.New(&buf, true)
+	opts := &Options{
+		EnableIncludes:  false,
+		PackRoot:        "/tmp",
+		ConvertBooleans: false,
+		Logger:          testLogger,
+	}
+	log := opts.log()
+	if log != testLogger {
+		t.Error("Options.log() should return the configured logger")
+	}
+	log.Debugf("test message")
+	if !strings.Contains(buf.String(), "test message") {
+		t.Error("Options.log() should return the configured logger that actually logs")
 	}
 }
