@@ -474,6 +474,42 @@ commands:
 
 **Note:** This feature is adapted from CircleCI's orb pack command. Without `--enable-includes`, directives are passed through unchanged.
 
+### Verbose Output
+
+Use the `--verbose` (or `-v`) flag to see which files are being processed:
+
+```bash
+fyaml pack config/ --verbose
+```
+
+**Behavior:**
+
+- Shows `[DEBUG] Processing: <filepath>` for each YAML/JSON file processed
+- Warnings (e.g., empty directory) are always shown with `[WARN]` prefix
+- All verbose output goes to stderr, so stdout remains clean for piping
+- Useful for debugging which files are being processed
+
+**Example:**
+```bash
+$ fyaml pack config/ --verbose
+[DEBUG] Processing: /path/to/config/services/api.yml
+[DEBUG] Processing: /path/to/config/services/db.yml
+services:
+  api:
+    name: api
+  db:
+    name: db
+```
+
+**Piping:** Since verbose output goes to stderr, you can still pipe YAML output:
+```bash
+# Only YAML to stdout (verbose to stderr)
+fyaml pack config/ --verbose 2>/dev/null | yq
+
+# Capture verbose output
+fyaml pack config/ --verbose 2>&1 | grep DEBUG
+```
+
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.

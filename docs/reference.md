@@ -22,6 +22,7 @@ fyaml pack [DIR] [flags]
 - `-o, --output string` - Write output to file (default: stdout)
 - `--check` - Compare generated output to `--output`, exit non-zero if different
 - `-f, --format string` - Output format: `yaml` or `json` (default: `yaml`)
+- `-v, --verbose` - Show files being processed (output to stderr)
 
 **Examples:**
 ```bash
@@ -165,6 +166,53 @@ fyaml pack config/ -f json -o config.json
 
 - YAML format: Returns empty output (0 bytes) when no files found
 - JSON format: Returns `null` when no files found
+
+### `--verbose`, `-v`
+
+Show verbose output including files being processed. All verbose output is written to stderr, so it doesn't interfere with piped stdout.
+
+**Usage:**
+```bash
+fyaml pack config/ --verbose
+fyaml pack config/ -v
+```
+
+**Default:** `false` (disabled)
+
+**Behavior:**
+
+- When enabled, shows `[DEBUG] Processing: <filepath>` for each YAML/JSON file processed
+- Warnings (e.g., empty directory) are always shown with `[WARN]` prefix, regardless of verbose flag
+- All output goes to stderr, so stdout remains clean for piping
+- Useful for debugging which files are being processed
+
+**Examples:**
+```bash
+# Show processing details
+fyaml pack config/ --verbose
+
+# Verbose output with other flags
+fyaml pack config/ --verbose -o output.yml
+fyaml pack config/ -v --format json
+
+# Pipe output while seeing verbose info
+fyaml pack config/ --verbose 2>&1 | grep DEBUG
+fyaml pack config/ --verbose 2>/dev/null | yq  # Only YAML to stdout
+```
+
+**Output Example:**
+```bash
+$ fyaml pack config/ --verbose
+[DEBUG] Processing: /path/to/config/services/api.yml
+[DEBUG] Processing: /path/to/config/services/db.yml
+services:
+  api:
+    name: api
+  db:
+    name: db
+```
+
+**Note:** Without `--verbose`, only warnings are shown. Debug output is completely silent.
 
 ### `--enable-includes`
 
