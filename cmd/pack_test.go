@@ -749,24 +749,25 @@ func TestPack_ConvertBooleans_AllVariants(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	yamlFile := filepath.Join(tmpDir, "config.yml")
+	// Use unique keys for each variant to avoid duplicate key errors after conversion
 	yamlContent := `true_values:
-  y: y
-  Y: Y
-  yes: yes
-  Yes: Yes
-  YES: YES
-  on: on
-  On: On
-  ON: ON
+  val_y: y
+  val_Y: Y
+  val_yes: yes
+  val_Yes: Yes
+  val_YES: YES
+  val_on: on
+  val_On: On
+  val_ON: ON
 false_values:
-  n: n
-  N: N
-  no: no
-  No: No
-  NO: NO
-  off: off
-  Off: Off
-  OFF: OFF`
+  val_n: n
+  val_N: N
+  val_no: no
+  val_No: No
+  val_NO: NO
+  val_off: off
+  val_Off: Off
+  val_OFF: OFF`
 	if err := os.WriteFile(yamlFile, []byte(yamlContent), 0600); err != nil {
 		t.Fatalf("Failed to create YAML file: %v", err)
 	}
@@ -778,7 +779,7 @@ false_values:
 	resultStr := string(result)
 
 	// All true variants should become true
-	trueVariants := []string{"y: true", "Y: true", "yes: true", "Yes: true", "YES: true", "on: true", "On: true", "ON: true"}
+	trueVariants := []string{"val_y: true", "val_Y: true", "val_yes: true", "val_Yes: true", "val_YES: true", "val_on: true", "val_On: true", "val_ON: true"}
 	for _, variant := range trueVariants {
 		if !strings.Contains(resultStr, variant) {
 			t.Errorf("pack() should convert %q to true. Got:\n%s", variant, resultStr)
@@ -786,7 +787,7 @@ false_values:
 	}
 
 	// All false variants should become false
-	falseVariants := []string{"n: false", "N: false", "no: false", "No: false", "NO: false", "off: false", "Off: false", "OFF: false"}
+	falseVariants := []string{"val_n: false", "val_N: false", "val_no: false", "val_No: false", "val_NO: false", "val_off: false", "val_Off: false", "val_OFF: false"}
 	for _, variant := range falseVariants {
 		if !strings.Contains(resultStr, variant) {
 			t.Errorf("pack() should convert %q to false. Got:\n%s", variant, resultStr)
