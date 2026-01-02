@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/jksmth/fyaml/compare/v1.3.0...v1.4.0) (2026-01-02)
+
+
+### Features
+
+* add --convert-booleans flag and improve CLI organization ([#37](https://github.com/jksmth/fyaml/issues/37)) ([c0c14b5](https://github.com/jksmth/fyaml/commit/c0c14b58a508d505e1b31856df5788770c408f30))
+
 ## [1.3.0](https://github.com/jksmth/fyaml/compare/v1.2.0...v1.3.0) (2026-01-02)
 
 
