@@ -126,10 +126,14 @@ func TestMarshalYAML_InvalidYAML(t *testing.T) {
 		return
 	}
 
-	// Verify the error message indicates a YAML parsing issue
+	// Verify the error message indicates a YAML parsing issue and includes file path
 	// The exact message may vary by YAML library version, but should contain "yaml"
 	if !strings.Contains(err.Error(), "yaml") {
 		t.Errorf("yaml.Marshal() error = %v, expected YAML parsing error", err)
+	}
+	// Verify the error includes the file path for better debugging
+	if !strings.Contains(err.Error(), anotherDirFile) {
+		t.Errorf("yaml.Marshal() error = %v, expected error to include file path %s", err, anotherDirFile)
 	}
 }
 
