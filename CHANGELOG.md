@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/jksmth/fyaml/compare/v1.2.0...v1.3.0) (2026-01-02)
+
+
+### Features
+
+* add verbose logging with shared logger package ([#34](https://github.com/jksmth/fyaml/issues/34)) ([8428688](https://github.com/jksmth/fyaml/commit/842868805ebdfef82b7fddc14f70c9f272555d21))
+
 ## [1.2.0](https://github.com/jksmth/fyaml/compare/v1.1.0...v1.2.0) (2026-01-01)
 
 
