@@ -6,7 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"gopkg.in/yaml.v3"
+	"github.com/jksmth/fyaml/internal/logger"
+	"go.yaml.in/yaml/v4"
 )
 
 func TestNewTree(t *testing.T) {
@@ -28,7 +29,7 @@ func TestNewTree(t *testing.T) {
 		t.Fatalf("Failed to create empty directory: %v", err)
 	}
 
-	tree, err := NewTree(tmpDir, nil)
+	tree, err := NewTree(tmpDir)
 	if err != nil {
 		t.Fatalf("NewTree() error = %v", err)
 	}
@@ -64,7 +65,7 @@ func TestMarshalYAML_RendersToYAML(t *testing.T) {
 		t.Fatalf("Failed to create empty directory: %v", err)
 	}
 
-	tree, err := NewTree(tmpDir, nil)
+	tree, err := NewTree(tmpDir)
 	if err != nil {
 		t.Fatalf("NewTree() error = %v", err)
 	}
@@ -114,7 +115,7 @@ func TestMarshalYAML_InvalidYAML(t *testing.T) {
 	}
 
 	// NewTree should succeed - it doesn't validate YAML content
-	tree, err := NewTree(tmpDir, nil)
+	tree, err := NewTree(tmpDir)
 	if err != nil {
 		t.Fatalf("NewTree() error = %v, expected no error", err)
 	}
@@ -127,13 +128,58 @@ func TestMarshalYAML_InvalidYAML(t *testing.T) {
 	}
 
 	// Verify the error message indicates a YAML parsing issue and includes file path
-	// The exact message may vary by YAML library version, but should contain "yaml"
-	if !strings.Contains(err.Error(), "yaml") {
+	// The exact message may vary by YAML library version, but should contain "yaml" or "YAML"
+	errStr := strings.ToLower(err.Error())
+	if !strings.Contains(errStr, "yaml") {
 		t.Errorf("yaml.Marshal() error = %v, expected YAML parsing error", err)
 	}
 	// Verify the error includes the file path for better debugging
 	if !strings.Contains(err.Error(), anotherDirFile) {
 		t.Errorf("yaml.Marshal() error = %v, expected error to include file path %s", err, anotherDirFile)
+	}
+
+	// Verify the error includes position information (line:column) if available
+	// New error format should include position like "YAML syntax error in file:line:column"
+	if strings.Contains(err.Error(), "YAML syntax error in") {
+		// Should have line:column format (e.g., ":0:9:")
+		if !strings.Contains(err.Error(), ":") {
+			t.Error("yaml.Marshal() error should include position information (line:column)")
+		}
+	}
+}
+
+func TestFormatYAMLError_ParserError(t *testing.T) {
+	// Test that formatYAMLError properly formats ParserError with position info
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "test.yml")
+
+	// Create invalid YAML that will trigger a ParserError
+	invalidYAML := "key: [unclosed"
+	if err := os.WriteFile(testFile, []byte(invalidYAML), 0600); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	tree, err := NewTree(tmpDir)
+	if err != nil {
+		t.Fatalf("NewTree() error = %v", err)
+	}
+
+	_, err = yaml.Marshal(tree)
+	if err == nil {
+		t.Fatal("Expected error for invalid YAML")
+	}
+
+	// Verify error message format includes position
+	errStr := err.Error()
+	if !strings.Contains(errStr, "YAML syntax error in") {
+		t.Errorf("Expected 'YAML syntax error in' in error message, got: %s", errStr)
+	}
+	if !strings.Contains(errStr, testFile) {
+		t.Errorf("Expected file path in error message, got: %s", errStr)
+	}
+	// Should have line:column format
+	if !strings.Contains(errStr, ":") {
+		t.Errorf("Expected position information (line:column) in error message, got: %s", errStr)
 	}
 }
 
@@ -151,7 +197,7 @@ func TestNewTree_JSONFiles(t *testing.T) {
 		t.Fatalf("Failed to create JSON file: %v", err)
 	}
 
-	tree, err := NewTree(tmpDir, nil)
+	tree, err := NewTree(tmpDir)
 	if err != nil {
 		t.Fatalf("NewTree() error = %v", err)
 	}
@@ -210,7 +256,7 @@ func TestNewTree_JSONSpecialCase(t *testing.T) {
 		t.Fatalf("Failed to create api.yml file: %v", err)
 	}
 
-	tree, err := NewTree(tmpDir, nil)
+	tree, err := NewTree(tmpDir)
 	if err != nil {
 		t.Fatalf("NewTree() error = %v", err)
 	}
@@ -243,7 +289,7 @@ func TestNewTree_JSONSpecialCase(t *testing.T) {
 }
 
 func TestMarshalLeaf_WithIncludes(t *testing.T) {
-	// Test marshalLeaf with ProcessIncludes enabled
+	// Test marshalLeaf with EnableIncludes enabled
 	tmpDir := t.TempDir()
 
 	commandsDir := filepath.Join(tmpDir, "commands")
@@ -271,12 +317,12 @@ func TestMarshalLeaf_WithIncludes(t *testing.T) {
 		t.Fatalf("Failed to get absolute path: %v", err)
 	}
 
-	opts := &IncludeOptions{
-		Enabled:  true,
-		PackRoot: absDir,
+	opts := &Options{
+		EnableIncludes: true,
+		PackRoot:       absDir,
 	}
 
-	tree, err := NewTree(tmpDir, opts)
+	tree, err := NewTree(tmpDir)
 	if err != nil {
 		t.Fatalf("NewTree() error = %v", err)
 	}
@@ -338,12 +384,12 @@ func TestMarshalLeaf_WithIncludes_ErrorCases(t *testing.T) {
 		t.Fatalf("Failed to get absolute path: %v", err)
 	}
 
-	opts := &IncludeOptions{
-		Enabled:  true,
-		PackRoot: absDir,
+	opts := &Options{
+		EnableIncludes: true,
+		PackRoot:       absDir,
 	}
 
-	tree, err := NewTree(tmpDir, opts)
+	tree, err := NewTree(tmpDir)
 	if err != nil {
 		t.Fatalf("NewTree() error = %v", err)
 	}
@@ -367,7 +413,7 @@ func TestMarshalLeaf_FileReadError(t *testing.T) {
 		t.Fatalf("Failed to create file: %v", err)
 	}
 
-	tree, err := NewTree(tmpDir, nil)
+	tree, err := NewTree(tmpDir)
 	if err != nil {
 		t.Fatalf("NewTree() error = %v", err)
 	}
@@ -413,6 +459,266 @@ func TestIsEmptyContent(t *testing.T) {
 	}
 }
 
+func TestNormalizeYAML11Booleans(t *testing.T) {
+	// Test that normalizeYAML11Booleans correctly converts YAML 1.1 booleans
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+		wantBool bool // true if the value should become a bool, false if string
+	}{
+		// Unquoted YAML 1.1 booleans should be normalized
+		{"unquoted on", "value: on", "true", true},
+		{"unquoted off", "value: off", "false", true},
+		{"unquoted yes", "value: yes", "true", true},
+		{"unquoted no", "value: no", "false", true},
+		{"unquoted y", "value: y", "true", true},
+		{"unquoted n", "value: n", "false", true},
+		{"unquoted Y", "value: Y", "true", true},
+		{"unquoted N", "value: N", "false", true},
+		{"unquoted Yes", "value: Yes", "true", true},
+		{"unquoted No", "value: No", "false", true},
+		{"unquoted ON", "value: ON", "true", true},
+		{"unquoted OFF", "value: OFF", "false", true},
+		{"unquoted On", "value: On", "true", true},
+		{"unquoted Off", "value: Off", "false", true},
+		{"unquoted YES", "value: YES", "true", true},
+		{"unquoted NO", "value: NO", "false", true},
+		// Quoted strings should NOT be normalized
+		{"double-quoted on", `value: "on"`, "on", false},
+		{"double-quoted yes", `value: "yes"`, "yes", false},
+		{"single-quoted on", "value: 'on'", "on", false},
+		{"single-quoted yes", "value: 'yes'", "yes", false},
+		// Already canonical booleans should remain unchanged
+		{"unquoted true", "value: true", "true", true},
+		{"unquoted false", "value: false", "false", true},
+		// Non-boolean strings should not be affected
+		{"unquoted norway", "value: norway", "norway", false},
+		{"unquoted yesss", "value: yesss", "yesss", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var node yaml.Node
+			if err := yaml.Unmarshal([]byte(tt.input), &node); err != nil {
+				t.Fatalf("Failed to parse YAML: %v", err)
+			}
+
+			normalizeYAML11Booleans(&node)
+
+			var result map[string]interface{}
+			if err := node.Decode(&result); err != nil {
+				t.Fatalf("Failed to decode node: %v", err)
+			}
+
+			val := result["value"]
+			if tt.wantBool {
+				boolVal, ok := val.(bool)
+				if !ok {
+					t.Errorf("Expected bool, got %T: %v", val, val)
+					return
+				}
+				expectedBool := tt.expected == "true"
+				if boolVal != expectedBool {
+					t.Errorf("Got %v, want %v", boolVal, expectedBool)
+				}
+			} else {
+				strVal, ok := val.(string)
+				if !ok {
+					t.Errorf("Expected string, got %T: %v", val, val)
+					return
+				}
+				if strVal != tt.expected {
+					t.Errorf("Got %q, want %q", strVal, tt.expected)
+				}
+			}
+		})
+	}
+}
+
+func TestNormalizeYAML11Booleans_Nested(t *testing.T) {
+	// Test that normalization works recursively in nested structures
+	input := `
+config:
+  enabled: on
+  debug: off
+  settings:
+    verbose: yes
+    quiet: "no"
+  items:
+    - active: on
+    - active: "off"
+`
+	var node yaml.Node
+	if err := yaml.Unmarshal([]byte(input), &node); err != nil {
+		t.Fatalf("Failed to parse YAML: %v", err)
+	}
+
+	normalizeYAML11Booleans(&node)
+
+	var result map[string]interface{}
+	if err := node.Decode(&result); err != nil {
+		t.Fatalf("Failed to decode node: %v", err)
+	}
+
+	config := result["config"].(map[string]interface{})
+
+	// Unquoted should be normalized
+	if enabled, ok := config["enabled"].(bool); !ok || !enabled {
+		t.Errorf("enabled should be bool true, got %T: %v", config["enabled"], config["enabled"])
+	}
+	if debug, ok := config["debug"].(bool); !ok || debug {
+		t.Errorf("debug should be bool false, got %T: %v", config["debug"], config["debug"])
+	}
+
+	settings := config["settings"].(map[string]interface{})
+	if verbose, ok := settings["verbose"].(bool); !ok || !verbose {
+		t.Errorf("verbose should be bool true, got %T: %v", settings["verbose"], settings["verbose"])
+	}
+	// Quoted should remain string
+	if quiet, ok := settings["quiet"].(string); !ok || quiet != "no" {
+		t.Errorf("quiet should be string 'no', got %T: %v", settings["quiet"], settings["quiet"])
+	}
+
+	items := config["items"].([]interface{})
+	item0 := items[0].(map[string]interface{})
+	if active, ok := item0["active"].(bool); !ok || !active {
+		t.Errorf("items[0].active should be bool true, got %T: %v", item0["active"], item0["active"])
+	}
+	item1 := items[1].(map[string]interface{})
+	// Quoted should remain string
+	if active, ok := item1["active"].(string); !ok || active != "off" {
+		t.Errorf("items[1].active should be string 'off', got %T: %v", item1["active"], item1["active"])
+	}
+}
+
+func TestMarshalLeaf_WithConvertBooleans(t *testing.T) {
+	// Test that the ConvertBooleans option works in marshalLeaf
+	tmpDir := t.TempDir()
+
+	// Create a subdirectory so the file becomes a nested key
+	configDir := filepath.Join(tmpDir, "config")
+	if err := os.MkdirAll(configDir, 0700); err != nil {
+		t.Fatalf("Failed to create config directory: %v", err)
+	}
+
+	yamlFile := filepath.Join(configDir, "test.yml")
+	yamlContent := `enabled: on
+disabled: "off"
+name: on_call_service`
+	if err := os.WriteFile(yamlFile, []byte(yamlContent), 0600); err != nil {
+		t.Fatalf("Failed to create YAML file: %v", err)
+	}
+
+	absDir, err := filepath.Abs(tmpDir)
+	if err != nil {
+		t.Fatalf("Failed to get absolute path: %v", err)
+	}
+
+	// Test with conversion enabled
+	opts := &Options{
+		EnableIncludes:  false,
+		PackRoot:        absDir,
+		ConvertBooleans: true,
+	}
+
+	tree, err := NewTree(tmpDir)
+	if err != nil {
+		t.Fatalf("NewTree() error = %v", err)
+	}
+
+	result, err := tree.Marshal(opts)
+	if err != nil {
+		t.Fatalf("Marshal() error = %v", err)
+	}
+
+	resultMap, ok := result.(map[string]interface{})
+	if !ok {
+		t.Fatalf("Expected map[string]interface{}, got %T", result)
+	}
+	configMap, ok := resultMap["config"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("Expected config to be map[string]interface{}, got %T", resultMap["config"])
+	}
+	testMap, ok := configMap["test"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("Expected test to be map[string]interface{}, got %T", configMap["test"])
+	}
+
+	// Unquoted 'on' should be normalized to bool true
+	if enabled, ok := testMap["enabled"].(bool); !ok || !enabled {
+		t.Errorf("enabled should be bool true, got %T: %v", testMap["enabled"], testMap["enabled"])
+	}
+
+	// Quoted 'off' should remain string
+	if disabled, ok := testMap["disabled"].(string); !ok || disabled != "off" {
+		t.Errorf("disabled should be string 'off', got %T: %v", testMap["disabled"], testMap["disabled"])
+	}
+
+	// Non-boolean string should remain unchanged
+	if name, ok := testMap["name"].(string); !ok || name != "on_call_service" {
+		t.Errorf("name should be string 'on_call_service', got %T: %v", testMap["name"], testMap["name"])
+	}
+}
+
+func TestMarshalLeaf_WithoutConvertBooleans(t *testing.T) {
+	// Test that without the option, YAML 1.1 booleans remain as strings
+	tmpDir := t.TempDir()
+
+	// Create a subdirectory so the file becomes a nested key
+	configDir := filepath.Join(tmpDir, "config")
+	if err := os.MkdirAll(configDir, 0700); err != nil {
+		t.Fatalf("Failed to create config directory: %v", err)
+	}
+
+	yamlFile := filepath.Join(configDir, "test.yml")
+	yamlContent := `enabled: on
+disabled: off`
+	if err := os.WriteFile(yamlFile, []byte(yamlContent), 0600); err != nil {
+		t.Fatalf("Failed to create YAML file: %v", err)
+	}
+
+	absDir, err := filepath.Abs(tmpDir)
+	if err != nil {
+		t.Fatalf("Failed to get absolute path: %v", err)
+	}
+
+	// Test WITHOUT conversion
+	opts := &Options{
+		EnableIncludes:  false,
+		PackRoot:        absDir,
+		ConvertBooleans: false,
+	}
+
+	tree, err := NewTree(tmpDir)
+	if err != nil {
+		t.Fatalf("NewTree() error = %v", err)
+	}
+
+	result, err := tree.Marshal(opts)
+	if err != nil {
+		t.Fatalf("Marshal() error = %v", err)
+	}
+
+	resultMap, ok := result.(map[string]interface{})
+	if !ok {
+		t.Fatalf("Expected map[string]interface{}, got %T", result)
+	}
+	configMap, ok := resultMap["config"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("Expected config to be map[string]interface{}, got %T", resultMap["config"])
+	}
+	testMap, ok := configMap["test"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("Expected test to be map[string]interface{}, got %T", configMap["test"])
+	}
+
+	// Without normalization, 'on' should remain string (YAML 1.2 behavior with interface{})
+	if enabled, ok := testMap["enabled"].(string); !ok || enabled != "on" {
+		t.Errorf("enabled should be string 'on' without normalization, got %T: %v", testMap["enabled"], testMap["enabled"])
+	}
+}
+
 func TestMarshalParent_WithEmptyMaps(t *testing.T) {
 	// Test that empty maps are properly skipped
 	tmpDir := t.TempDir()
@@ -436,7 +742,7 @@ func TestMarshalParent_WithEmptyMaps(t *testing.T) {
 		t.Fatalf("Failed to create file: %v", err)
 	}
 
-	tree, err := NewTree(tmpDir, nil)
+	tree, err := NewTree(tmpDir)
 	if err != nil {
 		t.Fatalf("NewTree() error = %v", err)
 	}
@@ -462,5 +768,54 @@ func TestMarshalParent_WithEmptyMaps(t *testing.T) {
 	// Directory with content should appear
 	if _, ok := resultMap["has_content"]; !ok {
 		t.Error("MarshalYAML() should contain 'has_content' key")
+	}
+}
+
+func TestOptions_Log_NilOptions(t *testing.T) {
+	// Test that Options.log() returns Nop logger when options is nil
+	var opts *Options
+	log := opts.log()
+	if log == nil {
+		t.Error("Options.log() should return a logger, not nil")
+	}
+	// Should be a NoOpLogger
+	log.Debugf("test") // Should not panic
+	log.Warnf("test")  // Should not panic
+}
+
+func TestOptions_Log_NilLogger(t *testing.T) {
+	// Test that Options.log() returns Nop logger when Logger is nil
+	opts := &Options{
+		EnableIncludes:  false,
+		PackRoot:        "/tmp",
+		ConvertBooleans: false,
+		Logger:          nil,
+	}
+	log := opts.log()
+	if log == nil {
+		t.Error("Options.log() should return a logger, not nil")
+	}
+	// Should be a NoOpLogger
+	log.Debugf("test") // Should not panic
+	log.Warnf("test")  // Should not panic
+}
+
+func TestOptions_Log_WithLogger(t *testing.T) {
+	// Test that Options.log() returns the configured logger
+	var buf strings.Builder
+	testLogger := logger.New(&buf, true)
+	opts := &Options{
+		EnableIncludes:  false,
+		PackRoot:        "/tmp",
+		ConvertBooleans: false,
+		Logger:          testLogger,
+	}
+	log := opts.log()
+	if log != testLogger {
+		t.Error("Options.log() should return the configured logger")
+	}
+	log.Debugf("test message")
+	if !strings.Contains(buf.String(), "test message") {
+		t.Error("Options.log() should return the configured logger that actually logs")
 	}
 }

@@ -14,6 +14,7 @@
 package filetree
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -24,18 +25,24 @@ import (
 	"github.com/jksmth/fyaml/internal/include"
 	"github.com/jksmth/fyaml/internal/logger"
 	"github.com/mitchellh/mapstructure"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v4"
 )
 
-// IncludeOptions controls include processing behavior.
-type IncludeOptions struct {
-	Enabled  bool
-	PackRoot string        // Absolute path to pack root (confinement boundary)
-	Logger   logger.Logger // Logger for verbose output (nil-safe: defaults to Nop())
+// Options controls how the filetree is processed during marshaling.
+type Options struct {
+	// Include processing
+	EnableIncludes bool   // Process <<include(file)>> directives
+	PackRoot       string // Absolute path to pack root (confinement boundary)
+
+	// YAML processing
+	ConvertBooleans bool // Convert unquoted YAML 1.1 booleans to true/false
+
+	// Logging
+	Logger logger.Logger // Logger for verbose output (nil-safe: defaults to Nop())
 }
 
 // log returns the logger, defaulting to Nop() if nil.
-func (o *IncludeOptions) log() logger.Logger {
+func (o *Options) log() logger.Logger {
 	if o == nil || o.Logger == nil {
 		return logger.Nop()
 	}
@@ -58,7 +65,7 @@ type PathNodes struct {
 
 // NewTree creates a new filetree starting at the root.
 // It collects all YAML files and directories, skipping dotfiles and dotfolders.
-func NewTree(rootPath string, opts *IncludeOptions) (*Node, error) {
+func NewTree(rootPath string) (*Node, error) {
 	absRootPath, err := filepath.Abs(rootPath)
 	if err != nil {
 		return nil, err
@@ -164,6 +171,72 @@ func isYaml(info os.FileInfo) bool {
 	return re.MatchString(info.Name())
 }
 
+// normalizeYAML11Booleans recursively converts unquoted YAML 1.1 boolean
+// strings to canonical boolean values. Quoted strings are left unchanged.
+// Per YAML 1.1 spec: https://yaml.org/type/bool.html
+func normalizeYAML11Booleans(n *yaml.Node) {
+	if n == nil {
+		return
+	}
+
+	// Only normalize unquoted scalar nodes that aren't already booleans
+	if n.Kind == yaml.ScalarNode && n.Style == 0 {
+		// Skip if already tagged as boolean (YAML 1.2 true/false)
+		if n.ShortTag() == "!!bool" {
+			return
+		}
+
+		// Convert YAML 1.1 boolean values to canonical form
+		switch n.Value {
+		case "y", "Y", "yes", "Yes", "YES", "on", "On", "ON":
+			n.Value = "true"
+			n.Tag = "!!bool"
+		case "n", "N", "no", "No", "NO", "off", "Off", "OFF":
+			n.Value = "false"
+			n.Tag = "!!bool"
+		}
+	}
+
+	// Recurse into children
+	for _, child := range n.Content {
+		normalizeYAML11Booleans(child)
+	}
+}
+
+// formatYAMLError formats a yaml error with position information if available.
+// Returns a formatted error string with file path and optional line/column info.
+func formatYAMLError(err error, filePath string) error {
+	if err == nil {
+		return nil
+	}
+
+	// Check for ParserError (syntax errors)
+	var parserErr *yaml.ParserError
+	if errors.As(err, &parserErr) {
+		return fmt.Errorf("YAML syntax error in %s:%d:%d: %s",
+			filePath, parserErr.Line, parserErr.Column, parserErr.Message)
+	}
+
+	// Check for TypeError (type conversion errors)
+	var typeErr *yaml.TypeError
+	if errors.As(err, &typeErr) {
+		var errMsgs []string
+		for _, e := range typeErr.Errors {
+			if e.Line > 0 && e.Column > 0 {
+				errMsgs = append(errMsgs, fmt.Sprintf("  line %d:%d: %v",
+					e.Line, e.Column, e.Err))
+			} else {
+				errMsgs = append(errMsgs, fmt.Sprintf("  %v", e.Err))
+			}
+		}
+		return fmt.Errorf("YAML type errors in %s:\n%s",
+			filePath, strings.Join(errMsgs, "\n"))
+	}
+
+	// Fallback to generic error with file path
+	return fmt.Errorf("failed to parse YAML in %s: %w", filePath, err)
+}
+
 func (n *Node) basename() string {
 	return n.Info.Name()
 }
@@ -195,19 +268,19 @@ func (n *Node) specialCase() bool {
 // MarshalYAML serializes the tree into YAML.
 // Implements yaml.Marshaler interface (called by yaml.Marshal).
 func (n *Node) MarshalYAML() (interface{}, error) {
-	return n.MarshalYAMLWithOptions(nil)
+	return n.Marshal(nil)
 }
 
-// MarshalYAMLWithOptions serializes the tree into YAML with include options.
-// If opts is nil, includes are disabled.
-func (n *Node) MarshalYAMLWithOptions(opts *IncludeOptions) (interface{}, error) {
+// Marshal serializes the tree into YAML with processing options.
+// If opts is nil, processing features are disabled.
+func (n *Node) Marshal(opts *Options) (interface{}, error) {
 	if len(n.Children) == 0 {
 		return n.marshalLeaf(opts)
 	}
 	return n.marshalParent(opts)
 }
 
-func (n *Node) marshalLeaf(opts *IncludeOptions) (interface{}, error) {
+func (n *Node) marshalLeaf(opts *Options) (interface{}, error) {
 	var content interface{}
 
 	if n.Info.IsDir() {
@@ -224,31 +297,30 @@ func (n *Node) marshalLeaf(opts *IncludeOptions) (interface{}, error) {
 		return content, fmt.Errorf("failed to read file %s: %w", n.FullPath, err)
 	}
 
-	// If includes are enabled, parse to yaml.Node to allow walking and replacing
-	if opts != nil && opts.Enabled {
-		var node yaml.Node
-		if err := yaml.Unmarshal(buf, &node); err != nil {
-			return content, fmt.Errorf("failed to parse YAML in %s: %w", n.FullPath, err)
-		}
+	// Always parse to yaml.Node first to support Style-aware processing
+	var node yaml.Node
+	if err := yaml.Unmarshal(buf, &node); err != nil {
+		return content, formatYAMLError(err, n.FullPath)
+	}
 
-		// Process include directives relative to the file's directory
+	// Process include directives if enabled
+	if opts != nil && opts.EnableIncludes {
 		baseDir := filepath.Dir(n.FullPath)
 		if err := include.InlineIncludes(&node, baseDir, opts.PackRoot); err != nil {
 			return content, fmt.Errorf("failed to process includes in %s: %w", n.FullPath, err)
 		}
-
-		// Decode the processed node back to interface{}
-		if err := node.Decode(&content); err != nil {
-			return content, fmt.Errorf("failed to decode YAML node in %s: %w", n.FullPath, err)
-		}
-		return content, nil
 	}
 
-	err = yaml.Unmarshal(buf, &content)
-	if err != nil {
-		return content, fmt.Errorf("failed to parse YAML in %s: %w", n.FullPath, err)
+	// Convert YAML 1.1 booleans if enabled
+	if opts != nil && opts.ConvertBooleans {
+		normalizeYAML11Booleans(&node)
 	}
-	return content, err
+
+	// Decode the processed node to interface{}
+	if err := node.Decode(&content); err != nil {
+		return content, formatYAMLError(err, n.FullPath)
+	}
+	return content, nil
 }
 
 // IsEmptyContent checks if a value is nil or an empty map.
@@ -287,11 +359,11 @@ func mergeTree(trees ...interface{}) map[string]interface{} {
 	return result
 }
 
-func (n *Node) marshalParent(opts *IncludeOptions) (interface{}, error) {
+func (n *Node) marshalParent(opts *Options) (interface{}, error) {
 	subtree := map[string]interface{}{}
 
 	for _, child := range n.Children {
-		c, err := child.MarshalYAMLWithOptions(opts)
+		c, err := child.Marshal(opts)
 		if err != nil {
 			// Error already includes file path from marshalLeaf, just propagate it
 			return nil, err
