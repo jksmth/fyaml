@@ -342,6 +342,222 @@ version: 1.0.0
 
 **Note:** The root-level files (`shared.yml` and `settings.yml`) merge their contents directly into the output root, while nested directories create the hierarchical structure.
 
+## File Includes Example
+
+This example demonstrates using file includes to share common configuration and include script content:
+
+### Directory Structure
+
+```
+config/
+  entities/
+    item1.yml
+  shared/
+    defaults.yml
+  scripts/
+    hello.sh
+    validate.sh
+```
+
+### Input Files
+
+**`entities/item1.yml`:**
+
+```yaml
+entity:
+  id: example1
+  attributes:
+    name: sample name
+    tags: []
+  config: !include ../shared/defaults.yml
+  steps:
+    - run:
+        name: Greeting
+        command: !include-text ../scripts/hello.sh
+    - run:
+        name: Validate
+        command: <<include(../scripts/validate.sh)>>
+```
+
+**`shared/defaults.yml`:**
+
+```yaml
+timeout: 30
+retries: 3
+health_check:
+  enabled: true
+  interval: 60
+```
+
+**`scripts/hello.sh`:**
+
+```bash
+#!/bin/bash
+echo "Hello World"
+```
+
+**`scripts/validate.sh`:**
+
+```bash
+#!/bin/bash
+echo "Validating..."
+```
+
+### Command
+
+```bash
+fyaml pack config/ --enable-includes
+```
+
+### Output
+
+```yaml
+entities:
+  item1:
+    entity:
+      id: example1
+      attributes:
+        name: sample name
+        tags: []
+      config:
+        timeout: 30
+        retries: 3
+        health_check:
+          enabled: true
+          interval: 60
+      steps:
+        - run:
+            name: Greeting
+            command: |
+              #!/bin/bash
+              echo "Hello World"
+        - run:
+            name: Validate
+            command: |
+              #!/bin/bash
+              echo "Validating..."
+shared:
+  defaults:
+    timeout: 30
+    retries: 3
+    health_check:
+      enabled: true
+      interval: 60
+```
+
+**Key points:**
+
+- `!include` merges YAML structures (the `config` key contains the merged content from `defaults.yml`)
+- `!include-text` and `<<include()>>` include raw text content (the script files are included as-is)
+- All three include mechanisms can be used together
+- Includes are processed relative to the file containing them
+
+## @ Directories Example
+
+This example demonstrates using `@` directories to organize files without creating additional nesting levels:
+
+### Directory Structure
+
+```
+config/
+  entities/
+    item1.yml
+    @group1/              # Merges into entities map
+      item2.yml
+      item3.yml
+    @group2/              # Merges into entities map
+      item4.yml
+```
+
+### Input Files
+
+**`entities/item1.yml`:**
+
+```yaml
+entity:
+  id: example1
+  attributes:
+    name: first item
+    tags: []
+```
+
+**`entities/@group1/item2.yml`:**
+
+```yaml
+entity:
+  id: example2
+  attributes:
+    name: second item
+    tags:
+      - tag1
+```
+
+**`entities/@group1/item3.yml`:**
+
+```yaml
+entity:
+  id: example3
+  attributes:
+    name: third item
+    tags:
+      - tag2
+```
+
+**`entities/@group2/item4.yml`:**
+
+```yaml
+entity:
+  id: example4
+  attributes:
+    name: fourth item
+    tags: []
+```
+
+### Command
+
+```bash
+fyaml pack config/
+```
+
+### Output
+
+```yaml
+entities:
+  item1:
+    entity:
+      id: example1
+      attributes:
+        name: first item
+        tags: []
+  item2:
+    entity:
+      id: example2
+      attributes:
+        name: second item
+        tags:
+          - tag1
+  item3:
+    entity:
+      id: example3
+      attributes:
+        name: third item
+        tags:
+          - tag2
+  item4:
+    entity:
+      id: example4
+      attributes:
+        name: fourth item
+        tags: []
+```
+
+**Key points:**
+
+- The `@group1` and `@group2` directory names do not appear in the output
+- All files from `@` directories merge directly into the parent map (`entities`)
+- This is useful for organizing large numbers of files without creating deep nesting
+- Files are organized in source but produce a flat structure in output
+
 ## Try It Yourself
 
 All examples in this documentation are based on the examples in the repository. Try them out:
