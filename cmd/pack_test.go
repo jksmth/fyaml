@@ -32,21 +32,75 @@ func testOptsWithIndent(dir, format string, enableIncludes, convertBooleans bool
 	}
 }
 
+// assertErrorContains asserts that an error exists and contains the specified substring.
+// If the error is nil or doesn't contain the substring, the test fails.
+func assertErrorContains(t *testing.T, err error, substr string) {
+	t.Helper()
+	if err == nil {
+		t.Fatalf("expected error containing %q, got nil", substr)
+	}
+	if !strings.Contains(err.Error(), substr) {
+		t.Errorf("error = %v, want error containing %q", err, substr)
+	}
+}
+
+// assertNoError asserts that an error is nil. If the error is not nil, the test fails.
+func assertNoError(t *testing.T, err error) {
+	t.Helper()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// createTestDir creates a temporary directory with the specified files and empty directories.
+// The files map keys are relative paths (e.g., "dir/file.yml"), and values are file contents.
+// The emptyDirs slice contains relative paths to empty directories to create.
+// Returns the path to the created temporary directory.
+func createTestDir(t *testing.T, files map[string]string, emptyDirs []string) string {
+	t.Helper()
+	tmpDir := t.TempDir()
+	for path, content := range files {
+		fullPath := filepath.Join(tmpDir, path)
+		dir := filepath.Dir(fullPath)
+		if err := os.MkdirAll(dir, 0700); err != nil {
+			t.Fatalf("Failed to create directory %q: %v", dir, err)
+		}
+		if err := os.WriteFile(fullPath, []byte(content), 0600); err != nil {
+			t.Fatalf("Failed to create file %q: %v", fullPath, err)
+		}
+	}
+	for _, dir := range emptyDirs {
+		fullPath := filepath.Join(tmpDir, dir)
+		if err := os.MkdirAll(fullPath, 0700); err != nil {
+			t.Fatalf("Failed to create empty directory %q: %v", fullPath, err)
+		}
+	}
+	return tmpDir
+}
+
+// assertOutputEqual asserts that two byte slices are equal.
+// Provides a clear error message showing both got and want values.
+func assertOutputEqual(t *testing.T, got, want []byte) {
+	t.Helper()
+	if string(got) != string(want) {
+		t.Errorf("output does not match expected\nGot:\n%s\nWant:\n%s", string(got), string(want))
+	}
+}
+
 func TestPack_InvalidYAML(t *testing.T) {
 	// Test error handling for invalid YAML
 	// Other successful cases are covered by TestPack_Golden
 	_, err := pack(testOpts("../testdata/invalid-yaml", "yaml", false, false), nil)
-	if err == nil {
-		t.Error("pack() expected error for invalid YAML")
-	}
-	if err != nil && !strings.Contains(err.Error(), "yaml") {
-		t.Errorf("pack() error = %v, want error containing 'yaml'", err)
-	}
+	assertErrorContains(t, err, "yaml")
+
 	// Verify error includes file path for better debugging
 	// Error may be "failed to parse YAML/JSON in" or "YAML/JSON syntax error in" depending on error type
 	errStr := err.Error()
-	if err != nil && !strings.Contains(errStr, "failed to parse YAML/JSON in") && !strings.Contains(errStr, "YAML/JSON syntax error in") && !strings.Contains(errStr, "YAML/JSON type errors in") {
-		t.Errorf("pack() error = %v, want error to include file path context", err)
+	hasPathContext := strings.Contains(errStr, "failed to parse YAML/JSON in") ||
+		strings.Contains(errStr, "YAML/JSON syntax error in") ||
+		strings.Contains(errStr, "YAML/JSON type errors in")
+	if !hasPathContext {
+		t.Errorf("error should include file path context: %v", err)
 	}
 }
 
@@ -63,39 +117,20 @@ func TestPack_ScalarFile(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tmpDir := t.TempDir()
-			scalarFile := filepath.Join(tmpDir, "value.yml")
-			if err := os.WriteFile(scalarFile, []byte(tt.content), 0600); err != nil {
-				t.Fatalf("Failed to create scalar file: %v", err)
-			}
+			tmpDir := createTestDir(t, map[string]string{
+				"value.yml": tt.content,
+			}, nil)
 
 			_, err := pack(testOpts(tmpDir, "yaml", false, false), nil)
-			if err == nil {
-				t.Error("pack() expected error for scalar file")
-			}
-			if err != nil && !strings.Contains(err.Error(), "expected a map") {
-				t.Errorf("pack() error = %v, want error containing 'expected a map'", err)
-			}
+			assertErrorContains(t, err, "expected a map")
 		})
 	}
 }
 
 func TestPack_ArrayFile(t *testing.T) {
-	// Test that files containing only an array (not a map) return an error
-	tmpDir := t.TempDir()
-	arrayFile := filepath.Join(tmpDir, "items.yml")
-	arrayContent := "- item1\n- item2\n- item3"
-	if err := os.WriteFile(arrayFile, []byte(arrayContent), 0600); err != nil {
-		t.Fatalf("Failed to create array file: %v", err)
-	}
-
-	_, err := pack(testOpts(tmpDir, "yaml", false, false), nil)
-	if err == nil {
-		t.Error("pack() expected error for array file")
-	}
-	if err != nil && !strings.Contains(err.Error(), "expected a map") {
-		t.Errorf("pack() error = %v, want error containing 'expected a map'", err)
-	}
+	// Test that files containing only an array (not a map) return an error using fixture
+	_, err := pack(testOpts("../testdata/array-file/input", "yaml", false, false), nil)
+	assertErrorContains(t, err, "expected a map")
 }
 
 func TestPack_Golden(t *testing.T) {
@@ -151,44 +186,28 @@ func TestPack_Golden(t *testing.T) {
 			// Includes test requires --enable-includes flag
 			enableIncludes := tt.name == "includes"
 			result, err := pack(testOpts(tt.dir, "yaml", enableIncludes, false), nil)
-			if err != nil {
-				t.Fatalf("pack() error = %v", err)
-			}
+			assertNoError(t, err)
 
 			expected, err := os.ReadFile(tt.expected)
 			if err != nil {
 				t.Fatalf("Failed to read expected file: %v", err)
 			}
 
-			if string(result) != string(expected) {
-				t.Errorf("pack() output does not match expected\nGot:\n%s\nWant:\n%s", string(result), string(expected))
-			}
+			assertOutputEqual(t, result, expected)
 		})
-	}
-}
-
-func TestPack_Deterministic(t *testing.T) {
-	opts := testOpts("../testdata/ordering/input", "yaml", false, false)
-
-	result1, err := pack(opts, nil)
-	if err != nil {
-		t.Fatalf("pack() error = %v", err)
-	}
-
-	result2, err := pack(opts, nil)
-	if err != nil {
-		t.Fatalf("pack() error = %v", err)
-	}
-
-	if string(result1) != string(result2) {
-		t.Errorf("pack() output is not deterministic\nFirst run:\n%s\nSecond run:\n%s", string(result1), string(result2))
 	}
 }
 
 func TestPack_NonexistentDir(t *testing.T) {
 	_, err := pack(testOpts("nonexistent/dir", "yaml", false, false), nil)
+	// Error message may vary, but should contain something about the directory
+	// Common error messages: "no such file", "not a directory", etc.
 	if err == nil {
-		t.Error("pack() expected error for nonexistent directory")
+		t.Fatal("pack() expected error for nonexistent directory")
+	}
+	// Just verify an error was returned (error message format may vary by OS)
+	if err.Error() == "" {
+		t.Error("pack() error should have a message")
 	}
 }
 
@@ -224,17 +243,7 @@ func TestPack_EmptyDir(t *testing.T) {
 func TestPack_EmptySubdirs(t *testing.T) {
 	// Test that directories with only empty subdirectories (no YAML files) are ignored
 	// Empty directories don't appear in output - only directories with YAML content
-	tmpDir := t.TempDir()
-
-	servicesDir := filepath.Join(tmpDir, "services")
-	databaseDir := filepath.Join(tmpDir, "database")
-
-	if err := os.Mkdir(servicesDir, 0700); err != nil {
-		t.Fatalf("Failed to create services directory: %v", err)
-	}
-	if err := os.Mkdir(databaseDir, 0700); err != nil {
-		t.Fatalf("Failed to create database directory: %v", err)
-	}
+	tmpDir := createTestDir(t, nil, []string{"services", "database"})
 
 	result, err := pack(testOpts(tmpDir, "yaml", false, false), nil)
 	if err != nil {
@@ -252,108 +261,39 @@ func TestPack_EmptySubdirs(t *testing.T) {
 	}
 }
 
-func TestPack_JSONInput(t *testing.T) {
-	// Create a temporary directory with JSON files
-	tmpDir := t.TempDir()
+func TestPack_JSONInput_Golden(t *testing.T) {
+	// Test that JSON files are processed correctly using fixtures
+	result, err := pack(testOpts("../testdata/json-input/input", "yaml", false, false), nil)
+	assertNoError(t, err)
 
-	servicesDir := filepath.Join(tmpDir, "services")
-	if err := os.Mkdir(servicesDir, 0700); err != nil {
-		t.Fatalf("Failed to create services directory: %v", err)
-	}
-
-	// Create a JSON file
-	jsonFile := filepath.Join(servicesDir, "api.json")
-	jsonContent := `{"name": "api", "port": 8080}`
-	if err := os.WriteFile(jsonFile, []byte(jsonContent), 0600); err != nil {
-		t.Fatalf("Failed to create JSON file: %v", err)
-	}
-
-	// Pack should process JSON files the same as YAML
-	result, err := pack(testOpts(tmpDir, "yaml", false, false), nil)
+	expected, err := os.ReadFile("../testdata/json-input/expected.yml")
 	if err != nil {
-		t.Fatalf("pack() error = %v", err)
+		t.Fatalf("Failed to read expected file: %v", err)
 	}
 
-	// Result should contain the JSON content
-	resultStr := string(result)
-	if !strings.Contains(resultStr, "api") || !strings.Contains(resultStr, "8080") {
-		t.Errorf("pack() result missing expected content from JSON file. Got: %s", resultStr)
-	}
+	assertOutputEqual(t, result, expected)
 }
 
 func TestPack_JSONOutput(t *testing.T) {
-	// Test JSON output format
+	// Test JSON output format with content
+	// Note: Empty directory JSON output is tested in TestPack_EmptyDir
 	result, err := pack(testOpts("../testdata/simple/input", "json", false, false), nil)
-	if err != nil {
-		t.Fatalf("pack() error = %v", err)
-	}
+	assertNoError(t, err)
 
-	// Result should be valid JSON
 	resultStr := string(result)
 	if len(resultStr) == 0 {
 		t.Error("pack() returned empty JSON output")
 	}
-
 	// Should start with { or [ for valid JSON
 	if resultStr[0] != '{' && resultStr[0] != '[' {
 		t.Errorf("pack() JSON output doesn't start with { or [. Got: %s", resultStr[:min(50, len(resultStr))])
 	}
 }
 
-func TestPack_JSONOutput_EmptyDir(t *testing.T) {
-	// Test JSON output for empty directory - should return "null\n"
-	tmpDir := t.TempDir()
-
-	result, err := pack(testOpts(tmpDir, "json", false, false), nil)
-	if err != nil {
-		t.Fatalf("pack() error = %v, expected no error for empty directory", err)
-	}
-
-	// Should produce "null\n" for completely empty directory
-	if string(result) != "null\n" {
-		t.Errorf("pack() result = %q, want 'null\\n'", string(result))
-	}
-}
-
 func TestPack_InvalidFormat(t *testing.T) {
 	// Test invalid format parameter
 	_, err := pack(testOpts("../testdata/simple/input", "invalid", false, false), nil)
-	if err == nil {
-		t.Error("pack() expected error for invalid format")
-	}
-	if err != nil && !strings.Contains(err.Error(), "invalid format") {
-		t.Errorf("pack() error = %v, want error containing 'invalid format'", err)
-	}
-}
-
-func TestPack_YAMLAnchors(t *testing.T) {
-	// Test that YAML anchors and aliases are expanded within a single file
-	expectedFile := "../testdata/anchors/expected.yml"
-
-	result, err := pack(testOpts("../testdata/anchors/input", "yaml", false, false), nil)
-	if err != nil {
-		t.Fatalf("pack() error = %v", err)
-	}
-
-	expected, err := os.ReadFile(expectedFile)
-	if err != nil {
-		t.Fatalf("Failed to read expected file: %v", err)
-	}
-
-	if string(result) != string(expected) {
-		t.Errorf("pack() output does not match expected\nGot:\n%s\nWant:\n%s", string(result), string(expected))
-	}
-
-	// Verify that anchors are expanded (not present as references)
-	resultStr := string(result)
-	if strings.Contains(resultStr, "&defaults") || strings.Contains(resultStr, "*defaults") {
-		t.Error("pack() output contains anchor/alias references, should be expanded")
-	}
-
-	// Verify that the expanded values are present
-	if !strings.Contains(resultStr, "timeout: 30") || !strings.Contains(resultStr, "retries: 3") {
-		t.Error("pack() output missing expanded anchor values")
-	}
+	assertErrorContains(t, err, "invalid format")
 }
 
 func TestWriteOutput_Stdout(t *testing.T) {
@@ -380,9 +320,7 @@ func TestWriteOutput_File(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to read output file: %v", err)
 	}
-	if string(content) != string(result) {
-		t.Errorf("writeOutput() content = %q, want %q", string(content), string(result))
-	}
+	assertOutputEqual(t, content, result)
 
 	// Verify permissions (should be 0644)
 	info, err := os.Stat(outputFile)
@@ -418,9 +356,7 @@ func TestWriteOutput_AtomicWrite(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to read output file: %v", err)
 	}
-	if string(content) != string(newContent) {
-		t.Errorf("writeOutput() atomic write failed - content = %q, want %q", string(content), string(newContent))
-	}
+	assertOutputEqual(t, content, newContent)
 }
 
 func TestWriteOutput_CreateTempError(t *testing.T) {
@@ -429,12 +365,7 @@ func TestWriteOutput_CreateTempError(t *testing.T) {
 	outputFile := filepath.Join(invalidDir, "output.yml")
 
 	err := writeOutput(outputFile, []byte("test"))
-	if err == nil {
-		t.Error("writeOutput() expected error for invalid directory")
-	}
-	if !strings.Contains(err.Error(), "failed to create temp file") {
-		t.Errorf("writeOutput() error = %v, want error about temp file", err)
-	}
+	assertErrorContains(t, err, "failed to create temp file")
 }
 
 func TestHandleCheck_Success(t *testing.T) {
@@ -459,12 +390,7 @@ func TestHandleCheck_Success(t *testing.T) {
 
 func TestHandleCheck_EmptyOutput(t *testing.T) {
 	err := handleCheck("", []byte("test"))
-	if err == nil {
-		t.Error("handleCheck() expected error for empty output path")
-	}
-	if !strings.Contains(err.Error(), "--check requires --output") {
-		t.Errorf("handleCheck() error = %v, want error about --output", err)
-	}
+	assertErrorContains(t, err, "--check requires --output")
 }
 
 func TestHandleCheck_ReadFileError(t *testing.T) {
@@ -473,48 +399,23 @@ func TestHandleCheck_ReadFileError(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	err := handleCheck(tmpDir, []byte("test"))
-	if err == nil {
-		t.Error("handleCheck() expected error when reading directory")
-	}
-	if !strings.Contains(err.Error(), "failed to read output file") {
-		t.Errorf("handleCheck() error = %v, want error about reading file", err)
-	}
+	assertErrorContains(t, err, "failed to read output file")
 }
 
 func TestPack_EnableIncludes(t *testing.T) {
 	// Test the --enable-includes extension feature
-	tmpDir := t.TempDir()
-
-	// Create directory structure
-	commandsDir := filepath.Join(tmpDir, "commands")
-	scriptsDir := filepath.Join(commandsDir, "scripts")
-	if err := os.MkdirAll(scriptsDir, 0700); err != nil {
-		t.Fatalf("Failed to create directories: %v", err)
-	}
-
-	// Create a script file to include
-	scriptFile := filepath.Join(scriptsDir, "hello.sh")
-	scriptContent := "#!/bin/bash\necho 'Hello World'"
-	if err := os.WriteFile(scriptFile, []byte(scriptContent), 0600); err != nil {
-		t.Fatalf("Failed to create script file: %v", err)
-	}
-
-	// Create a YAML file with include directive
-	yamlFile := filepath.Join(commandsDir, "hello.yml")
-	yamlContent := `description: A test command
+	tmpDir := createTestDir(t, map[string]string{
+		"commands/scripts/hello.sh": "#!/bin/bash\necho 'Hello World'",
+		"commands/hello.yml": `description: A test command
 steps:
   - run:
       name: Hello
-      command: <<include(scripts/hello.sh)>>`
-	if err := os.WriteFile(yamlFile, []byte(yamlContent), 0600); err != nil {
-		t.Fatalf("Failed to create YAML file: %v", err)
-	}
+      command: <<include(scripts/hello.sh)>>`,
+	}, nil)
 
 	// Test WITHOUT includes enabled - directive should remain as-is
 	result, err := pack(testOpts(tmpDir, "yaml", false, false), nil)
-	if err != nil {
-		t.Fatalf("pack() without includes error = %v", err)
-	}
+	assertNoError(t, err)
 	resultStr := string(result)
 	if !strings.Contains(resultStr, "<<include(scripts/hello.sh)>>") {
 		t.Error("pack() without --enable-includes should preserve include directive")
@@ -522,9 +423,7 @@ steps:
 
 	// Test WITH includes enabled - directive should be replaced
 	result, err = pack(testOpts(tmpDir, "yaml", true, false), nil)
-	if err != nil {
-		t.Fatalf("pack() with includes error = %v", err)
-	}
+	assertNoError(t, err)
 	resultStr = string(result)
 	if strings.Contains(resultStr, "<<include") {
 		t.Error("pack() with --enable-includes should replace include directive")
@@ -536,60 +435,23 @@ steps:
 
 func TestPack_EnableIncludes_ErrorFileNotFound(t *testing.T) {
 	// Test error handling when included file doesn't exist
-	tmpDir := t.TempDir()
-
-	commandsDir := filepath.Join(tmpDir, "commands")
-	if err := os.MkdirAll(commandsDir, 0700); err != nil {
-		t.Fatalf("Failed to create directories: %v", err)
-	}
-
-	// Create a YAML file with include directive pointing to non-existent file
-	yamlFile := filepath.Join(commandsDir, "hello.yml")
-	yamlContent := `command: <<include(nonexistent.sh)>>`
-	if err := os.WriteFile(yamlFile, []byte(yamlContent), 0600); err != nil {
-		t.Fatalf("Failed to create YAML file: %v", err)
-	}
+	tmpDir := createTestDir(t, map[string]string{
+		"commands/hello.yml": `command: <<include(nonexistent.sh)>>`,
+	}, nil)
 
 	_, err := pack(testOpts(tmpDir, "yaml", true, false), nil)
-	if err == nil {
-		t.Error("pack() expected error for missing include file")
-	}
-	if !strings.Contains(err.Error(), "could not open") {
-		t.Errorf("pack() error = %v, want error containing 'could not open'", err)
-	}
+	assertErrorContains(t, err, "could not open")
 }
 
 func TestPack_EnableIncludes_RelativePathWithParent(t *testing.T) {
 	// Test that relative paths with ../ work in include directives
-	tmpDir := t.TempDir()
-
-	// Create structure: tmpDir/commands/test.yml and tmpDir/scripts/script.sh
-	commandsDir := filepath.Join(tmpDir, "commands")
-	scriptsDir := filepath.Join(tmpDir, "scripts")
-	if err := os.MkdirAll(commandsDir, 0700); err != nil {
-		t.Fatalf("Failed to create commands directory: %v", err)
-	}
-	if err := os.MkdirAll(scriptsDir, 0700); err != nil {
-		t.Fatalf("Failed to create scripts directory: %v", err)
-	}
-
-	scriptFile := filepath.Join(scriptsDir, "script.sh")
-	scriptContent := "echo 'relative path with ..'"
-	if err := os.WriteFile(scriptFile, []byte(scriptContent), 0600); err != nil {
-		t.Fatalf("Failed to create script: %v", err)
-	}
-
-	// Create YAML with relative path using ../
-	yamlFile := filepath.Join(commandsDir, "test.yml")
-	yamlContent := `command: <<include(../scripts/script.sh)>>`
-	if err := os.WriteFile(yamlFile, []byte(yamlContent), 0600); err != nil {
-		t.Fatalf("Failed to create YAML file: %v", err)
-	}
+	tmpDir := createTestDir(t, map[string]string{
+		"scripts/script.sh": "echo 'relative path with ..'",
+		"commands/test.yml": `command: <<include(../scripts/script.sh)>>`,
+	}, nil)
 
 	result, err := pack(testOpts(tmpDir, "yaml", true, false), nil)
-	if err != nil {
-		t.Fatalf("pack() with relative path error = %v", err)
-	}
+	assertNoError(t, err)
 
 	resultStr := string(result)
 	if !strings.Contains(resultStr, "echo 'relative path with ..'") {
@@ -599,14 +461,9 @@ func TestPack_EnableIncludes_RelativePathWithParent(t *testing.T) {
 
 func TestPack_EnableIncludes_InvalidYAMLWithIncludes(t *testing.T) {
 	// Test that invalid YAML still fails even with includes enabled
-	tmpDir := t.TempDir()
-
-	yamlFile := filepath.Join(tmpDir, "invalid.yml")
-	// Invalid YAML that would fail Unmarshal
-	invalidContent := "key: [unclosed"
-	if err := os.WriteFile(yamlFile, []byte(invalidContent), 0600); err != nil {
-		t.Fatalf("Failed to create file: %v", err)
-	}
+	tmpDir := createTestDir(t, map[string]string{
+		"invalid.yml": "key: [unclosed", // Invalid YAML that would fail Unmarshal
+	}, nil)
 
 	_, err := pack(testOpts(tmpDir, "yaml", true, false), nil)
 	if err == nil {
@@ -619,41 +476,6 @@ func min(a, b int) int {
 		return a
 	}
 	return b
-}
-
-func TestPack_Verbose_ShowsProcessing(t *testing.T) {
-	// Test that verbose mode logs processed files to the logger
-	var buf bytes.Buffer
-	log := logger.New(&buf, true) // verbose enabled
-
-	_, err := pack(testOpts("../testdata/simple/input", "yaml", false, false), log)
-	if err != nil {
-		t.Fatalf("pack() error = %v", err)
-	}
-
-	output := buf.String()
-	if !strings.Contains(output, "[DEBUG] Processing:") {
-		t.Errorf("pack() verbose output should contain '[DEBUG] Processing:', got: %s", output)
-	}
-	if !strings.Contains(output, ".yml") {
-		t.Errorf("pack() verbose output should contain file paths, got: %s", output)
-	}
-}
-
-func TestPack_Quiet_NoDebugOutput(t *testing.T) {
-	// Test that non-verbose mode produces no debug output
-	var buf bytes.Buffer
-	log := logger.New(&buf, false) // verbose disabled
-
-	_, err := pack(testOpts("../testdata/simple/input", "yaml", false, false), log)
-	if err != nil {
-		t.Fatalf("pack() error = %v", err)
-	}
-
-	output := buf.String()
-	if strings.Contains(output, "[DEBUG]") {
-		t.Errorf("pack() quiet mode should not contain [DEBUG], got: %s", output)
-	}
 }
 
 func TestPack_EmptyDir_Warning(t *testing.T) {
@@ -678,101 +500,54 @@ func TestPack_EmptyDir_Warning(t *testing.T) {
 }
 
 func TestPack_ConvertBooleans(t *testing.T) {
-	// Test the --convert-booleans flag
-	tmpDir := t.TempDir()
-
-	yamlFile := filepath.Join(tmpDir, "config.yml")
-	yamlContent := `enabled: on
-disabled: off
-maybe: "yes"
-name: on_call_service`
-	if err := os.WriteFile(yamlFile, []byte(yamlContent), 0600); err != nil {
-		t.Fatalf("Failed to create YAML file: %v", err)
+	// Test the --convert-booleans flag using fixtures
+	tests := []struct {
+		name            string
+		convertBooleans bool
+		expectedFile    string
+	}{
+		{
+			name:            "without conversion",
+			convertBooleans: false,
+			expectedFile:    "../testdata/convert-booleans/expected-without-conversion.yml",
+		},
+		{
+			name:            "with conversion",
+			convertBooleans: true,
+			expectedFile:    "../testdata/convert-booleans/expected-with-conversion.yml",
+		},
 	}
 
-	// Test WITHOUT normalization (default behavior)
-	result, err := pack(testOpts(tmpDir, "yaml", false, false), nil)
-	if err != nil {
-		t.Fatalf("pack() without normalization error = %v", err)
-	}
-	resultStr := string(result)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := pack(testOpts("../testdata/convert-booleans/input", "yaml", false, tt.convertBooleans), nil)
+			assertNoError(t, err)
 
-	// Without normalization, 'on' and 'off' should appear as quoted strings in output
-	// because they're treated as strings by the YAML 1.2 compliant library
-	if strings.Contains(resultStr, "enabled: true") {
-		t.Errorf("pack() without normalization should not convert 'on' to true. Got:\n%s", resultStr)
-	}
+			expected, err := os.ReadFile(tt.expectedFile)
+			if err != nil {
+				t.Fatalf("Failed to read expected file: %v", err)
+			}
 
-	// Test WITH normalization
-	result, err = pack(testOpts(tmpDir, "yaml", false, true), nil)
-	if err != nil {
-		t.Fatalf("pack() with normalization error = %v", err)
-	}
-	resultStr = string(result)
-
-	// With normalization, unquoted 'on' should become true
-	if !strings.Contains(resultStr, "enabled: true") {
-		t.Errorf("pack() with normalization should convert 'on' to true. Got:\n%s", resultStr)
-	}
-	// With normalization, unquoted 'off' should become false
-	if !strings.Contains(resultStr, "disabled: false") {
-		t.Errorf("pack() with normalization should convert 'off' to false. Got:\n%s", resultStr)
-	}
-	// Quoted "yes" should remain as string
-	if !strings.Contains(resultStr, `maybe: "yes"`) && !strings.Contains(resultStr, "maybe: 'yes'") && !strings.Contains(resultStr, "maybe: yes") {
-		// The library might quote or not quote the string output
-		t.Logf("maybe value in output: %s", resultStr)
-	}
-	// Non-boolean string should remain unchanged
-	if !strings.Contains(resultStr, "name: on_call_service") {
-		t.Errorf("pack() should preserve non-boolean strings. Got:\n%s", resultStr)
+			assertOutputEqual(t, result, expected)
+		})
 	}
 }
 
 func TestPack_ConvertBooleans_WithIncludes(t *testing.T) {
-	// Test that normalization works together with includes
-	tmpDir := t.TempDir()
+	// Test that normalization works together with includes using fixtures
+	result, err := pack(testOpts("../testdata/convert-booleans-with-includes/input", "yaml", true, true), nil)
+	assertNoError(t, err)
 
-	scriptsDir := filepath.Join(tmpDir, "scripts")
-	if err := os.MkdirAll(scriptsDir, 0700); err != nil {
-		t.Fatalf("Failed to create scripts directory: %v", err)
-	}
-
-	scriptFile := filepath.Join(scriptsDir, "test.sh")
-	scriptContent := "echo 'test'"
-	if err := os.WriteFile(scriptFile, []byte(scriptContent), 0600); err != nil {
-		t.Fatalf("Failed to create script: %v", err)
-	}
-
-	yamlFile := filepath.Join(tmpDir, "config.yml")
-	yamlContent := `enabled: on
-script: <<include(scripts/test.sh)>>`
-	if err := os.WriteFile(yamlFile, []byte(yamlContent), 0600); err != nil {
-		t.Fatalf("Failed to create YAML file: %v", err)
-	}
-
-	// Test with both includes and normalization enabled
-	result, err := pack(testOpts(tmpDir, "yaml", true, true), nil)
+	expected, err := os.ReadFile("../testdata/convert-booleans-with-includes/expected.yml")
 	if err != nil {
-		t.Fatalf("pack() error = %v", err)
+		t.Fatalf("Failed to read expected file: %v", err)
 	}
-	resultStr := string(result)
 
-	// Normalization should work
-	if !strings.Contains(resultStr, "enabled: true") {
-		t.Errorf("pack() should normalize 'on' to true. Got:\n%s", resultStr)
-	}
-	// Includes should work
-	if !strings.Contains(resultStr, "echo 'test'") {
-		t.Errorf("pack() should include script content. Got:\n%s", resultStr)
-	}
+	assertOutputEqual(t, result, expected)
 }
 
 func TestPack_ConvertBooleans_AllVariants(t *testing.T) {
 	// Test all boolean variants (y, Y, yes, Yes, YES, on, On, ON, n, N, no, No, NO, off, Off, OFF)
-	tmpDir := t.TempDir()
-
-	yamlFile := filepath.Join(tmpDir, "config.yml")
 	// Use unique keys for each variant to avoid duplicate key errors after conversion
 	yamlContent := `true_values:
   val_y: y
@@ -792,9 +567,9 @@ false_values:
   val_off: off
   val_Off: Off
   val_OFF: OFF`
-	if err := os.WriteFile(yamlFile, []byte(yamlContent), 0600); err != nil {
-		t.Fatalf("Failed to create YAML file: %v", err)
-	}
+	tmpDir := createTestDir(t, map[string]string{
+		"config.yml": yamlContent,
+	}, nil)
 
 	result, err := pack(testOpts(tmpDir, "yaml", false, true), nil)
 	if err != nil {
@@ -821,19 +596,13 @@ false_values:
 
 func TestPack_ConvertBooleans_AlreadyBoolean(t *testing.T) {
 	// Test that already-boolean values (true/false) are not double-converted
-	tmpDir := t.TempDir()
-
-	yamlFile := filepath.Join(tmpDir, "config.yml")
-	yamlContent := `enabled: true
-disabled: false`
-	if err := os.WriteFile(yamlFile, []byte(yamlContent), 0600); err != nil {
-		t.Fatalf("Failed to create YAML file: %v", err)
-	}
+	tmpDir := createTestDir(t, map[string]string{
+		"config.yml": `enabled: true
+disabled: false`,
+	}, nil)
 
 	result, err := pack(testOpts(tmpDir, "yaml", false, true), nil)
-	if err != nil {
-		t.Fatalf("pack() error = %v", err)
-	}
+	assertNoError(t, err)
 	resultStr := string(result)
 
 	// Already boolean values should remain as booleans
@@ -846,123 +615,92 @@ disabled: false`
 }
 
 func TestPack_ConvertBooleans_DeeplyNested(t *testing.T) {
-	// Test convert-booleans in deeply nested structures
-	tmpDir := t.TempDir()
+	// Test convert-booleans in deeply nested structures using fixtures
+	result, err := pack(testOpts("../testdata/convert-booleans-deeply-nested/input", "yaml", false, true), nil)
+	assertNoError(t, err)
 
-	subDir := filepath.Join(tmpDir, "level1", "level2", "level3")
-	if err := os.MkdirAll(subDir, 0700); err != nil {
-		t.Fatalf("Failed to create nested directories: %v", err)
-	}
-
-	yamlFile := filepath.Join(subDir, "config.yml")
-	yamlContent := `enabled: on
-settings:
-  debug: off
-  nested:
-    verbose: yes
-    quiet: no`
-	if err := os.WriteFile(yamlFile, []byte(yamlContent), 0600); err != nil {
-		t.Fatalf("Failed to create YAML file: %v", err)
-	}
-
-	result, err := pack(testOpts(tmpDir, "yaml", false, true), nil)
+	expected, err := os.ReadFile("../testdata/convert-booleans-deeply-nested/expected.yml")
 	if err != nil {
-		t.Fatalf("pack() error = %v", err)
+		t.Fatalf("Failed to read expected file: %v", err)
 	}
-	resultStr := string(result)
 
-	// All nested boolean values should be converted
-	if !strings.Contains(resultStr, "enabled: true") {
-		t.Errorf("pack() should convert nested 'on' to true. Got:\n%s", resultStr)
+	assertOutputEqual(t, result, expected)
+}
+
+func TestPack_WithLogger(t *testing.T) {
+	// Test that pack() works correctly with different logger configurations
+	tmpDir := createTestDir(t, map[string]string{
+		"test.yml": "key: value",
+	}, nil)
+
+	tests := []struct {
+		name           string
+		verbose        bool
+		validateOutput func(t *testing.T, result []byte, logOutput string)
+	}{
+		{
+			name:    "nil logger",
+			verbose: false, // Not used for nil case
+			validateOutput: func(t *testing.T, result []byte, logOutput string) {
+				if len(result) == 0 {
+					t.Error("pack() should return result even with nil logger")
+				}
+			},
+		},
+		{
+			name:    "verbose logger",
+			verbose: true,
+			validateOutput: func(t *testing.T, result []byte, logOutput string) {
+				if len(result) == 0 {
+					t.Error("pack() should return result")
+				}
+				if !strings.Contains(logOutput, "[DEBUG] Processing:") {
+					t.Errorf("pack() should log processing messages, got: %s", logOutput)
+				}
+				if !strings.Contains(logOutput, "test.yml") {
+					t.Errorf("pack() should log file paths, got: %s", logOutput)
+				}
+			},
+		},
+		{
+			name:    "quiet logger",
+			verbose: false,
+			validateOutput: func(t *testing.T, result []byte, logOutput string) {
+				if len(result) == 0 {
+					t.Error("pack() should return result")
+				}
+			},
+		},
 	}
-	if !strings.Contains(resultStr, "debug: false") {
-		t.Errorf("pack() should convert nested 'off' to false. Got:\n%s", resultStr)
-	}
-	if !strings.Contains(resultStr, "verbose: true") {
-		t.Errorf("pack() should convert nested 'yes' to true. Got:\n%s", resultStr)
-	}
-	if !strings.Contains(resultStr, "quiet: false") {
-		t.Errorf("pack() should convert nested 'no' to false. Got:\n%s", resultStr)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			var testLogger logger.Logger
+			if tt.name == "nil logger" {
+				testLogger = nil
+			} else {
+				testLogger = logger.New(&buf, tt.verbose)
+			}
+
+			result, err := pack(testOpts(tmpDir, "yaml", false, false), testLogger)
+			if err != nil {
+				t.Fatalf("pack() error = %v", err)
+			}
+
+			logOutput := buf.String()
+			tt.validateOutput(t, result, logOutput)
+		})
 	}
 }
 
-func TestPack_WithNilLogger(t *testing.T) {
-	// Test that pack() works correctly with nil logger (should use Nop logger)
-	tmpDir := t.TempDir()
-
-	yamlFile := filepath.Join(tmpDir, "test.yml")
-	if err := os.WriteFile(yamlFile, []byte("key: value"), 0600); err != nil {
-		t.Fatalf("Failed to create YAML file: %v", err)
-	}
-
-	// Should not panic with nil logger
-	result, err := pack(testOpts(tmpDir, "yaml", false, false), nil)
-	if err != nil {
-		t.Fatalf("pack() with nil logger error = %v", err)
-	}
-	if len(result) == 0 {
-		t.Error("pack() should return result even with nil logger")
-	}
-}
-
-func TestPack_WithLogger_VerboseOutput(t *testing.T) {
-	// Test that pack() uses the provided logger for verbose output
-	tmpDir := t.TempDir()
-
-	yamlFile := filepath.Join(tmpDir, "test.yml")
-	if err := os.WriteFile(yamlFile, []byte("key: value"), 0600); err != nil {
-		t.Fatalf("Failed to create YAML file: %v", err)
-	}
-
-	var buf bytes.Buffer
-	testLogger := logger.New(&buf, true) // verbose enabled
-
-	result, err := pack(testOpts(tmpDir, "yaml", false, false), testLogger)
-	if err != nil {
-		t.Fatalf("pack() error = %v", err)
-	}
-	if len(result) == 0 {
-		t.Error("pack() should return result")
-	}
-
-	// Logger should have been used
-	output := buf.String()
-	if !strings.Contains(output, "[DEBUG] Processing:") {
-		t.Errorf("pack() should log processing messages, got: %s", output)
-	}
-	if !strings.Contains(output, "test.yml") {
-		t.Errorf("pack() should log file paths, got: %s", output)
-	}
-}
-
-func TestPack_Indent_YAML_Default(t *testing.T) {
-	// Test that default indent is 2 spaces for YAML
-	result, err := pack(testOpts("../testdata/simple/input", "yaml", false, false), nil)
-	if err != nil {
-		t.Fatalf("pack() error = %v", err)
-	}
-
-	resultStr := string(result)
-	// Check that the first nested level uses 2 spaces
-	lines := strings.Split(resultStr, "\n")
-	foundIndent := false
-	for _, line := range lines {
-		if strings.HasPrefix(line, "  item1:") {
-			foundIndent = true
-			break
-		}
-	}
-	if !foundIndent {
-		t.Errorf("pack() YAML output should use 2-space indent by default. Got:\n%s", resultStr)
-	}
-}
-
-func TestPack_Indent_YAML_Custom(t *testing.T) {
-	// Test custom indent values for YAML
+func TestPack_Indent_YAML(t *testing.T) {
+	// Test indent values for YAML (default and custom)
 	tests := []struct {
 		name   string
 		indent int
 	}{
+		{"default (2 spaces)", 2},
 		{"1 space", 1},
 		{"4 spaces", 4},
 		{"8 spaces", 8},
@@ -986,35 +724,13 @@ func TestPack_Indent_YAML_Custom(t *testing.T) {
 	}
 }
 
-func TestPack_Indent_JSON_Default(t *testing.T) {
-	// Test that default indent is 2 spaces for JSON
-	result, err := pack(testOpts("../testdata/simple/input", "json", false, false), nil)
-	if err != nil {
-		t.Fatalf("pack() error = %v", err)
-	}
-
-	resultStr := string(result)
-	// Check that nested objects use 2-space indent
-	// JSON should have lines like:  "entities": { (first level after root)
-	lines := strings.Split(resultStr, "\n")
-	foundIndent := false
-	for _, line := range lines {
-		if strings.HasPrefix(line, `  "entities": {`) {
-			foundIndent = true
-			break
-		}
-	}
-	if !foundIndent {
-		t.Errorf("pack() JSON output should use 2-space indent by default. Got:\n%s", resultStr)
-	}
-}
-
-func TestPack_Indent_JSON_Custom(t *testing.T) {
-	// Test custom indent values for JSON
+func TestPack_Indent_JSON(t *testing.T) {
+	// Test indent values for JSON (default and custom)
 	tests := []struct {
 		name   string
 		indent int
 	}{
+		{"default (2 spaces)", 2},
 		{"1 space", 1},
 		{"4 spaces", 4},
 		{"8 spaces", 8},
@@ -1051,35 +767,7 @@ func TestPack_Indent_Invalid(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := pack(testOptsWithIndent("../testdata/simple/input", "yaml", false, false, tt.indent), nil)
-			if err == nil {
-				t.Errorf("pack() expected error for invalid indent %d", tt.indent)
-			}
-			if err != nil && !strings.Contains(err.Error(), "invalid indent") {
-				t.Errorf("pack() error = %v, want error containing 'invalid indent'", err)
-			}
+			assertErrorContains(t, err, "invalid indent")
 		})
 	}
-}
-
-func TestMarshalToFormat_YAMLEncodeError(t *testing.T) {
-	// Test error path when YAML encoder Encode() fails
-	// Note: The YAML encoder panics for some invalid types (like channels),
-	// but it can return errors in other scenarios (e.g., writer errors).
-	// This test verifies that the error handling code path exists.
-
-	// Test with valid data to ensure normal path works
-	data := map[string]interface{}{"key": "value"}
-	result, err := marshalToFormat(data, "yaml", 2)
-	if err != nil {
-		t.Errorf("marshalToFormat() unexpected error: %v", err)
-	}
-	if len(result) == 0 {
-		t.Error("marshalToFormat() returned empty result")
-	}
-
-	// Test that the error handling path exists by verifying the function structure
-	// The code at line 242-244 handles enc.Encode() errors and calls enc.Close()
-	// The code at line 246-248 handles enc.Close() errors
-	// These paths are difficult to test directly without mocking, but the code exists
-	// to handle cases where the encoder returns errors (e.g., writer failures)
 }

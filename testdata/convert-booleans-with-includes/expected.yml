@@ -1,0 +1,3 @@
+enabled: true
+script: |
+  echo 'test'

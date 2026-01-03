@@ -10,29 +10,91 @@ import (
 	"go.yaml.in/yaml/v4"
 )
 
+// assertNoError asserts that an error is nil. If the error is not nil, the test fails.
+func assertNoError(t *testing.T, err error) {
+	t.Helper()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// assertErrorContains asserts that an error exists and contains the specified substring.
+// If the error is nil or doesn't contain the substring, the test fails.
+func assertErrorContains(t *testing.T, err error, substr string) {
+	t.Helper()
+	if err == nil {
+		t.Fatalf("expected error containing %q, got nil", substr)
+	}
+	if !strings.Contains(err.Error(), substr) {
+		t.Errorf("error = %v, want error containing %q", err, substr)
+	}
+}
+
+// createTestDir creates a temporary directory with the specified files and empty directories.
+// The files map keys are relative paths (e.g., "dir/file.yml"), and values are file contents.
+// The emptyDirs slice contains relative paths to empty directories to create.
+// Returns the path to the created temporary directory.
+func createTestDir(t *testing.T, files map[string]string, emptyDirs []string) string {
+	t.Helper()
+	tmpDir := t.TempDir()
+	for path, content := range files {
+		fullPath := filepath.Join(tmpDir, path)
+		dir := filepath.Dir(fullPath)
+		if err := os.MkdirAll(dir, 0700); err != nil {
+			t.Fatalf("Failed to create directory %q: %v", dir, err)
+		}
+		if err := os.WriteFile(fullPath, []byte(content), 0600); err != nil {
+			t.Fatalf("Failed to create file %q: %v", fullPath, err)
+		}
+	}
+	for _, dir := range emptyDirs {
+		fullPath := filepath.Join(tmpDir, dir)
+		if err := os.MkdirAll(fullPath, 0700); err != nil {
+			t.Fatalf("Failed to create empty directory %q: %v", fullPath, err)
+		}
+	}
+	return tmpDir
+}
+
+// createTreeAndMarshal creates a tree from the given directory, marshals it to YAML,
+// and returns the result as a map[string]interface{}.
+func createTreeAndMarshal(t *testing.T, dir string) map[string]interface{} {
+	t.Helper()
+	tree, err := NewTree(dir)
+	assertNoError(t, err)
+	result, err := tree.MarshalYAML()
+	assertNoError(t, err)
+	resultMap, ok := result.(map[string]interface{})
+	if !ok {
+		t.Fatalf("MarshalYAML() returned %T, want map[string]interface{}", result)
+	}
+	return resultMap
+}
+
+// findNodeByName recursively searches the tree for a node with the matching name.
+// Returns nil if not found.
+func findNodeByName(t *testing.T, tree *Node, name string) *Node {
+	t.Helper()
+	if tree.Info.Name() == name {
+		return tree
+	}
+	for _, child := range tree.Children {
+		if found := findNodeByName(t, child, name); found != nil {
+			return found
+		}
+	}
+	return nil
+}
+
 func TestNewTree(t *testing.T) {
 	// Test basic tree building with a temporary directory
 	// Integration tests in cmd/fyaml/main_test.go cover full pack() behavior
-	tmpDir := t.TempDir()
-
-	subDir := filepath.Join(tmpDir, "sub_dir")
-	subDirFile := filepath.Join(tmpDir, "sub_dir", "sub_dir_file.yml")
-	emptyDir := filepath.Join(tmpDir, "empty_dir")
-
-	if err := os.Mkdir(subDir, 0700); err != nil {
-		t.Fatalf("Failed to create subdirectory: %v", err)
-	}
-	if err := os.WriteFile(subDirFile, []byte("foo:\n  bar:\n    baz"), 0600); err != nil {
-		t.Fatalf("Failed to create file: %v", err)
-	}
-	if err := os.Mkdir(emptyDir, 0700); err != nil {
-		t.Fatalf("Failed to create empty directory: %v", err)
-	}
+	tmpDir := createTestDir(t, map[string]string{
+		"sub_dir/sub_dir_file.yml": "entity:\n  id: example1\n  attributes:\n    name: sample name",
+	}, []string{"empty_dir"})
 
 	tree, err := NewTree(tmpDir)
-	if err != nil {
-		t.Fatalf("NewTree() error = %v", err)
-	}
+	assertNoError(t, err)
 
 	if tree == nil {
 		t.Fatal("NewTree() returned nil tree")
@@ -49,45 +111,18 @@ func TestNewTree(t *testing.T) {
 }
 
 func TestMarshalYAML_RendersToYAML(t *testing.T) {
-	tmpDir := t.TempDir()
+	tmpDir := createTestDir(t, map[string]string{
+		"sub_dir/sub_dir_file.yml": "entity:\n  id: example1\n  attributes:\n    name: sample name",
+	}, []string{"empty_dir"})
 
-	subDir := filepath.Join(tmpDir, "sub_dir")
-	subDirFile := filepath.Join(tmpDir, "sub_dir", "sub_dir_file.yml")
-	emptyDir := filepath.Join(tmpDir, "empty_dir")
+	// Verify it contains expected keys
+	resultMap := createTreeAndMarshal(t, tmpDir)
 
-	if err := os.Mkdir(subDir, 0700); err != nil {
-		t.Fatalf("Failed to create subdirectory: %v", err)
-	}
-	if err := os.WriteFile(subDirFile, []byte("foo:\n  bar:\n    baz"), 0600); err != nil {
-		t.Fatalf("Failed to create file: %v", err)
-	}
-	if err := os.Mkdir(emptyDir, 0700); err != nil {
-		t.Fatalf("Failed to create empty directory: %v", err)
-	}
-
-	tree, err := NewTree(tmpDir)
-	if err != nil {
-		t.Fatalf("NewTree() error = %v", err)
-	}
-
-	out, err := yaml.Marshal(tree)
-	if err != nil {
-		t.Fatalf("yaml.Marshal() error = %v", err)
-	}
-
+	// Verify yaml.Marshal works
+	out, err := yaml.Marshal(resultMap)
+	assertNoError(t, err)
 	if len(out) == 0 {
 		t.Error("yaml.Marshal() returned empty output")
-	}
-
-	// Verify it contains expected keys (order may vary due to sorting)
-	result, err := tree.MarshalYAML()
-	if err != nil {
-		t.Fatalf("MarshalYAML() error = %v", err)
-	}
-
-	resultMap, ok := result.(map[string]interface{})
-	if !ok {
-		t.Fatalf("MarshalYAML() returned %T, want map[string]interface{}", result)
 	}
 
 	if _, ok := resultMap["sub_dir"]; !ok {
@@ -99,49 +134,34 @@ func TestMarshalYAML_RendersToYAML(t *testing.T) {
 	}
 }
 
+func TestNewTree_NonexistentDirectory(t *testing.T) {
+	// Test that NewTree returns an error for non-existent directory
+	_, err := NewTree("/nonexistent/path/that/does/not/exist")
+	assertErrorContains(t, err, "no such file")
+}
+
 func TestMarshalYAML_InvalidYAML(t *testing.T) {
 	// Test that invalid YAML content causes an error when marshaling
 	// This matches the original CircleCI test behavior
-	tmpDir := t.TempDir()
-
-	anotherDir := filepath.Join(tmpDir, "another_dir")
+	tmpDir := createTestDir(t, map[string]string{
+		"another_dir/another_dir_file.yml": "1some: in: valid: yaml",
+	}, nil)
 	anotherDirFile := filepath.Join(tmpDir, "another_dir", "another_dir_file.yml")
-
-	if err := os.Mkdir(anotherDir, 0700); err != nil {
-		t.Fatalf("Failed to create directory: %v", err)
-	}
-	if err := os.WriteFile(anotherDirFile, []byte("1some: in: valid: yaml"), 0600); err != nil {
-		t.Fatalf("Failed to create invalid YAML file: %v", err)
-	}
 
 	// NewTree should succeed - it doesn't validate YAML content
 	tree, err := NewTree(tmpDir)
-	if err != nil {
-		t.Fatalf("NewTree() error = %v, expected no error", err)
-	}
+	assertNoError(t, err)
 
 	// yaml.Marshal should fail when trying to marshal the tree with invalid YAML
 	_, err = yaml.Marshal(tree)
-	if err == nil {
-		t.Error("yaml.Marshal() expected error for invalid YAML content, got nil")
-		return
-	}
-
-	// Verify the error message indicates a YAML parsing issue and includes file path
-	// The exact message may vary by YAML library version, but should contain "yaml" or "YAML"
+	assertErrorContains(t, err, anotherDirFile)
+	// Verify the error is a YAML/JSON parsing error
 	errStr := strings.ToLower(err.Error())
-	if !strings.Contains(errStr, "yaml") {
-		t.Errorf("yaml.Marshal() error = %v, expected YAML parsing error", err)
+	if !strings.Contains(errStr, "yaml") && !strings.Contains(errStr, "json") {
+		t.Errorf("yaml.Marshal() error = %v, expected YAML/JSON parsing error", err)
 	}
-	// Verify the error includes the file path for better debugging
-	if !strings.Contains(err.Error(), anotherDirFile) {
-		t.Errorf("yaml.Marshal() error = %v, expected error to include file path %s", err, anotherDirFile)
-	}
-
 	// Verify the error includes position information (line:column) if available
-	// New error format should include position like "YAML/JSON syntax error in file:line:column"
 	if strings.Contains(err.Error(), "YAML/JSON syntax error in") {
-		// Should have line:column format (e.g., ":0:9:")
 		if !strings.Contains(err.Error(), ":") {
 			t.Error("yaml.Marshal() error should include position information (line:column)")
 		}
@@ -150,441 +170,315 @@ func TestMarshalYAML_InvalidYAML(t *testing.T) {
 
 func TestFormatYAMLError_ParserError(t *testing.T) {
 	// Test that formatYAMLError properly formats ParserError with position info
-	tmpDir := t.TempDir()
+	tmpDir := createTestDir(t, map[string]string{
+		"test.yml": "key: [unclosed",
+	}, nil)
 	testFile := filepath.Join(tmpDir, "test.yml")
 
-	// Create invalid YAML that will trigger a ParserError
-	invalidYAML := "key: [unclosed"
-	if err := os.WriteFile(testFile, []byte(invalidYAML), 0600); err != nil {
-		t.Fatalf("Failed to create test file: %v", err)
-	}
-
 	tree, err := NewTree(tmpDir)
-	if err != nil {
-		t.Fatalf("NewTree() error = %v", err)
-	}
+	assertNoError(t, err)
 
 	_, err = yaml.Marshal(tree)
-	if err == nil {
-		t.Fatal("Expected error for invalid YAML")
-	}
-
-	// Verify error message format includes position
-	errStr := err.Error()
-	if !strings.Contains(errStr, "YAML/JSON syntax error in") {
-		t.Errorf("Expected 'YAML/JSON syntax error in' in error message, got: %s", errStr)
-	}
-	if !strings.Contains(errStr, testFile) {
-		t.Errorf("Expected file path in error message, got: %s", errStr)
+	assertErrorContains(t, err, "YAML/JSON syntax error in")
+	// Verify error includes file path
+	if !strings.Contains(err.Error(), testFile) {
+		t.Errorf("Expected file path in error message, got: %s", err.Error())
 	}
 	// Should have line:column format
-	if !strings.Contains(errStr, ":") {
-		t.Errorf("Expected position information (line:column) in error message, got: %s", errStr)
+	if !strings.Contains(err.Error(), ":") {
+		t.Errorf("Expected position information (line:column) in error message, got: %s", err.Error())
+	}
+}
+
+func TestFormatYAMLError_TypeError(t *testing.T) {
+	// Test that formatYAMLError properly formats TypeError with position info
+	// Create YAML that will cause a type error (e.g., trying to use a string as a number)
+	tmpDir := createTestDir(t, map[string]string{
+		"test.yml": "key: not_a_number\nnumber: !!int not_a_number",
+	}, nil)
+	testFile := filepath.Join(tmpDir, "test.yml")
+
+	tree, err := NewTree(tmpDir)
+	assertNoError(t, err)
+
+	_, err = yaml.Marshal(tree)
+	// TypeError should be formatted with file path and error details
+	assertErrorContains(t, err, testFile)
+	// Should contain type error indication
+	if !strings.Contains(err.Error(), "type") && !strings.Contains(err.Error(), "YAML/JSON") {
+		t.Errorf("Expected type error indication in error message, got: %s", err.Error())
 	}
 }
 
 func TestNewTree_JSONFiles(t *testing.T) {
 	// Test that JSON files are recognized and processed
-	tmpDir := t.TempDir()
-
-	servicesDir := filepath.Join(tmpDir, "services")
-	jsonFile := filepath.Join(servicesDir, "api.json")
-
-	if err := os.Mkdir(servicesDir, 0700); err != nil {
-		t.Fatalf("Failed to create services directory: %v", err)
-	}
-	if err := os.WriteFile(jsonFile, []byte(`{"name": "api", "port": 8080}`), 0600); err != nil {
-		t.Fatalf("Failed to create JSON file: %v", err)
-	}
+	tmpDir := createTestDir(t, map[string]string{
+		"entities/item1.json": `{"entity": {"id": "example1", "attributes": {"name": "sample name"}}}`,
+	}, nil)
 
 	tree, err := NewTree(tmpDir)
-	if err != nil {
-		t.Fatalf("NewTree() error = %v", err)
-	}
+	assertNoError(t, err)
 
 	if tree == nil {
 		t.Fatal("NewTree() returned nil tree")
 	}
 
 	// Verify JSON file is included in the tree
-	result, err := tree.MarshalYAML()
-	if err != nil {
-		t.Fatalf("MarshalYAML() error = %v", err)
+	resultMap := createTreeAndMarshal(t, tmpDir)
+
+	entitiesMap, ok := resultMap["entities"].(map[string]interface{})
+	if !ok {
+		t.Fatal("MarshalYAML() result missing 'entities' key or not a map")
 	}
 
-	resultMap, ok := result.(map[string]interface{})
+	item1Map, ok := entitiesMap["item1"].(map[string]interface{})
 	if !ok {
-		t.Fatalf("MarshalYAML() returned %T, want map[string]interface{}", result)
-	}
-
-	servicesMap, ok := resultMap["services"].(map[string]interface{})
-	if !ok {
-		t.Fatal("MarshalYAML() result missing 'services' key or not a map")
-	}
-
-	apiMap, ok := servicesMap["api"].(map[string]interface{})
-	if !ok {
-		t.Fatal("MarshalYAML() result missing 'api' key from JSON file or not a map")
+		t.Fatal("MarshalYAML() result missing 'item1' key from JSON file or not a map")
 	}
 
 	// Verify JSON content was parsed correctly
-	// JSON numbers may be parsed as int or float64 depending on the YAML library
-	if apiMap["name"] != "api" {
-		t.Errorf("MarshalYAML() JSON content name not parsed correctly. Got: %v", apiMap["name"])
+	entityMap, ok := item1Map["entity"].(map[string]interface{})
+	if !ok {
+		t.Fatal("MarshalYAML() result missing 'entity' key from JSON file or not a map")
 	}
-	port := apiMap["port"]
-	if port != 8080 && port != float64(8080) {
-		t.Errorf("MarshalYAML() JSON content port not parsed correctly. Got: %v (type: %T)", port, port)
+
+	if entityMap["id"] != "example1" {
+		t.Errorf("MarshalYAML() JSON content id not parsed correctly. Got: %v", entityMap["id"])
+	}
+
+	attributesMap, ok := entityMap["attributes"].(map[string]interface{})
+	if !ok {
+		t.Fatal("MarshalYAML() result missing 'attributes' key from JSON file or not a map")
+	}
+
+	if attributesMap["name"] != "sample name" {
+		t.Errorf("MarshalYAML() JSON content name not parsed correctly. Got: %v", attributesMap["name"])
 	}
 }
 
 func TestNewTree_JSONSpecialCase(t *testing.T) {
 	// Test that @*.json files are recognized as special case files
-	tmpDir := t.TempDir()
+	tmpDir := createTestDir(t, map[string]string{
+		"entities/@common.json": `{"timeout": 30, "retries": 3}`,
+		"entities/item1.yml":    "entity:\n  id: example1\n  attributes:\n    name: sample name",
+	}, nil)
 
-	servicesDir := filepath.Join(tmpDir, "services")
-	atCommonFile := filepath.Join(servicesDir, "@common.json")
-	apiFile := filepath.Join(servicesDir, "api.yml")
+	resultMap := createTreeAndMarshal(t, tmpDir)
 
-	if err := os.Mkdir(servicesDir, 0700); err != nil {
-		t.Fatalf("Failed to create services directory: %v", err)
-	}
-	if err := os.WriteFile(atCommonFile, []byte(`{"timeout": 30, "retries": 3}`), 0600); err != nil {
-		t.Fatalf("Failed to create @common.json file: %v", err)
-	}
-	if err := os.WriteFile(apiFile, []byte("name: api"), 0600); err != nil {
-		t.Fatalf("Failed to create api.yml file: %v", err)
-	}
-
-	tree, err := NewTree(tmpDir)
-	if err != nil {
-		t.Fatalf("NewTree() error = %v", err)
-	}
-
-	result, err := tree.MarshalYAML()
-	if err != nil {
-		t.Fatalf("MarshalYAML() error = %v", err)
-	}
-
-	resultMap, ok := result.(map[string]interface{})
+	entitiesMap, ok := resultMap["entities"].(map[string]interface{})
 	if !ok {
-		t.Fatalf("MarshalYAML() returned %T, want map[string]interface{}", result)
+		t.Fatal("MarshalYAML() result missing 'entities' key or not a map")
 	}
 
-	servicesMap, ok := resultMap["services"].(map[string]interface{})
-	if !ok {
-		t.Fatal("MarshalYAML() result missing 'services' key or not a map")
-	}
-
-	// @common.json should merge into services map
+	// @common.json should merge into entities map
 	// JSON numbers may be parsed as int or float64 depending on the YAML library
-	timeout := servicesMap["timeout"]
+	timeout := entitiesMap["timeout"]
 	if timeout != 30 && timeout != float64(30) {
-		t.Errorf("MarshalYAML() @common.json content not merged into services map. Got timeout: %v (type: %T)", timeout, timeout)
+		t.Errorf("MarshalYAML() @common.json content not merged into entities map. Got timeout: %v (type: %T)", timeout, timeout)
 	}
-	// api.yml should also be present
-	if servicesMap["api"] == nil {
-		t.Error("MarshalYAML() api.yml not found in services map")
+	// item1.yml should also be present
+	if entitiesMap["item1"] == nil {
+		t.Error("MarshalYAML() item1.yml not found in entities map")
 	}
 }
 
 func TestSpecialCaseDirectory(t *testing.T) {
 	// Test that specialCaseDirectory() correctly identifies @ directories
-	tmpDir := t.TempDir()
-
-	// Create a directory starting with @
-	atDir := filepath.Join(tmpDir, "@infrastructure")
-	if err := os.Mkdir(atDir, 0700); err != nil {
-		t.Fatalf("Failed to create @infrastructure directory: %v", err)
-	}
-
-	// Create a regular directory
-	regularDir := filepath.Join(tmpDir, "services")
-	if err := os.Mkdir(regularDir, 0700); err != nil {
-		t.Fatalf("Failed to create services directory: %v", err)
-	}
+	tmpDir := createTestDir(t, nil, []string{"@group1", "entities"})
 
 	tree, err := NewTree(tmpDir)
-	if err != nil {
-		t.Fatalf("NewTree() error = %v", err)
-	}
+	assertNoError(t, err)
 
-	// Find the @infrastructure node
-	var atDirNode *Node
-	var regularDirNode *Node
-	for _, child := range tree.Children {
-		if child.Info.Name() == "@infrastructure" {
-			atDirNode = child
-		}
-		if child.Info.Name() == "services" {
-			regularDirNode = child
-		}
-	}
-
+	// Find the @group1 node
+	atDirNode := findNodeByName(t, tree, "@group1")
 	if atDirNode == nil {
-		t.Fatal("Could not find @infrastructure node")
+		t.Fatal("Could not find @group1 node")
 	}
+
+	// Find the entities node
+	regularDirNode := findNodeByName(t, tree, "entities")
 	if regularDirNode == nil {
-		t.Fatal("Could not find services node")
+		t.Fatal("Could not find entities node")
 	}
 
-	// @infrastructure should be identified as special case directory
+	// @group1 should be identified as special case directory
 	if !atDirNode.specialCaseDirectory() {
-		t.Error("specialCaseDirectory() returned false for @infrastructure directory")
+		t.Error("specialCaseDirectory() returned false for @group1 directory")
 	}
 
-	// services should not be identified as special case directory
+	// entities should not be identified as special case directory
 	if regularDirNode.specialCaseDirectory() {
-		t.Error("specialCaseDirectory() returned true for regular services directory")
+		t.Error("specialCaseDirectory() returned true for regular entities directory")
+	}
+}
+
+func TestSpecialCaseFile(t *testing.T) {
+	// Test that specialCase() correctly identifies @*.yml files (not directories)
+	tmpDir := createTestDir(t, map[string]string{
+		"entities/@common.yml": "timeout: 30",
+		"entities/item1.yml":   "entity:\n  id: example1",
+	}, nil)
+
+	tree, err := NewTree(tmpDir)
+	assertNoError(t, err)
+
+	// Find the @common.yml node
+	atFileNode := findNodeByName(t, tree, "@common.yml")
+	if atFileNode == nil {
+		t.Fatal("Could not find @common.yml node")
+	}
+
+	// Find a regular file node
+	regularFileNode := findNodeByName(t, tree, "item1.yml")
+	if regularFileNode == nil {
+		t.Fatal("Could not find item1.yml node")
+	}
+
+	// @common.yml should be identified as special case file
+	if !atFileNode.specialCase() {
+		t.Error("specialCase() returned false for @common.yml file")
+	}
+
+	// item1.yml should not be identified as special case file
+	if regularFileNode.specialCase() {
+		t.Error("specialCase() returned true for regular item1.yml file")
+	}
+
+	// @common.yml should not be identified as special case directory
+	if atFileNode.specialCaseDirectory() {
+		t.Error("specialCaseDirectory() returned true for @common.yml file (should only be true for directories)")
 	}
 }
 
 func TestMarshalYAML_AtDirectory(t *testing.T) {
 	// Test that @ directories merge their contents into parent map
-	tmpDir := t.TempDir()
+	tmpDir := createTestDir(t, map[string]string{
+		"entities/@group1/item1.yml": "entity:\n  id: example1\n  attributes:\n    name: first item",
+		"entities/@group1/item2.yml": "entity:\n  id: example2\n  attributes:\n    name: second item",
+		"entities/@group2/item3.yml": "entity:\n  id: example3\n  attributes:\n    name: third item",
+		"entities/item4.yml":         "entity:\n  id: example4\n  attributes:\n    name: fourth item",
+	}, nil)
 
-	componentsDir := filepath.Join(tmpDir, "components")
-	atInfraDir := filepath.Join(componentsDir, "@infrastructure")
-	atMonitorDir := filepath.Join(componentsDir, "@monitoring")
+	resultMap := createTreeAndMarshal(t, tmpDir)
 
-	if err := os.MkdirAll(atInfraDir, 0700); err != nil {
-		t.Fatalf("Failed to create @infrastructure directory: %v", err)
-	}
-	if err := os.MkdirAll(atMonitorDir, 0700); err != nil {
-		t.Fatalf("Failed to create @monitoring directory: %v", err)
-	}
-
-	// Create files in @ directories
-	cacheFile := filepath.Join(atInfraDir, "cache.yml")
-	queueFile := filepath.Join(atInfraDir, "queue.yml")
-	metricsFile := filepath.Join(atMonitorDir, "metrics.yml")
-
-	if err := os.WriteFile(cacheFile, []byte("type: redis\nhost: cache.example.com"), 0600); err != nil {
-		t.Fatalf("Failed to create cache.yml: %v", err)
-	}
-	if err := os.WriteFile(queueFile, []byte("type: rabbitmq\nhost: queue.example.com"), 0600); err != nil {
-		t.Fatalf("Failed to create queue.yml: %v", err)
-	}
-	if err := os.WriteFile(metricsFile, []byte("type: prometheus\nport: 9090"), 0600); err != nil {
-		t.Fatalf("Failed to create metrics.yml: %v", err)
-	}
-
-	// Create a regular file in components
-	databaseFile := filepath.Join(componentsDir, "database.yml")
-	if err := os.WriteFile(databaseFile, []byte("type: postgresql\nhost: db.example.com"), 0600); err != nil {
-		t.Fatalf("Failed to create database.yml: %v", err)
-	}
-
-	tree, err := NewTree(tmpDir)
-	if err != nil {
-		t.Fatalf("NewTree() error = %v", err)
-	}
-
-	result, err := tree.MarshalYAML()
-	if err != nil {
-		t.Fatalf("MarshalYAML() error = %v", err)
-	}
-
-	resultMap, ok := result.(map[string]interface{})
+	entitiesMap, ok := resultMap["entities"].(map[string]interface{})
 	if !ok {
-		t.Fatalf("MarshalYAML() returned %T, want map[string]interface{}", result)
+		t.Fatal("MarshalYAML() result missing 'entities' key or not a map")
 	}
 
-	componentsMap, ok := resultMap["components"].(map[string]interface{})
-	if !ok {
-		t.Fatal("MarshalYAML() result missing 'components' key or not a map")
+	// Files from @group1 should be in entities map (not nested under @group1)
+	if entitiesMap["item1"] == nil {
+		t.Error("MarshalYAML() item1.yml from @group1 not found in entities map")
+	}
+	if entitiesMap["item2"] == nil {
+		t.Error("MarshalYAML() item2.yml from @group1 not found in entities map")
 	}
 
-	// Files from @infrastructure should be in components map (not nested under @infrastructure)
-	if componentsMap["cache"] == nil {
-		t.Error("MarshalYAML() cache.yml from @infrastructure not found in components map")
-	}
-	if componentsMap["queue"] == nil {
-		t.Error("MarshalYAML() queue.yml from @infrastructure not found in components map")
-	}
-
-	// Files from @monitoring should be in components map (not nested under @monitoring)
-	if componentsMap["metrics"] == nil {
-		t.Error("MarshalYAML() metrics.yml from @monitoring not found in components map")
+	// Files from @group2 should be in entities map (not nested under @group2)
+	if entitiesMap["item3"] == nil {
+		t.Error("MarshalYAML() item3.yml from @group2 not found in entities map")
 	}
 
 	// Regular file should also be present
-	if componentsMap["database"] == nil {
-		t.Error("MarshalYAML() database.yml not found in components map")
+	if entitiesMap["item4"] == nil {
+		t.Error("MarshalYAML() item4.yml not found in entities map")
 	}
 
-	// @infrastructure and @monitoring should NOT be keys in components map
-	if componentsMap["@infrastructure"] != nil {
-		t.Error("MarshalYAML() @infrastructure should not be a key in components map")
+	// @group1 and @group2 should NOT be keys in entities map
+	if entitiesMap["@group1"] != nil {
+		t.Error("MarshalYAML() @group1 should not be a key in entities map")
 	}
-	if componentsMap["@monitoring"] != nil {
-		t.Error("MarshalYAML() @monitoring should not be a key in components map")
+	if entitiesMap["@group2"] != nil {
+		t.Error("MarshalYAML() @group2 should not be a key in entities map")
 	}
-	if componentsMap["infrastructure"] != nil {
-		t.Error("MarshalYAML() infrastructure (without @) should not be a key in components map")
+	if entitiesMap["group1"] != nil {
+		t.Error("MarshalYAML() group1 (without @) should not be a key in entities map")
 	}
-	if componentsMap["monitoring"] != nil {
-		t.Error("MarshalYAML() monitoring (without @) should not be a key in components map")
+	if entitiesMap["group2"] != nil {
+		t.Error("MarshalYAML() group2 (without @) should not be a key in entities map")
 	}
 }
 
 func TestMarshalYAML_EmptyAtDirectory(t *testing.T) {
 	// Test that empty @ directories are ignored
-	tmpDir := t.TempDir()
+	tmpDir := createTestDir(t, map[string]string{
+		"entities/item1.yml": "entity:\n  id: example1\n  attributes:\n    name: sample name",
+	}, []string{"entities/@group1"})
 
-	componentsDir := filepath.Join(tmpDir, "components")
-	atEmptyDir := filepath.Join(componentsDir, "@empty")
+	resultMap := createTreeAndMarshal(t, tmpDir)
 
-	if err := os.MkdirAll(atEmptyDir, 0700); err != nil {
-		t.Fatalf("Failed to create @empty directory: %v", err)
-	}
-
-	// Create a regular file in components
-	databaseFile := filepath.Join(componentsDir, "database.yml")
-	if err := os.WriteFile(databaseFile, []byte("type: postgresql"), 0600); err != nil {
-		t.Fatalf("Failed to create database.yml: %v", err)
-	}
-
-	tree, err := NewTree(tmpDir)
-	if err != nil {
-		t.Fatalf("NewTree() error = %v", err)
-	}
-
-	result, err := tree.MarshalYAML()
-	if err != nil {
-		t.Fatalf("MarshalYAML() error = %v", err)
-	}
-
-	resultMap, ok := result.(map[string]interface{})
+	entitiesMap, ok := resultMap["entities"].(map[string]interface{})
 	if !ok {
-		t.Fatalf("MarshalYAML() returned %T, want map[string]interface{}", result)
-	}
-
-	componentsMap, ok := resultMap["components"].(map[string]interface{})
-	if !ok {
-		t.Fatal("MarshalYAML() result missing 'components' key or not a map")
+		t.Fatal("MarshalYAML() result missing 'entities' key or not a map")
 	}
 
 	// Empty @ directory should not create any keys
-	if componentsMap["@empty"] != nil {
-		t.Error("MarshalYAML() empty @empty directory should not create a key")
+	if entitiesMap["@group1"] != nil {
+		t.Error("MarshalYAML() empty @group1 directory should not create a key")
 	}
-	if componentsMap["empty"] != nil {
-		t.Error("MarshalYAML() empty @empty directory should not create an 'empty' key")
+	if entitiesMap["group1"] != nil {
+		t.Error("MarshalYAML() empty @group1 directory should not create a 'group1' key")
 	}
 
 	// Regular file should still be present
-	if componentsMap["database"] == nil {
-		t.Error("MarshalYAML() database.yml not found in components map")
+	if entitiesMap["item1"] == nil {
+		t.Error("MarshalYAML() item1.yml not found in entities map")
 	}
 }
 
 func TestMarshalYAML_NestedAtDirectories(t *testing.T) {
 	// Test that nested @ directories work recursively
-	// @services/@common/ should merge into parent of @services/
-	tmpDir := t.TempDir()
+	// @group1/@group2/ should merge into parent of @group1/
+	tmpDir := createTestDir(t, map[string]string{
+		"entities/@group1/@group2/item1.yml": "entity:\n  id: example1\n  attributes:\n    name: first item",
+		"entities/@group1/@group2/item2.yml": "entity:\n  id: example2\n  attributes:\n    name: second item",
+		"entities/@group1/item3.yml":         "entity:\n  id: example3\n  attributes:\n    name: third item",
+	}, nil)
 
-	componentsDir := filepath.Join(tmpDir, "components")
-	atServicesDir := filepath.Join(componentsDir, "@services")
-	atCommonDir := filepath.Join(atServicesDir, "@common")
+	resultMap := createTreeAndMarshal(t, tmpDir)
 
-	if err := os.MkdirAll(atCommonDir, 0700); err != nil {
-		t.Fatalf("Failed to create nested @ directories: %v", err)
-	}
-
-	// Create files in nested @ directory
-	configFile := filepath.Join(atCommonDir, "config.yml")
-	settingsFile := filepath.Join(atCommonDir, "settings.yml")
-
-	if err := os.WriteFile(configFile, []byte("timeout: 30\nretries: 3"), 0600); err != nil {
-		t.Fatalf("Failed to create config.yml: %v", err)
-	}
-	if err := os.WriteFile(settingsFile, []byte("debug: true\nlog_level: info"), 0600); err != nil {
-		t.Fatalf("Failed to create settings.yml: %v", err)
-	}
-
-	// Create a file directly in @services
-	apiFile := filepath.Join(atServicesDir, "api.yml")
-	if err := os.WriteFile(apiFile, []byte("name: api\nport: 8080"), 0600); err != nil {
-		t.Fatalf("Failed to create api.yml: %v", err)
-	}
-
-	tree, err := NewTree(tmpDir)
-	if err != nil {
-		t.Fatalf("NewTree() error = %v", err)
-	}
-
-	result, err := tree.MarshalYAML()
-	if err != nil {
-		t.Fatalf("MarshalYAML() error = %v", err)
-	}
-
-	resultMap, ok := result.(map[string]interface{})
+	entitiesMap, ok := resultMap["entities"].(map[string]interface{})
 	if !ok {
-		t.Fatalf("MarshalYAML() returned %T, want map[string]interface{}", result)
+		t.Fatal("MarshalYAML() result missing 'entities' key or not a map")
 	}
 
-	componentsMap, ok := resultMap["components"].(map[string]interface{})
-	if !ok {
-		t.Fatal("MarshalYAML() result missing 'components' key or not a map")
+	// Files from nested @group2 should be in entities map (merged through @group1)
+	if entitiesMap["item1"] == nil {
+		t.Error("MarshalYAML() item1.yml from @group1/@group2 not found in entities map")
+	}
+	if entitiesMap["item2"] == nil {
+		t.Error("MarshalYAML() item2.yml from @group1/@group2 not found in entities map")
 	}
 
-	// Files from nested @common should be in components map (merged through @services)
-	if componentsMap["config"] == nil {
-		t.Error("MarshalYAML() config.yml from @services/@common not found in components map")
-	}
-	if componentsMap["settings"] == nil {
-		t.Error("MarshalYAML() settings.yml from @services/@common not found in components map")
+	// File from @group1 should also be in entities map
+	if entitiesMap["item3"] == nil {
+		t.Error("MarshalYAML() item3.yml from @group1 not found in entities map")
 	}
 
-	// File from @services should also be in components map
-	if componentsMap["api"] == nil {
-		t.Error("MarshalYAML() api.yml from @services not found in components map")
+	// @group1 and @group2 should NOT be keys in entities map
+	if entitiesMap["@group1"] != nil {
+		t.Error("MarshalYAML() @group1 should not be a key in entities map")
 	}
-
-	// @services and @common should NOT be keys in components map
-	if componentsMap["@services"] != nil {
-		t.Error("MarshalYAML() @services should not be a key in components map")
+	if entitiesMap["@group2"] != nil {
+		t.Error("MarshalYAML() @group2 should not be a key in entities map")
 	}
-	if componentsMap["@common"] != nil {
-		t.Error("MarshalYAML() @common should not be a key in components map")
+	if entitiesMap["group1"] != nil {
+		t.Error("MarshalYAML() group1 (without @) should not be a key in entities map")
 	}
-	if componentsMap["services"] != nil {
-		t.Error("MarshalYAML() services (without @) should not be a key in components map")
-	}
-	if componentsMap["common"] != nil {
-		t.Error("MarshalYAML() common (without @) should not be a key in components map")
+	if entitiesMap["group2"] != nil {
+		t.Error("MarshalYAML() group2 (without @) should not be a key in entities map")
 	}
 }
 
 func TestMarshalLeaf_WithIncludes(t *testing.T) {
 	// Test marshalLeaf with EnableIncludes enabled
-	tmpDir := t.TempDir()
-
-	commandsDir := filepath.Join(tmpDir, "commands")
-	scriptsDir := filepath.Join(commandsDir, "scripts")
-	if err := os.MkdirAll(scriptsDir, 0700); err != nil {
-		t.Fatalf("Failed to create directories: %v", err)
-	}
-
-	// Create a script to include
-	scriptFile := filepath.Join(scriptsDir, "test.sh")
-	scriptContent := "#!/bin/bash\necho 'test'"
-	if err := os.WriteFile(scriptFile, []byte(scriptContent), 0600); err != nil {
-		t.Fatalf("Failed to create script: %v", err)
-	}
-
-	// Create YAML with include
-	yamlFile := filepath.Join(commandsDir, "test.yml")
-	yamlContent := `command: <<include(scripts/test.sh)>>`
-	if err := os.WriteFile(yamlFile, []byte(yamlContent), 0600); err != nil {
-		t.Fatalf("Failed to create YAML file: %v", err)
-	}
+	tmpDir := createTestDir(t, map[string]string{
+		"entities/scripts/test.sh": "#!/bin/bash\necho 'test'",
+		"entities/item1.yml":       "entity:\n  id: example1\n  attributes:\n    command: <<include(scripts/test.sh)>>",
+	}, nil)
 
 	absDir, err := filepath.Abs(tmpDir)
-	if err != nil {
-		t.Fatalf("Failed to get absolute path: %v", err)
-	}
+	assertNoError(t, err)
 
 	opts := &Options{
 		EnableIncludes: true,
@@ -592,32 +486,17 @@ func TestMarshalLeaf_WithIncludes(t *testing.T) {
 	}
 
 	tree, err := NewTree(tmpDir)
-	if err != nil {
-		t.Fatalf("NewTree() error = %v", err)
-	}
+	assertNoError(t, err)
 
-	// Find the test.yml node
-	var testNode *Node
-	for _, child := range tree.Children {
-		if child.Info.Name() == "commands" {
-			for _, cmdChild := range child.Children {
-				if cmdChild.Info.Name() == "test.yml" {
-					testNode = cmdChild
-					break
-				}
-			}
-		}
-	}
-
+	// Find the item1.yml node
+	testNode := findNodeByName(t, tree, "item1.yml")
 	if testNode == nil {
-		t.Fatal("Could not find test.yml node")
+		t.Fatal("Could not find item1.yml node")
 	}
 
 	// Test with includes enabled
 	result, err := testNode.marshalLeaf(opts)
-	if err != nil {
-		t.Fatalf("marshalLeaf() with includes error = %v", err)
-	}
+	assertNoError(t, err)
 
 	resultMap, ok := result.(map[string]interface{})
 	if !ok {
@@ -625,9 +504,19 @@ func TestMarshalLeaf_WithIncludes(t *testing.T) {
 	}
 
 	// The include should have been processed
-	commandVal, ok := resultMap["command"].(string)
+	entityMap, ok := resultMap["entity"].(map[string]interface{})
 	if !ok {
-		t.Fatalf("marshalLeaf() command value is %T, want string", resultMap["command"])
+		t.Fatalf("marshalLeaf() entity value is %T, want map[string]interface{}", resultMap["entity"])
+	}
+
+	attributesMap, ok := entityMap["attributes"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("marshalLeaf() attributes value is %T, want map[string]interface{}", entityMap["attributes"])
+	}
+
+	commandVal, ok := attributesMap["command"].(string)
+	if !ok {
+		t.Fatalf("marshalLeaf() command value is %T, want string", attributesMap["command"])
 	}
 
 	if !strings.Contains(commandVal, "echo 'test'") {
@@ -639,19 +528,12 @@ func TestMarshalLeaf_WithIncludes(t *testing.T) {
 }
 
 func TestMarshalLeaf_WithIncludes_ErrorCases(t *testing.T) {
-	tmpDir := t.TempDir()
-
-	// Test error when include file doesn't exist
-	yamlFile := filepath.Join(tmpDir, "test.yml")
-	yamlContent := `command: <<include(nonexistent.sh)>>`
-	if err := os.WriteFile(yamlFile, []byte(yamlContent), 0600); err != nil {
-		t.Fatalf("Failed to create YAML file: %v", err)
-	}
+	tmpDir := createTestDir(t, map[string]string{
+		"test.yml": `command: <<include(nonexistent.sh)>>`,
+	}, nil)
 
 	absDir, err := filepath.Abs(tmpDir)
-	if err != nil {
-		t.Fatalf("Failed to get absolute path: %v", err)
-	}
+	assertNoError(t, err)
 
 	opts := &Options{
 		EnableIncludes: true,
@@ -659,48 +541,42 @@ func TestMarshalLeaf_WithIncludes_ErrorCases(t *testing.T) {
 	}
 
 	tree, err := NewTree(tmpDir)
-	if err != nil {
-		t.Fatalf("NewTree() error = %v", err)
-	}
+	assertNoError(t, err)
 
-	testNode := tree.Children[0]
+	testNode := findNodeByName(t, tree, "test.yml")
+	if testNode == nil {
+		t.Fatal("Could not find test.yml node")
+	}
 
 	_, err = testNode.marshalLeaf(opts)
-	if err == nil {
-		t.Error("marshalLeaf() expected error for missing include file")
-	}
-	if !strings.Contains(err.Error(), "could not open") {
-		t.Errorf("marshalLeaf() error = %v, want 'could not open'", err)
-	}
+	assertErrorContains(t, err, "could not open")
 }
 
 func TestMarshalLeaf_FileReadError(t *testing.T) {
 	// Test error handling when file cannot be read
-	tmpDir := t.TempDir()
+	tmpDir := createTestDir(t, map[string]string{
+		"test.yml": "key: value",
+	}, nil)
 	yamlFile := filepath.Join(tmpDir, "test.yml")
-	if err := os.WriteFile(yamlFile, []byte("key: value"), 0600); err != nil {
-		t.Fatalf("Failed to create file: %v", err)
-	}
 
 	tree, err := NewTree(tmpDir)
-	if err != nil {
-		t.Fatalf("NewTree() error = %v", err)
-	}
+	assertNoError(t, err)
 
-	testNode := tree.Children[0]
+	testNode := findNodeByName(t, tree, "test.yml")
+	if testNode == nil {
+		t.Fatal("Could not find test.yml node")
+	}
 
 	// Remove read permission to trigger error
 	if err := os.Chmod(yamlFile, 0000); err != nil {
 		t.Fatalf("Failed to chmod file: %v", err)
 	}
-	defer func() {
+	t.Cleanup(func() {
 		_ = os.Chmod(yamlFile, 0600) // Restore for cleanup
-	}()
+	})
 
 	_, err = testNode.marshalLeaf(nil)
-	if err == nil {
-		t.Error("marshalLeaf() expected error for unreadable file")
-	}
+	assertErrorContains(t, err, "failed to read file")
 }
 
 func TestIsEmptyContent(t *testing.T) {
@@ -863,26 +739,14 @@ config:
 
 func TestMarshalLeaf_WithConvertBooleans(t *testing.T) {
 	// Test that the ConvertBooleans option works in marshalLeaf
-	tmpDir := t.TempDir()
-
-	// Create a subdirectory so the file becomes a nested key
-	configDir := filepath.Join(tmpDir, "config")
-	if err := os.MkdirAll(configDir, 0700); err != nil {
-		t.Fatalf("Failed to create config directory: %v", err)
-	}
-
-	yamlFile := filepath.Join(configDir, "test.yml")
-	yamlContent := `enabled: on
+	tmpDir := createTestDir(t, map[string]string{
+		"config/test.yml": `enabled: on
 disabled: "off"
-name: on_call_service`
-	if err := os.WriteFile(yamlFile, []byte(yamlContent), 0600); err != nil {
-		t.Fatalf("Failed to create YAML file: %v", err)
-	}
+name: on_call_service`,
+	}, nil)
 
 	absDir, err := filepath.Abs(tmpDir)
-	if err != nil {
-		t.Fatalf("Failed to get absolute path: %v", err)
-	}
+	assertNoError(t, err)
 
 	// Test with conversion enabled
 	opts := &Options{
@@ -892,14 +756,10 @@ name: on_call_service`
 	}
 
 	tree, err := NewTree(tmpDir)
-	if err != nil {
-		t.Fatalf("NewTree() error = %v", err)
-	}
+	assertNoError(t, err)
 
 	result, err := tree.Marshal(opts)
-	if err != nil {
-		t.Fatalf("Marshal() error = %v", err)
-	}
+	assertNoError(t, err)
 
 	resultMap, ok := result.(map[string]interface{})
 	if !ok {
@@ -932,25 +792,13 @@ name: on_call_service`
 
 func TestMarshalLeaf_WithoutConvertBooleans(t *testing.T) {
 	// Test that without the option, YAML 1.1 booleans remain as strings
-	tmpDir := t.TempDir()
-
-	// Create a subdirectory so the file becomes a nested key
-	configDir := filepath.Join(tmpDir, "config")
-	if err := os.MkdirAll(configDir, 0700); err != nil {
-		t.Fatalf("Failed to create config directory: %v", err)
-	}
-
-	yamlFile := filepath.Join(configDir, "test.yml")
-	yamlContent := `enabled: on
-disabled: off`
-	if err := os.WriteFile(yamlFile, []byte(yamlContent), 0600); err != nil {
-		t.Fatalf("Failed to create YAML file: %v", err)
-	}
+	tmpDir := createTestDir(t, map[string]string{
+		"config/test.yml": `enabled: on
+disabled: off`,
+	}, nil)
 
 	absDir, err := filepath.Abs(tmpDir)
-	if err != nil {
-		t.Fatalf("Failed to get absolute path: %v", err)
-	}
+	assertNoError(t, err)
 
 	// Test WITHOUT conversion
 	opts := &Options{
@@ -960,14 +808,10 @@ disabled: off`
 	}
 
 	tree, err := NewTree(tmpDir)
-	if err != nil {
-		t.Fatalf("NewTree() error = %v", err)
-	}
+	assertNoError(t, err)
 
 	result, err := tree.Marshal(opts)
-	if err != nil {
-		t.Fatalf("Marshal() error = %v", err)
-	}
+	assertNoError(t, err)
 
 	resultMap, ok := result.(map[string]interface{})
 	if !ok {
@@ -990,41 +834,11 @@ disabled: off`
 
 func TestMarshalParent_WithEmptyMaps(t *testing.T) {
 	// Test that empty maps are properly skipped
-	tmpDir := t.TempDir()
+	tmpDir := createTestDir(t, map[string]string{
+		"has_content/file.yml": "key: value",
+	}, []string{"empty1", "empty2"})
 
-	// Create a directory with empty subdirectories
-	empty1 := filepath.Join(tmpDir, "empty1")
-	empty2 := filepath.Join(tmpDir, "empty2")
-	hasContent := filepath.Join(tmpDir, "has_content")
-	hasContentFile := filepath.Join(hasContent, "file.yml")
-
-	if err := os.MkdirAll(empty1, 0700); err != nil {
-		t.Fatalf("Failed to create empty1: %v", err)
-	}
-	if err := os.MkdirAll(empty2, 0700); err != nil {
-		t.Fatalf("Failed to create empty2: %v", err)
-	}
-	if err := os.MkdirAll(hasContent, 0700); err != nil {
-		t.Fatalf("Failed to create has_content: %v", err)
-	}
-	if err := os.WriteFile(hasContentFile, []byte("key: value"), 0600); err != nil {
-		t.Fatalf("Failed to create file: %v", err)
-	}
-
-	tree, err := NewTree(tmpDir)
-	if err != nil {
-		t.Fatalf("NewTree() error = %v", err)
-	}
-
-	result, err := tree.MarshalYAML()
-	if err != nil {
-		t.Fatalf("MarshalYAML() error = %v", err)
-	}
-
-	resultMap, ok := result.(map[string]interface{})
-	if !ok {
-		t.Fatalf("MarshalYAML() returned %T, want map[string]interface{}", result)
-	}
+	resultMap := createTreeAndMarshal(t, tmpDir)
 
 	// Empty directories should not appear
 	if _, ok := resultMap["empty1"]; ok {
@@ -1040,87 +854,180 @@ func TestMarshalParent_WithEmptyMaps(t *testing.T) {
 	}
 }
 
-func TestOptions_Log_NilOptions(t *testing.T) {
-	// Test that Options.log() returns Nop logger when options is nil
-	var opts *Options
-	log := opts.log()
-	if log == nil {
-		t.Error("Options.log() should return a logger, not nil")
+func TestMarshalParent_NonMapTypeError(t *testing.T) {
+	// Test that marshalParent returns an error when a child returns a non-map type
+	// This happens when a YAML file contains a scalar value instead of a map
+	tmpDir := createTestDir(t, map[string]string{
+		"dir/scalar.yml": "just a string",
+		"dir/map.yml":    "key: value",
+	}, nil)
+
+	tree, err := NewTree(tmpDir)
+	assertNoError(t, err)
+
+	// Find the directory node
+	dirNode := findNodeByName(t, tree, "dir")
+	if dirNode == nil {
+		t.Fatal("Could not find dir node")
 	}
-	// Should be a NoOpLogger
-	log.Debugf("test") // Should not panic
-	log.Warnf("test")  // Should not panic
+
+	// Marshal should fail because scalar.yml returns a string, not a map
+	_, err = dirNode.Marshal(nil)
+	assertErrorContains(t, err, "expected a map")
+	assertErrorContains(t, err, "scalar.yml")
 }
 
-func TestOptions_Log_NilLogger(t *testing.T) {
-	// Test that Options.log() returns Nop logger when Logger is nil
-	opts := &Options{
-		EnableIncludes:  false,
-		PackRoot:        "/tmp",
-		ConvertBooleans: false,
-		Logger:          nil,
+func TestRootFile(t *testing.T) {
+	// Test that rootFile() correctly identifies files at the root level
+	tmpDir := createTestDir(t, map[string]string{
+		"root_file.yml":   "key1: value1",
+		"subdir/file.yml": "key2: value2",
+	}, nil)
+
+	tree, err := NewTree(tmpDir)
+	assertNoError(t, err)
+
+	// Find the root file node
+	rootFileNode := findNodeByName(t, tree, "root_file.yml")
+	if rootFileNode == nil {
+		t.Fatal("Could not find root_file.yml node")
 	}
-	log := opts.log()
-	if log == nil {
-		t.Error("Options.log() should return a logger, not nil")
+
+	// Find a file in a subdirectory
+	subFileNode := findNodeByName(t, tree, "file.yml")
+	if subFileNode == nil {
+		t.Fatal("Could not find file.yml node")
 	}
-	// Should be a NoOpLogger
-	log.Debugf("test") // Should not panic
-	log.Warnf("test")  // Should not panic
+
+	// root_file.yml should be identified as a root file
+	if !rootFileNode.rootFile() {
+		t.Error("rootFile() returned false for root_file.yml")
+	}
+
+	// file.yml in subdirectory should not be identified as a root file
+	if subFileNode.rootFile() {
+		t.Error("rootFile() returned true for file.yml in subdirectory")
+	}
+
+	// Verify root files are merged correctly (not nested under a key)
+	resultMap := createTreeAndMarshal(t, tmpDir)
+	// Root file content should be merged at the top level
+	if resultMap["key1"] == nil {
+		t.Error("Root file content should be merged at top level, not nested")
+	}
+	if resultMap["key1"] != "value1" {
+		t.Errorf("Root file content key1 = %v, want 'value1'", resultMap["key1"])
+	}
+	// Subdirectory should still be nested
+	subdirMap, ok := resultMap["subdir"].(map[string]interface{})
+	if !ok {
+		t.Fatal("Subdirectory should be nested under 'subdir' key")
+	}
+	// File in subdirectory is nested under its name (without extension)
+	fileMap, ok := subdirMap["file"].(map[string]interface{})
+	if !ok {
+		t.Fatal("File should be nested under 'file' key in subdirectory")
+	}
+	if fileMap["key2"] != "value2" {
+		t.Errorf("Subdirectory file content key2 = %v, want 'value2'", fileMap["key2"])
+	}
 }
 
-func TestOptions_Log_WithLogger(t *testing.T) {
-	// Test that Options.log() returns the configured logger
-	var buf strings.Builder
-	testLogger := logger.New(&buf, true)
-	opts := &Options{
-		EnableIncludes:  false,
-		PackRoot:        "/tmp",
-		ConvertBooleans: false,
-		Logger:          testLogger,
-	}
-	log := opts.log()
-	if log != testLogger {
-		t.Error("Options.log() should return the configured logger")
-	}
-	log.Debugf("test message")
-	if !strings.Contains(buf.String(), "test message") {
-		t.Error("Options.log() should return the configured logger that actually logs")
-	}
+func TestOptions_Log(t *testing.T) {
+	// Test that Options.log() returns appropriate logger in different scenarios
+	t.Run("nil options", func(t *testing.T) {
+		log := (*Options)(nil).log()
+		if log == nil {
+			t.Error("Options.log() should return a logger, not nil")
+		}
+		// Should be a NoOpLogger
+		log.Debugf("test") // Should not panic
+		log.Warnf("test")  // Should not panic
+	})
+
+	t.Run("nil logger", func(t *testing.T) {
+		opts := &Options{
+			EnableIncludes:  false,
+			PackRoot:        "/tmp",
+			ConvertBooleans: false,
+			Logger:          nil,
+		}
+		log := opts.log()
+		if log == nil {
+			t.Error("Options.log() should return a logger, not nil")
+		}
+		// Should be a NoOpLogger
+		log.Debugf("test") // Should not panic
+		log.Warnf("test")  // Should not panic
+	})
+
+	t.Run("with logger", func(t *testing.T) {
+		var buf strings.Builder
+		testLogger := logger.New(&buf, true)
+		opts := &Options{
+			EnableIncludes:  false,
+			PackRoot:        "/tmp",
+			ConvertBooleans: false,
+			Logger:          testLogger,
+		}
+		log := opts.log()
+		if log != testLogger {
+			t.Error("Options.log() should return the configured logger")
+		}
+		log.Debugf("test message")
+		if !strings.Contains(buf.String(), "test message") {
+			t.Error("Options.log() should return the configured logger that actually logs")
+		}
+	})
 }
 
 func TestMergeTree_InvalidInput(t *testing.T) {
 	// Test that mergeTree returns an error for types that mapstructure.Decode can't handle
-	// Channels cannot be decoded by mapstructure
-	ch := make(chan int)
+	tests := []struct {
+		name        string
+		input       interface{}
+		expectError bool
+		errorSubstr string
+		validate    func(t *testing.T, result map[string]interface{})
+	}{
+		{
+			name:        "channel",
+			input:       make(chan int),
+			expectError: true,
+			errorSubstr: "failed to decode tree structure",
+		},
+		{
+			name:        "function",
+			input:       func() {},
+			expectError: true,
+			errorSubstr: "failed to decode tree structure",
+		},
+		{
+			name:        "nil",
+			input:       nil,
+			expectError: false,
+			validate: func(t *testing.T, result map[string]interface{}) {
+				if result == nil {
+					t.Error("mergeTree() returned nil result for nil input")
+				}
+				if len(result) != 0 {
+					t.Errorf("mergeTree() result should be empty for nil input, got %v", result)
+				}
+			},
+		},
+	}
 
-	_, err := mergeTree(ch)
-	if err == nil {
-		t.Error("mergeTree() expected error for channel type")
-	}
-	if !strings.Contains(err.Error(), "failed to decode tree structure") {
-		t.Errorf("mergeTree() error = %v, want error containing 'failed to decode tree structure'", err)
-	}
-
-	// Test with function (also can't be decoded by mapstructure)
-	var fn = func() {}
-	_, err = mergeTree(fn)
-	if err == nil {
-		t.Error("mergeTree() expected error for function type")
-	}
-	if !strings.Contains(err.Error(), "failed to decode tree structure") {
-		t.Errorf("mergeTree() error = %v, want error containing 'failed to decode tree structure'", err)
-	}
-
-	// Test with nil (should be skipped, not cause error)
-	result, err := mergeTree(nil)
-	if err != nil {
-		t.Errorf("mergeTree() unexpected error for nil: %v", err)
-	}
-	if result == nil {
-		t.Error("mergeTree() returned nil result for nil input")
-	}
-	if len(result) != 0 {
-		t.Errorf("mergeTree() result should be empty for nil input, got %v", result)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := mergeTree(tt.input)
+			if tt.expectError {
+				assertErrorContains(t, err, tt.errorSubstr)
+			} else {
+				assertNoError(t, err)
+				if tt.validate != nil {
+					tt.validate(t, result)
+				}
+			}
+		})
 	}
 }

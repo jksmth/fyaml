@@ -1,0 +1,6 @@
+enabled: on
+settings:
+  debug: off
+  nested:
+    verbose: yes
+    quiet: no
