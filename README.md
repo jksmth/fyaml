@@ -532,6 +532,32 @@ This is useful when your source files use YAML 1.1-style boolean values (`on`, `
 
 For more details, see the [Usage Guide](https://jksmth.github.io/fyaml/usage/).
 
+### @ Directory Support
+
+Directories starting with `@` merge their contents into the parent directory map, similar to `@` files. This allows directories to be used for organization without creating additional nesting levels.
+
+**Example:**
+```
+components/
+  database.yml
+  @infrastructure/     # Merges into components map
+    cache.yml
+    queue.yml
+  @monitoring/        # Merges into components map
+    metrics.yml
+```
+
+Produces:
+```yaml
+components:
+  cache: <contents>
+  database: <contents>
+  metrics: <contents>
+  queue: <contents>
+```
+
+**Note:** This is an extension to the FYAML specification. See [EXTENSIONS.md](EXTENSIONS.md#-directory-support) for complete documentation.
+
 ### Verbose Output
 
 Use the `-v` (or `--verbose`) global flag to see which files are being processed:

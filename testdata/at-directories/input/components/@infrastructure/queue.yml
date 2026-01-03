@@ -1,0 +1,4 @@
+type: rabbitmq
+host: queue.example.com
+port: 5672
+

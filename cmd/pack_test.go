@@ -127,6 +127,11 @@ func TestPack_Golden(t *testing.T) {
 			dir:      "../testdata/includes/input",
 			expected: "../testdata/includes/expected.yml",
 		},
+		{
+			name:     "at-directories",
+			dir:      "../testdata/at-directories/input",
+			expected: "../testdata/at-directories/expected.yml",
+		},
 	}
 
 	for _, tt := range tests {

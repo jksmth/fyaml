@@ -196,6 +196,73 @@ The `@` prefix is removed, and the file's contents are merged directly into the 
 
 **Note:** While the specification allows multiple `@` files in the same directory, it's recommended to use only one per directory. If multiple `@` files exist, they all merge into the parent map, and key collisions are resolved by the last file processed (order is not guaranteed).
 
+### @ Directories
+
+Directories starting with `@` merge their contents into the parent directory map, similar to `@` files. This allows directories to be used for organization without creating additional nesting levels in the output.
+
+**Example:**
+
+Directory structure:
+```
+config/
+  components/
+    database.yml
+    @infrastructure/        # Merges into components map
+      cache.yml
+      queue.yml
+    @monitoring/           # Merges into components map
+      metrics.yml
+```
+
+**`components/database.yml`:**
+```yaml
+type: postgresql
+host: db.example.com
+```
+
+**`components/@infrastructure/cache.yml`:**
+```yaml
+type: redis
+host: cache.example.com
+```
+
+**`components/@infrastructure/queue.yml`:**
+```yaml
+type: rabbitmq
+host: queue.example.com
+```
+
+**`components/@monitoring/metrics.yml`:**
+```yaml
+type: prometheus
+port: 9090
+```
+
+Produces:
+```yaml
+components:
+  cache:
+    host: cache.example.com
+    type: redis
+  database:
+    host: db.example.com
+    type: postgresql
+  metrics:
+    port: 9090
+    type: prometheus
+  queue:
+    host: queue.example.com
+    type: rabbitmq
+```
+
+**Key Points:**
+- The `@infrastructure` and `@monitoring` directory names do not appear as keys in the output
+- All files from `@` directories merge directly into the parent map (`components` in this example)
+- This is useful for organizing large numbers of files without creating deep nesting
+- Empty `@` directories are ignored (no keys created)
+
+**Note:** This is an extension to the FYAML specification. See [EXTENSIONS.md](../EXTENSIONS.md#-directory-support) for complete documentation.
+
 ### Nested Directories
 
 Directories can be nested to any depth:
