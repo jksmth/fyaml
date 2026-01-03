@@ -132,7 +132,12 @@ function install_cli {
 
 	# Extract the tarball
 	echo "Extracting..."
-	tar zxf "${RELEASE_FILENAME}" --strip 1
+	tar zxf "${RELEASE_FILENAME}"
+
+	if [ ! -f "fyaml" ]; then
+		echo "ERROR: Binary 'fyaml' not found in archive" >&2
+		exit 1
+	fi
 
 	echo "Installing to $DESTDIR"
 	install fyaml "$DESTDIR"
