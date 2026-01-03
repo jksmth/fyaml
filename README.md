@@ -9,7 +9,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Release](https://img.shields.io/github/v/release/jksmth/fyaml?include_prereleases&sort=semver)](https://github.com/jksmth/fyaml/releases)
 
-**Docs:** https://jksmth.github.io/fyaml/ | **Install:** https://jksmth.github.io/fyaml/installation/ | **Usage:** https://jksmth.github.io/fyaml/usage/ | **Issues:** https://github.com/jksmth/fyaml/issues
+📖 [Documentation](https://jksmth.github.io/fyaml/) • 🚀 [Installation](https://jksmth.github.io/fyaml/installation/) • 📚 [Usage Guide](https://jksmth.github.io/fyaml/usage/) • 🐛 [Issues](https://github.com/jksmth/fyaml/issues)
 
 **fyaml** compiles a directory tree of YAML or JSON files into a single deterministic document.
 
