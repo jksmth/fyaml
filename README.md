@@ -280,6 +280,8 @@ service:
   name: api
 ```
 
+**Cross-file sharing:** If you need shared values across files, use the `!include` feature (with `--enable-includes`) to include YAML content from other files at specific locations in your structure. This provides similar functionality to cross-file anchors.
+
 ### Multi-Document YAML Files
 
 YAML supports multiple documents in a single file, separated by `---`. However, **fyaml only processes the first document** in multi-document files. Subsequent documents are silently ignored.
