@@ -59,7 +59,8 @@ function install_cli {
 	# GitHub's URL for the latest release, will redirect.
 	GITHUB_BASE_URL="https://github.com/jksmth/fyaml"
 	LATEST_URL="${GITHUB_BASE_URL}/releases/latest/"
-	DESTDIR="${DESTDIR:-/usr/local/bin}"
+	# Default to user-writable directory, can be overridden via DESTDIR
+	DESTDIR="${DESTDIR:-$HOME/.local/bin}"
 
 	if [ -z "$VERSION" ]; then
 		VERSION=$(curl -sLI -o /dev/null -w '%{url_effective}' "$LATEST_URL" | cut -d "v" -f 2)
@@ -139,10 +140,25 @@ function install_cli {
 		exit 1
 	fi
 
-	echo "Installing to $DESTDIR"
-	install fyaml "$DESTDIR"
+	# Make binary executable
+	chmod +x fyaml
 
-	command -v fyaml
+	# Create destination directory if it doesn't exist
+	mkdir -p "$DESTDIR"
+
+	echo "Installing to $DESTDIR"
+	install -m 755 fyaml "$DESTDIR/fyaml"
+
+	# Check if directory is in PATH and provide helpful message
+	if ! echo "$PATH" | grep -q "$DESTDIR"; then
+		echo ""
+		echo "Note: $DESTDIR is not in your PATH."
+		echo "Add it to your PATH by adding this line to your shell profile (~/.bashrc, ~/.zshrc, etc.):"
+		echo "  export PATH=\"\$PATH:$DESTDIR\""
+		echo ""
+	fi
+
+	command -v fyaml || echo "Run 'export PATH=\"\$PATH:$DESTDIR\"' to use fyaml immediately."
 
 	# Delete the working directory when the install was successful.
 	rm -r "$SCRATCH"
