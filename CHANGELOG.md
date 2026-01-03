@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/jksmth/fyaml/compare/v1.4.0...v1.5.0) (2026-01-03)
+
+
+### Features
+
+* **includes:** add unified tag-based include system ([#39](https://github.com/jksmth/fyaml/issues/39)) ([9e927c2](https://github.com/jksmth/fyaml/commit/9e927c29de15834dfbd1fc2d6f9b9a308e2ea7fa))
+
 ## [1.4.0](https://github.com/jksmth/fyaml/compare/v1.3.0...v1.4.0) (2026-01-02)
 
 
