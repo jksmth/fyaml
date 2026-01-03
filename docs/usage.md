@@ -340,7 +340,7 @@ entities:
 - If both `@group1/` directory and `@group1.yml` file exist, both merge into parent (order not guaranteed)
 - Nested `@` directories are supported: `@group1/@shared/` merges into parent of `@group1/`
 
-**Note:** This is an extension to the FYAML specification. See [EXTENSIONS.md](../EXTENSIONS.md) for information about extensions to the specification.
+**Note:** This is an extension to the FYAML specification. See [EXTENSIONS.md](https://github.com/jksmth/fyaml/blob/main/EXTENSIONS.md) for information about extensions to the specification.
 
 ### Nested Directories
 
@@ -589,7 +589,7 @@ fyaml pack config/ | yq eval '.entities.item1.entity.attributes.count = 5' - > o
 
 ## File Includes
 
-fyaml supports including content from other files using the `--enable-includes` flag. This is an extension to the FYAML specification. See [EXTENSIONS.md](../EXTENSIONS.md) for information about extensions.
+fyaml supports including content from other files using the `--enable-includes` flag. This is an extension to the FYAML specification. See [EXTENSIONS.md](https://github.com/jksmth/fyaml/blob/main/EXTENSIONS.md) for information about extensions.
 
 This feature is useful for:
 

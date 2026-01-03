@@ -9,7 +9,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Release](https://img.shields.io/github/v/release/jksmth/fyaml?include_prereleases&sort=semver)](https://github.com/jksmth/fyaml/releases)
 
-**Docs:** [docs/index.md](docs/index.md) | **Install:** [docs/installation.md](docs/installation.md) | **Usage:** [docs/usage.md](docs/usage.md) | **Issues:** https://github.com/jksmth/fyaml/issues
+📖 [Documentation](https://jksmth.github.io/fyaml/) • 🚀 [Installation](https://jksmth.github.io/fyaml/installation/) • 📚 [Usage Guide](https://jksmth.github.io/fyaml/usage/) • 🐛 [Issues](https://github.com/jksmth/fyaml/issues)
 
 **fyaml** compiles a directory tree of YAML or JSON files into a single deterministic document.
 
@@ -114,7 +114,7 @@ fyaml is intentionally limited in scope to keep output predictable and diffs tru
 - **No surprises** - Pure structure compilation with no logic, templating, or execution model
 - **Build-time tool** - Runs as a build step, producing the single file your tools expect
 
-For technical details on how directory structure maps to YAML, see [docs/index.md#how-it-works](docs/index.md#how-it-works).
+For technical details on how directory structure maps to YAML, see [How It Works](https://jksmth.github.io/fyaml/#how-it-works).
 
 ---
 
@@ -160,13 +160,13 @@ go install github.com/jksmth/fyaml@latest
 docker run --rm -v $(pwd):/workspace ghcr.io/jksmth/fyaml:latest pack /workspace/examples/basic
 ```
 
-For more installation options (pre-built binaries, Windows, multi-stage Docker), see [docs/installation.md](docs/installation.md).
+For more installation options (pre-built binaries, Windows, multi-stage Docker), see the [Installation Guide](https://jksmth.github.io/fyaml/installation/).
 
 ## Verification
 
 fyaml releases are signed with [cosign](https://github.com/sigstore/cosign) using keyless signing.
 
-For verification steps (binaries, Docker images, SBOMs), see [docs/installation.md#verification](docs/installation.md#verification).
+For verification steps (binaries, Docker images, SBOMs), see [Installation - Verification](https://jksmth.github.io/fyaml/installation/#verification).
 
 ## Usage
 
@@ -194,14 +194,14 @@ fyaml -v pack /path/to/config
 
 ### More examples and patterns
 
-- See [docs/usage.md](docs/usage.md) for:
-  - [Directory structure rules](docs/usage.md#directory-structure-rules) - Basic structure, root files, `@` files and directories
-  - [File includes](docs/usage.md#file-includes) - Using `!include`, `!include-text`, and `<<include()>>`
-  - [Limitations](docs/usage.md#limitations) - File content requirements, YAML anchors, multi-document files
-- See [docs/examples.md](docs/examples.md) and the [`examples/`](examples/) directory for runnable examples.
-- See [docs/reference.md](docs/reference.md) for:
-  - [Commands](docs/reference.md#commands) - `pack`, `version`
-  - [Flags reference](docs/reference.md#flags-reference) - All available flags and options
+- See the [Usage Guide](https://jksmth.github.io/fyaml/usage/) for:
+  - [Directory structure rules](https://jksmth.github.io/fyaml/usage/#directory-structure-rules) - Basic structure, root files, `@` files and directories
+  - [File includes](https://jksmth.github.io/fyaml/usage/#file-includes) - Using `!include`, `!include-text`, and `<<include()>>`
+  - [Limitations](https://jksmth.github.io/fyaml/usage/#limitations) - File content requirements, YAML anchors, multi-document files
+- See the [Examples](https://jksmth.github.io/fyaml/examples/) and the [`examples/`](examples/) directory for runnable examples.
+- See the [Command Reference](https://jksmth.github.io/fyaml/reference/) for:
+  - [Commands](https://jksmth.github.io/fyaml/reference/#commands) - `pack`, `version`
+  - [Flags reference](https://jksmth.github.io/fyaml/reference/#flags-reference) - All available flags and options
 
 ## Exit Codes
 
@@ -220,7 +220,7 @@ It's a small, focused tool that:
 - Has a minimal surface area focused on one task
 - Does not implement templating, variables, or conditionals
 
-**Need templating or variable substitution?** Use external tools like `envsubst` alongside fyaml. This keeps fyaml focused on structure compilation while allowing you to use specialized tools for templating. See [docs/usage.md#integration-with-templating](docs/usage.md#integration-with-templating) for examples.
+**Need templating or variable substitution?** Use external tools like `envsubst` alongside fyaml. This keeps fyaml focused on structure compilation while allowing you to use specialized tools for templating. See [Usage Guide - Integration with Templating](https://jksmth.github.io/fyaml/usage/#integration-with-templating) for examples.
 
 **Extensions:** fyaml includes optional extensions (like JSON support) that enhance functionality while maintaining spec compliance. See the [Extensions](#extensions) section for details.
 
@@ -230,12 +230,12 @@ It's a small, focused tool that:
 
 fyaml includes the following extensions beyond the FYAML specification. These features are opt-in and do not affect spec-compliant behavior.
 
-- **JSON Support** - Accept `.json` files and output JSON format. See [docs/usage.md#output-format](docs/usage.md#output-format) and [docs/reference.md#--format--f](docs/reference.md#--format--f) for details.
-- **File Includes** - Use `!include`, `!include-text`, and `<<include()>>` directives to include content from other files. See [docs/usage.md#file-includes](docs/usage.md#file-includes) for complete documentation.
-- **Boolean Conversion** - Convert YAML 1.1 booleans (`on`/`off`, `yes`/`no`) to YAML 1.2 (`true`/`false`). See [docs/usage.md#converting-onoff-and-yesno-to-truefalse](docs/usage.md#converting-onoff-and-yesno-to-truefalse) for details.
-- **@ Directory Support** - Directories starting with `@` merge into parent map, similar to `@` files. See [docs/usage.md#-directories](docs/usage.md#-directories) for details.
+- **JSON Support** - Accept `.json` files and output JSON format. See [Usage Guide - Output Format](https://jksmth.github.io/fyaml/usage/#output-format) and [Command Reference - --format/-f](https://jksmth.github.io/fyaml/reference/#format--f) for details.
+- **File Includes** - Use `!include`, `!include-text`, and `<<include()>>` directives to include content from other files. See [Usage Guide - File Includes](https://jksmth.github.io/fyaml/usage/#file-includes) for complete documentation.
+- **Boolean Conversion** - Convert YAML 1.1 booleans (`on`/`off`, `yes`/`no`) to YAML 1.2 (`true`/`false`). See [Usage Guide - Converting on/off and yes/no to true/false](https://jksmth.github.io/fyaml/usage/#converting-onoff-and-yesno-to-truefalse) for details.
+- **@ Directory Support** - Directories starting with `@` merge into parent map, similar to `@` files. See [Usage Guide - @ Directories](https://jksmth.github.io/fyaml/usage/#-directories) for details.
 
-For complete documentation on all extensions, see [docs/usage.md](docs/usage.md) and [docs/reference.md](docs/reference.md).
+For complete documentation on all extensions, see the [Usage Guide](https://jksmth.github.io/fyaml/usage/) and [Command Reference](https://jksmth.github.io/fyaml/reference/).
 
 ## License
 
