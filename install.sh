@@ -123,7 +123,7 @@ function install_cli {
 
 	# Verify checksum if available
 	if [ "$CHECKSUMS_AVAILABLE" = "true" ]; then
-		EXPECTED_CHECKSUM=$(grep "${RELEASE_FILENAME}" checksums.txt | awk '{print $1}')
+		EXPECTED_CHECKSUM=$(grep "${RELEASE_FILENAME}$" checksums.txt | awk '{print $1}')
 		if ! verify_checksum "${RELEASE_FILENAME}" "$EXPECTED_CHECKSUM"; then
 			echo "ERROR: Checksum verification failed. Aborting installation." >&2
 			exit 1
