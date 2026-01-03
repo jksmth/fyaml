@@ -288,6 +288,275 @@ func TestNewTree_JSONSpecialCase(t *testing.T) {
 	}
 }
 
+func TestSpecialCaseDirectory(t *testing.T) {
+	// Test that specialCaseDirectory() correctly identifies @ directories
+	tmpDir := t.TempDir()
+
+	// Create a directory starting with @
+	atDir := filepath.Join(tmpDir, "@infrastructure")
+	if err := os.Mkdir(atDir, 0700); err != nil {
+		t.Fatalf("Failed to create @infrastructure directory: %v", err)
+	}
+
+	// Create a regular directory
+	regularDir := filepath.Join(tmpDir, "services")
+	if err := os.Mkdir(regularDir, 0700); err != nil {
+		t.Fatalf("Failed to create services directory: %v", err)
+	}
+
+	tree, err := NewTree(tmpDir)
+	if err != nil {
+		t.Fatalf("NewTree() error = %v", err)
+	}
+
+	// Find the @infrastructure node
+	var atDirNode *Node
+	var regularDirNode *Node
+	for _, child := range tree.Children {
+		if child.Info.Name() == "@infrastructure" {
+			atDirNode = child
+		}
+		if child.Info.Name() == "services" {
+			regularDirNode = child
+		}
+	}
+
+	if atDirNode == nil {
+		t.Fatal("Could not find @infrastructure node")
+	}
+	if regularDirNode == nil {
+		t.Fatal("Could not find services node")
+	}
+
+	// @infrastructure should be identified as special case directory
+	if !atDirNode.specialCaseDirectory() {
+		t.Error("specialCaseDirectory() returned false for @infrastructure directory")
+	}
+
+	// services should not be identified as special case directory
+	if regularDirNode.specialCaseDirectory() {
+		t.Error("specialCaseDirectory() returned true for regular services directory")
+	}
+}
+
+func TestMarshalYAML_AtDirectory(t *testing.T) {
+	// Test that @ directories merge their contents into parent map
+	tmpDir := t.TempDir()
+
+	componentsDir := filepath.Join(tmpDir, "components")
+	atInfraDir := filepath.Join(componentsDir, "@infrastructure")
+	atMonitorDir := filepath.Join(componentsDir, "@monitoring")
+
+	if err := os.MkdirAll(atInfraDir, 0700); err != nil {
+		t.Fatalf("Failed to create @infrastructure directory: %v", err)
+	}
+	if err := os.MkdirAll(atMonitorDir, 0700); err != nil {
+		t.Fatalf("Failed to create @monitoring directory: %v", err)
+	}
+
+	// Create files in @ directories
+	cacheFile := filepath.Join(atInfraDir, "cache.yml")
+	queueFile := filepath.Join(atInfraDir, "queue.yml")
+	metricsFile := filepath.Join(atMonitorDir, "metrics.yml")
+
+	if err := os.WriteFile(cacheFile, []byte("type: redis\nhost: cache.example.com"), 0600); err != nil {
+		t.Fatalf("Failed to create cache.yml: %v", err)
+	}
+	if err := os.WriteFile(queueFile, []byte("type: rabbitmq\nhost: queue.example.com"), 0600); err != nil {
+		t.Fatalf("Failed to create queue.yml: %v", err)
+	}
+	if err := os.WriteFile(metricsFile, []byte("type: prometheus\nport: 9090"), 0600); err != nil {
+		t.Fatalf("Failed to create metrics.yml: %v", err)
+	}
+
+	// Create a regular file in components
+	databaseFile := filepath.Join(componentsDir, "database.yml")
+	if err := os.WriteFile(databaseFile, []byte("type: postgresql\nhost: db.example.com"), 0600); err != nil {
+		t.Fatalf("Failed to create database.yml: %v", err)
+	}
+
+	tree, err := NewTree(tmpDir)
+	if err != nil {
+		t.Fatalf("NewTree() error = %v", err)
+	}
+
+	result, err := tree.MarshalYAML()
+	if err != nil {
+		t.Fatalf("MarshalYAML() error = %v", err)
+	}
+
+	resultMap, ok := result.(map[string]interface{})
+	if !ok {
+		t.Fatalf("MarshalYAML() returned %T, want map[string]interface{}", result)
+	}
+
+	componentsMap, ok := resultMap["components"].(map[string]interface{})
+	if !ok {
+		t.Fatal("MarshalYAML() result missing 'components' key or not a map")
+	}
+
+	// Files from @infrastructure should be in components map (not nested under @infrastructure)
+	if componentsMap["cache"] == nil {
+		t.Error("MarshalYAML() cache.yml from @infrastructure not found in components map")
+	}
+	if componentsMap["queue"] == nil {
+		t.Error("MarshalYAML() queue.yml from @infrastructure not found in components map")
+	}
+
+	// Files from @monitoring should be in components map (not nested under @monitoring)
+	if componentsMap["metrics"] == nil {
+		t.Error("MarshalYAML() metrics.yml from @monitoring not found in components map")
+	}
+
+	// Regular file should also be present
+	if componentsMap["database"] == nil {
+		t.Error("MarshalYAML() database.yml not found in components map")
+	}
+
+	// @infrastructure and @monitoring should NOT be keys in components map
+	if componentsMap["@infrastructure"] != nil {
+		t.Error("MarshalYAML() @infrastructure should not be a key in components map")
+	}
+	if componentsMap["@monitoring"] != nil {
+		t.Error("MarshalYAML() @monitoring should not be a key in components map")
+	}
+	if componentsMap["infrastructure"] != nil {
+		t.Error("MarshalYAML() infrastructure (without @) should not be a key in components map")
+	}
+	if componentsMap["monitoring"] != nil {
+		t.Error("MarshalYAML() monitoring (without @) should not be a key in components map")
+	}
+}
+
+func TestMarshalYAML_EmptyAtDirectory(t *testing.T) {
+	// Test that empty @ directories are ignored
+	tmpDir := t.TempDir()
+
+	componentsDir := filepath.Join(tmpDir, "components")
+	atEmptyDir := filepath.Join(componentsDir, "@empty")
+
+	if err := os.MkdirAll(atEmptyDir, 0700); err != nil {
+		t.Fatalf("Failed to create @empty directory: %v", err)
+	}
+
+	// Create a regular file in components
+	databaseFile := filepath.Join(componentsDir, "database.yml")
+	if err := os.WriteFile(databaseFile, []byte("type: postgresql"), 0600); err != nil {
+		t.Fatalf("Failed to create database.yml: %v", err)
+	}
+
+	tree, err := NewTree(tmpDir)
+	if err != nil {
+		t.Fatalf("NewTree() error = %v", err)
+	}
+
+	result, err := tree.MarshalYAML()
+	if err != nil {
+		t.Fatalf("MarshalYAML() error = %v", err)
+	}
+
+	resultMap, ok := result.(map[string]interface{})
+	if !ok {
+		t.Fatalf("MarshalYAML() returned %T, want map[string]interface{}", result)
+	}
+
+	componentsMap, ok := resultMap["components"].(map[string]interface{})
+	if !ok {
+		t.Fatal("MarshalYAML() result missing 'components' key or not a map")
+	}
+
+	// Empty @ directory should not create any keys
+	if componentsMap["@empty"] != nil {
+		t.Error("MarshalYAML() empty @empty directory should not create a key")
+	}
+	if componentsMap["empty"] != nil {
+		t.Error("MarshalYAML() empty @empty directory should not create an 'empty' key")
+	}
+
+	// Regular file should still be present
+	if componentsMap["database"] == nil {
+		t.Error("MarshalYAML() database.yml not found in components map")
+	}
+}
+
+func TestMarshalYAML_NestedAtDirectories(t *testing.T) {
+	// Test that nested @ directories work recursively
+	// @services/@common/ should merge into parent of @services/
+	tmpDir := t.TempDir()
+
+	componentsDir := filepath.Join(tmpDir, "components")
+	atServicesDir := filepath.Join(componentsDir, "@services")
+	atCommonDir := filepath.Join(atServicesDir, "@common")
+
+	if err := os.MkdirAll(atCommonDir, 0700); err != nil {
+		t.Fatalf("Failed to create nested @ directories: %v", err)
+	}
+
+	// Create files in nested @ directory
+	configFile := filepath.Join(atCommonDir, "config.yml")
+	settingsFile := filepath.Join(atCommonDir, "settings.yml")
+
+	if err := os.WriteFile(configFile, []byte("timeout: 30\nretries: 3"), 0600); err != nil {
+		t.Fatalf("Failed to create config.yml: %v", err)
+	}
+	if err := os.WriteFile(settingsFile, []byte("debug: true\nlog_level: info"), 0600); err != nil {
+		t.Fatalf("Failed to create settings.yml: %v", err)
+	}
+
+	// Create a file directly in @services
+	apiFile := filepath.Join(atServicesDir, "api.yml")
+	if err := os.WriteFile(apiFile, []byte("name: api\nport: 8080"), 0600); err != nil {
+		t.Fatalf("Failed to create api.yml: %v", err)
+	}
+
+	tree, err := NewTree(tmpDir)
+	if err != nil {
+		t.Fatalf("NewTree() error = %v", err)
+	}
+
+	result, err := tree.MarshalYAML()
+	if err != nil {
+		t.Fatalf("MarshalYAML() error = %v", err)
+	}
+
+	resultMap, ok := result.(map[string]interface{})
+	if !ok {
+		t.Fatalf("MarshalYAML() returned %T, want map[string]interface{}", result)
+	}
+
+	componentsMap, ok := resultMap["components"].(map[string]interface{})
+	if !ok {
+		t.Fatal("MarshalYAML() result missing 'components' key or not a map")
+	}
+
+	// Files from nested @common should be in components map (merged through @services)
+	if componentsMap["config"] == nil {
+		t.Error("MarshalYAML() config.yml from @services/@common not found in components map")
+	}
+	if componentsMap["settings"] == nil {
+		t.Error("MarshalYAML() settings.yml from @services/@common not found in components map")
+	}
+
+	// File from @services should also be in components map
+	if componentsMap["api"] == nil {
+		t.Error("MarshalYAML() api.yml from @services not found in components map")
+	}
+
+	// @services and @common should NOT be keys in components map
+	if componentsMap["@services"] != nil {
+		t.Error("MarshalYAML() @services should not be a key in components map")
+	}
+	if componentsMap["@common"] != nil {
+		t.Error("MarshalYAML() @common should not be a key in components map")
+	}
+	if componentsMap["services"] != nil {
+		t.Error("MarshalYAML() services (without @) should not be a key in components map")
+	}
+	if componentsMap["common"] != nil {
+		t.Error("MarshalYAML() common (without @) should not be a key in components map")
+	}
+}
+
 func TestMarshalLeaf_WithIncludes(t *testing.T) {
 	// Test marshalLeaf with EnableIncludes enabled
 	tmpDir := t.TempDir()

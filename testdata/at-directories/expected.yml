@@ -1,0 +1,17 @@
+components:
+    cache:
+        host: cache.example.com
+        port: 6379
+        type: redis
+    database:
+        host: db.example.com
+        port: 5432
+        type: postgresql
+    metrics:
+        endpoint: /metrics
+        port: 9090
+        type: prometheus
+    queue:
+        host: queue.example.com
+        port: 5672
+        type: rabbitmq

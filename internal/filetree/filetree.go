@@ -268,6 +268,10 @@ func (n *Node) specialCase() bool {
 	return re.MatchString(n.basename())
 }
 
+func (n *Node) specialCaseDirectory() bool {
+	return n.Info.IsDir() && strings.HasPrefix(n.basename(), "@")
+}
+
 // MarshalYAML serializes the tree into YAML.
 // Implements yaml.Marshaler interface (called by yaml.Marshal).
 func (n *Node) MarshalYAML() (interface{}, error) {
@@ -380,6 +384,8 @@ func (n *Node) marshalParent(opts *Options) (interface{}, error) {
 		switch c.(type) {
 		case map[string]interface{}, map[interface{}]interface{}:
 			if child.rootFile() {
+				subtree = mergeTree(subtree, c)
+			} else if child.specialCaseDirectory() {
 				subtree = mergeTree(subtree, c)
 			} else if child.specialCase() {
 				subtree = mergeTree(subtree, subtree[child.Parent.name()], c)
