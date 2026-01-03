@@ -405,6 +405,217 @@ fyaml pack config/ | sed 's/{{VERSION}}/v1.0.0/g' > output.yml
 fyaml pack config/ | yq eval '.services.api.replicas = 5' - > output.yml
 ```
 
+## File Includes
+
+fyaml supports including content from other files using the `--enable-includes` flag. This is useful for:
+
+- Sharing common configuration across multiple files
+- Keeping scripts and commands in separate files for better organization
+- Reusing YAML fragments without duplication
+
+### Include Mechanisms
+
+fyaml supports three include mechanisms:
+
+| Syntax | Purpose | Use Case |
+|--------|---------|----------|
+| `!include` | Include parsed YAML structures | Shared config, reusable fragments |
+| `!include-text` | Include raw text content | Scripts, SQL queries, commands |
+| `<<include()>>` | Alias for `!include-text` | CircleCI style syntax |
+
+### Including YAML Structures (`!include`)
+
+Use `!include` to include and merge YAML content from another file:
+
+```
+config/
+  services/
+    api.yml
+  common/
+    defaults.yml
+```
+
+**`common/defaults.yml`:**
+```yaml
+timeout: 30
+retries: 3
+health_check: true
+```
+
+**`services/api.yml`:**
+```yaml
+name: api
+config: !include ../common/defaults.yml
+port: 8080
+```
+
+Running `fyaml pack config/ --enable-includes`:
+
+```yaml
+services:
+  api:
+    name: api
+    config:
+      timeout: 30
+      retries: 3
+      health_check: true
+    port: 8080
+```
+
+### Including Text Content (`!include-text`)
+
+Use `!include-text` to include raw file content as a string value. This is ideal for scripts and commands:
+
+```
+config/
+  commands/
+    deploy.yml
+    scripts/
+      deploy.sh
+```
+
+**`commands/scripts/deploy.sh`:**
+```bash
+#!/bin/bash
+echo "Deploying application..."
+kubectl apply -f manifests/
+```
+
+**`commands/deploy.yml`:**
+```yaml
+name: deploy
+description: Deploy the application
+steps:
+  - run:
+      name: Deploy
+      command: !include-text scripts/deploy.sh
+```
+
+Running `fyaml pack config/ --enable-includes`:
+
+```yaml
+commands:
+  deploy:
+    name: deploy
+    description: Deploy the application
+    steps:
+      - run:
+          name: Deploy
+          command: |
+            #!/bin/bash
+            echo "Deploying application..."
+            kubectl apply -f manifests/
+```
+
+### CircleCI Style (`<<include()>>`)
+
+The `<<include()>>` directive syntax is supported as an alias for `!include-text`. This syntax was inspired by CircleCI's orb pack implementation:
+
+```yaml
+# Both are equivalent:
+command: !include-text scripts/deploy.sh
+command: <<include(scripts/deploy.sh)>>
+```
+
+### Combining Include Mechanisms
+
+You can use all three mechanisms in the same project:
+
+```yaml
+# commands/full-deploy.yml
+name: full-deploy
+metadata: !include ../common/metadata.yml      # YAML structure
+steps:
+  - run:
+      name: Deploy
+      command: !include-text scripts/deploy.sh  # Text (tag syntax)
+  - run:
+      name: Validate
+      command: <<include(scripts/validate.sh)>> # Text (directive syntax)
+```
+
+### Nested Includes
+
+Included files can contain their own includes:
+
+```yaml
+# common/defaults.yml
+base: !include base-defaults.yml
+custom:
+  timeout: 30
+```
+
+```yaml
+# common/base-defaults.yml
+retries: 3
+debug: false
+```
+
+### JSON File Support
+
+fyaml supports includes in JSON files, with some limitations:
+
+#### Using `<<include()>>` in JSON Files (Recommended)
+
+The `<<include()>>` directive works in JSON files since it's processed as a string value:
+
+```json
+{
+  "name": "api",
+  "version": "v1",
+  "steps": [
+    {
+      "run": {
+        "name": "Deploy",
+        "command": "<<include(../scripts/deploy.sh)>>"
+      }
+    }
+  ]
+}
+```
+
+This is **standard JSON** and will work with any JSON parser.
+
+#### Using YAML Tags in JSON Files
+
+YAML tags (`!include`, `!include-text`) can also be used in JSON files:
+
+```json
+{
+  "name": "api",
+  "config": !include ../common/defaults.json,
+  "steps": [
+    {
+      "run": {
+        "command": !include-text ../scripts/deploy.sh
+      }
+    }
+  ]
+}
+```
+
+**Note:** This is **not standard JSON syntax**. Standard JSON parsers will reject files with YAML tags. However, since fyaml uses `yaml.Unmarshal` to parse JSON files (treating JSON as a subset of YAML), these tags will work when processed by fyaml.
+
+#### Including JSON Files from YAML
+
+YAML files can include JSON files using `!include`:
+
+```yaml
+# services/api.yml
+name: api
+config: !include ../common/defaults.json
+```
+
+The included JSON file will be parsed and merged into the YAML structure.
+
+### Security
+
+All includes are confined to the pack root directory:
+
+- Paths are resolved relative to the file containing the include
+- Absolute paths are allowed but must be within the pack root
+- Attempts to escape the pack root (e.g., `../../etc/passwd`) are rejected
+
 ## Best Practices
 
 1. **Keep files focused**: Each file should represent a single logical unit
@@ -413,6 +624,7 @@ fyaml pack config/ | yq eval '.services.api.replicas = 5' - > output.yml
 4. **Version control**: Commit both source directory structure and generated output
 5. **Verify in CI**: Use `--check` flag in CI to catch unexpected changes
 6. **Document structure**: Add README files in directories to explain organization
+7. **Use includes sparingly**: Prefer filesystem structure for organization; use includes for reusable fragments and text content
 
 ## Limitations
 

@@ -139,8 +139,8 @@ func TestMarshalYAML_InvalidYAML(t *testing.T) {
 	}
 
 	// Verify the error includes position information (line:column) if available
-	// New error format should include position like "YAML syntax error in file:line:column"
-	if strings.Contains(err.Error(), "YAML syntax error in") {
+	// New error format should include position like "YAML/JSON syntax error in file:line:column"
+	if strings.Contains(err.Error(), "YAML/JSON syntax error in") {
 		// Should have line:column format (e.g., ":0:9:")
 		if !strings.Contains(err.Error(), ":") {
 			t.Error("yaml.Marshal() error should include position information (line:column)")
@@ -171,8 +171,8 @@ func TestFormatYAMLError_ParserError(t *testing.T) {
 
 	// Verify error message format includes position
 	errStr := err.Error()
-	if !strings.Contains(errStr, "YAML syntax error in") {
-		t.Errorf("Expected 'YAML syntax error in' in error message, got: %s", errStr)
+	if !strings.Contains(errStr, "YAML/JSON syntax error in") {
+		t.Errorf("Expected 'YAML/JSON syntax error in' in error message, got: %s", errStr)
 	}
 	if !strings.Contains(errStr, testFile) {
 		t.Errorf("Expected file path in error message, got: %s", errStr)

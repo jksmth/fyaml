@@ -1,11 +1,23 @@
 commands:
     hello:
+        config:
+            retries: 3
+            timeout: 30
         description: A simple command that imports from a file when packed.
         steps:
             - run:
                 command: |+
-                    # This is a bash file, but could really be any text-based file
+                    #!/bin/bash
                     echo "Hello World"
 
                 name: Hello Greeting
+            - run:
+                command: |+
+                    #!/bin/bash
+                    echo "Validating..."
 
+                name: Validate
+common:
+    defaults:
+        retries: 3
+        timeout: 30

@@ -166,6 +166,9 @@ func dotfolder(info os.FileInfo) bool {
 	return info.IsDir() && dotfile(info)
 }
 
+// isYaml checks if a file is a supported YAML/JSON file.
+// Note: This project is YAML-first; JSON support is provided as a convenience
+// since JSON is a subset of YAML.
 func isYaml(info os.FileInfo) bool {
 	re := regexp.MustCompile(`.+\.(yml|yaml|json)$`)
 	return re.MatchString(info.Name())
@@ -213,7 +216,7 @@ func formatYAMLError(err error, filePath string) error {
 	// Check for ParserError (syntax errors)
 	var parserErr *yaml.ParserError
 	if errors.As(err, &parserErr) {
-		return fmt.Errorf("YAML syntax error in %s:%d:%d: %s",
+		return fmt.Errorf("YAML/JSON syntax error in %s:%d:%d: %s",
 			filePath, parserErr.Line, parserErr.Column, parserErr.Message)
 	}
 
@@ -229,12 +232,12 @@ func formatYAMLError(err error, filePath string) error {
 				errMsgs = append(errMsgs, fmt.Sprintf("  %v", e.Err))
 			}
 		}
-		return fmt.Errorf("YAML type errors in %s:\n%s",
+		return fmt.Errorf("YAML/JSON type errors in %s:\n%s",
 			filePath, strings.Join(errMsgs, "\n"))
 	}
 
 	// Fallback to generic error with file path
-	return fmt.Errorf("failed to parse YAML in %s: %w", filePath, err)
+	return fmt.Errorf("failed to parse YAML/JSON in %s: %w", filePath, err)
 }
 
 func (n *Node) basename() string {
@@ -303,10 +306,10 @@ func (n *Node) marshalLeaf(opts *Options) (interface{}, error) {
 		return content, formatYAMLError(err, n.FullPath)
 	}
 
-	// Process include directives if enabled
+	// Process all include mechanisms if enabled (!include, !include-text, <<include()>>)
 	if opts != nil && opts.EnableIncludes {
 		baseDir := filepath.Dir(n.FullPath)
-		if err := include.InlineIncludes(&node, baseDir, opts.PackRoot); err != nil {
+		if err := include.ProcessIncludes(&node, baseDir, opts.PackRoot); err != nil {
 			return content, fmt.Errorf("failed to process includes in %s: %w", n.FullPath, err)
 		}
 	}

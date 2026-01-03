@@ -1,0 +1,11 @@
+name: api
+version: v1
+config: !include ../common/defaults.yml
+steps:
+  - run:
+      name: Deploy
+      command: !include-text ../scripts/deploy.sh
+  - run:
+      name: Validate
+      command: <<include(../scripts/validate.sh)>>
+
