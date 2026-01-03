@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/jksmth/fyaml/compare/v1.5.0...v1.6.0) (2026-01-03)
+
+
+### Features
+
+* **extensions:** add @ directory support ([#42](https://github.com/jksmth/fyaml/issues/42)) ([b25cc8a](https://github.com/jksmth/fyaml/commit/b25cc8a242019d17ad6837e5bb12f54676bc459e))
+
 ## [1.5.0](https://github.com/jksmth/fyaml/compare/v1.4.0...v1.5.0) (2026-01-03)
 
 
