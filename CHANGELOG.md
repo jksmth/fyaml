@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.7.0](https://github.com/jksmth/fyaml/compare/v1.6.0...v1.7.0) (2026-01-03)
+
+
+### Features
+
+* add --indent flag for YAML/JSON output ([4766c2a](https://github.com/jksmth/fyaml/commit/4766c2a9812a35bed1f23c4eb26362258f497315))
+* Improve documentation, add indent flag, and fix error handling ([#44](https://github.com/jksmth/fyaml/issues/44)) ([4766c2a](https://github.com/jksmth/fyaml/commit/4766c2a9812a35bed1f23c4eb26362258f497315))
+
+
+### Bug Fixes
+
+* replace panic with error handling in mergeTree ([4766c2a](https://github.com/jksmth/fyaml/commit/4766c2a9812a35bed1f23c4eb26362258f497315))
+
 ## [1.6.0](https://github.com/jksmth/fyaml/compare/v1.5.0...v1.6.0) (2026-01-03)
 
 
