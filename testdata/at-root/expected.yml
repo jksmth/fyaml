@@ -1,10 +1,13 @@
 api_version: v1
-metadata:
-    author: system
-    created: 2024-01-01T00:00:00Z
-services:
-    api:
+entities:
+  item1:
+    entity:
+      attributes:
         actions:
-            - command: deploy.sh
-              type: execute
-        name: api
+          - command: hello.sh
+            type: execute
+        name: sample name
+      id: example1
+metadata:
+  author: system
+  created: 2024-01-01T00:00:00Z

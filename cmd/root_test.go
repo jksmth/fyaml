@@ -104,4 +104,3 @@ func TestRootCmd_VerboseFlag_Global(t *testing.T) {
 	// Restore original value
 	verbose = originalVerbose
 }
-

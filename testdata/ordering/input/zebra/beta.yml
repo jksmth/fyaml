@@ -1,2 +1,4 @@
-value: beta
-
+entity:
+  id: example3
+  attributes:
+    value: beta

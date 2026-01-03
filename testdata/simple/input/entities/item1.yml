@@ -1,0 +1,8 @@
+entity:
+  id: example1
+  attributes:
+    name: sample name
+    enabled: true
+    settings:
+      timeout: 300
+      retries: 3

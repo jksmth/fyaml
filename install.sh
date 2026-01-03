@@ -144,4 +144,3 @@ function install_cli {
 }
 
 install_cli
-

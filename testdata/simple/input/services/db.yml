@@ -1,6 +1,0 @@
-name: db
-enabled: true
-settings:
-  timeout: 600
-  retries: 5
-

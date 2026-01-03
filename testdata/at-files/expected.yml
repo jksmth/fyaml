@@ -1,9 +1,12 @@
-services:
-    api:
+entities:
+  item1:
+    entity:
+      attributes:
         actions:
-            - command: build.sh
-              type: execute
-        name: api
-    runtime:
-        image: base:latest
-        type: container
+          - command: build.sh
+            type: execute
+        name: sample name
+      id: example1
+  runtime:
+    image: base:latest
+    type: container

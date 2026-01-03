@@ -33,8 +33,12 @@ go.work.sum
 dist/
 build/
 
+# Python virtual environment (for pre-commit)
+.venv/
+venv/
+env/
+
 # Temporary files
 tmp/
 temp/
 *.tmp
-

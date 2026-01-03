@@ -1088,3 +1088,39 @@ func TestOptions_Log_WithLogger(t *testing.T) {
 		t.Error("Options.log() should return the configured logger that actually logs")
 	}
 }
+
+func TestMergeTree_InvalidInput(t *testing.T) {
+	// Test that mergeTree returns an error for types that mapstructure.Decode can't handle
+	// Channels cannot be decoded by mapstructure
+	ch := make(chan int)
+
+	_, err := mergeTree(ch)
+	if err == nil {
+		t.Error("mergeTree() expected error for channel type")
+	}
+	if !strings.Contains(err.Error(), "failed to decode tree structure") {
+		t.Errorf("mergeTree() error = %v, want error containing 'failed to decode tree structure'", err)
+	}
+
+	// Test with function (also can't be decoded by mapstructure)
+	var fn = func() {}
+	_, err = mergeTree(fn)
+	if err == nil {
+		t.Error("mergeTree() expected error for function type")
+	}
+	if !strings.Contains(err.Error(), "failed to decode tree structure") {
+		t.Errorf("mergeTree() error = %v, want error containing 'failed to decode tree structure'", err)
+	}
+
+	// Test with nil (should be skipped, not cause error)
+	result, err := mergeTree(nil)
+	if err != nil {
+		t.Errorf("mergeTree() unexpected error for nil: %v", err)
+	}
+	if result == nil {
+		t.Error("mergeTree() returned nil result for nil input")
+	}
+	if len(result) != 0 {
+		t.Errorf("mergeTree() result should be empty for nil input, got %v", result)
+	}
+}

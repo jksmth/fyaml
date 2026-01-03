@@ -1,0 +1,6 @@
+entity:
+  id: example2
+  attributes:
+    name: second item
+    tags:
+      - tag3

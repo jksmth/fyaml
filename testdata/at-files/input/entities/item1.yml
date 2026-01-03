@@ -1,0 +1,7 @@
+entity:
+  id: example1
+  attributes:
+    name: sample name
+    actions:
+      - type: execute
+        command: build.sh

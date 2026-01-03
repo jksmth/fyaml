@@ -9,7 +9,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Release](https://img.shields.io/github/v/release/jksmth/fyaml?include_prereleases&sort=semver)](https://github.com/jksmth/fyaml/releases)
 
-📖 **[Documentation](https://jksmth.github.io/fyaml)** | 🐛 [Report Bug](https://github.com/jksmth/fyaml/issues) | 💡 [Request Feature](https://github.com/jksmth/fyaml/issues)
+**Docs:** [docs/index.md](docs/index.md) | **Install:** [docs/installation.md](docs/installation.md) | **Usage:** [docs/usage.md](docs/usage.md) | **Issues:** https://github.com/jksmth/fyaml/issues
 
 **fyaml** compiles a directory tree of YAML or JSON files into a single deterministic document.
 
@@ -18,6 +18,65 @@ It exists to solve a common, recurring problem:
 > Some tools expect configuration to live in a single YAML file, even as that file grows to thousands of lines.
 
 fyaml lets you work with structure and small files, while still producing the single file those tools expect.
+
+## Quick Example
+
+Given a directory structure:
+
+```
+config/
+  entities/
+    item1.yml
+    item2.yml
+```
+
+**`entities/item1.yml`:**
+
+```yaml
+entity:
+  id: example1
+  attributes:
+    name: sample name
+    tags:
+      - tag1
+      - tag2
+```
+
+**`entities/item2.yml`:**
+
+```yaml
+entity:
+  id: example2
+  attributes:
+    name: another name
+    tags: []
+```
+
+Run:
+
+```bash
+fyaml pack config/
+```
+
+Produces:
+
+```yaml
+entities:
+  item1:
+    entity:
+      id: example1
+      attributes:
+        name: sample name
+        tags:
+          - tag1
+          - tag2
+  item2:
+    entity:
+      id: example2
+      attributes:
+        name: another name
+        tags: []
+```
 
 ---
 
@@ -50,18 +109,12 @@ There is no logic, templating, or execution model involved.
 
 fyaml is intentionally limited in scope to keep output predictable and diffs trustworthy.
 
-- Maps directory structure directly to YAML structure
-- Lets you split large configs into small, focused files
-- Produces a single, predictable output document
-- Runs as a build-time step
+- **Organize as you want** - Split large configs into small, focused files organized in directories
+- **Predictable output** - Identical input always produces identical output, making diffs meaningful
+- **No surprises** - Pure structure compilation with no logic, templating, or execution model
+- **Build-time tool** - Runs as a build step, producing the single file your tools expect
 
-**How it works:**
-
-- Directory names become map keys
-- File names (without extension) become nested keys
-- Files starting with `@` merge into the parent directory
-- Root-level files merge directly into the output
-- Output is deterministic with keys sorted alphabetically
+For technical details on how directory structure maps to YAML, see [docs/index.md#how-it-works](docs/index.md#how-it-works).
 
 ---
 
@@ -75,6 +128,7 @@ Use fyaml when:
 - You want organization without adding logic
 
 fyaml is not a good fit if you need:
+
 - conditionals
 - loops
 - variable resolution
@@ -90,85 +144,36 @@ Those concerns are better handled by other tools.
 curl -sSL https://raw.githubusercontent.com/jksmth/fyaml/main/install.sh | bash
 ```
 
+**Note:** This downloads and executes a script. For verification steps, see [Verification](#verification) below.
+
 ### From Source (Go)
 
 ```bash
 go install github.com/jksmth/fyaml@latest
 ```
 
-### From Pre-built Binaries
-
-Download the latest release from the [GitHub releases page](https://github.com/jksmth/fyaml/releases).
-
-**Linux/macOS:**
-```bash
-curl -L https://github.com/jksmth/fyaml/releases/latest/download/fyaml_linux_amd64.tar.gz | tar xz
-chmod +x fyaml
-./fyaml pack examples/basic
-```
-
-**Windows:** Download the `.zip` file from releases and extract.
-
 ### Docker
 
 **Run directly:**
+
 ```bash
 docker run --rm -v $(pwd):/workspace ghcr.io/jksmth/fyaml:latest pack /workspace/examples/basic
 ```
 
-**Use in multi-stage builds:**
-```dockerfile
-# Build stage - copy fyaml binary
-FROM ghcr.io/jksmth/fyaml:latest AS fyaml
-
-# Your application stage
-FROM your-base-image:latest
-COPY --from=fyaml /fyaml /usr/local/bin/fyaml
-
-# Use fyaml in your build process
-COPY config/ /config/
-RUN fyaml pack /config > /app/config.yml
-```
-
-Releases are cryptographically signed. See [Verification](#verification) below.
+For more installation options (pre-built binaries, Windows, multi-stage Docker), see [docs/installation.md](docs/installation.md).
 
 ## Verification
 
-fyaml releases are signed with [cosign](https://github.com/sigstore/cosign) using keyless signing, providing cryptographic proof that artifacts are authentic and haven't been tampered with.
+fyaml releases are signed with [cosign](https://github.com/sigstore/cosign) using keyless signing.
 
-### Verify Binary Signatures
-
-```bash
-# Download the release and signature files
-VERSION="v1.0.0"
-wget https://github.com/jksmth/fyaml/releases/download/${VERSION}/checksums.txt
-wget https://github.com/jksmth/fyaml/releases/download/${VERSION}/checksums.txt.sigstore.json
-
-# Verify signature
-cosign verify-blob --certificate-identity-regexp '^https://github.com/jksmth/fyaml' \
-  --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
-  checksums.txt \
-  --bundle checksums.txt.sigstore.json
-```
-
-### Verify Docker Images
-
-```bash
-cosign verify --certificate-identity-regexp '^https://github.com/jksmth/fyaml' \
-  --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
-  ghcr.io/jksmth/fyaml:v1.0.0
-```
-
-### Software Bill of Materials (SBOM)
-
-SPDX SBOMs are included with each release, providing a complete inventory of all dependencies. Download from the [releases page](https://github.com/jksmth/fyaml/releases) (files ending in `.sbom.spdx.json`).
+For verification steps (binaries, Docker images, SBOMs), see [docs/installation.md#verification](docs/installation.md#verification).
 
 ## Usage
 
 ### Basic Usage
 
 ```bash
-# Pack current directory to stdout
+# Pack current directory to stdout (fyaml is equivalent to fyaml pack .)
 fyaml
 
 # Pack specific directory
@@ -187,204 +192,35 @@ fyaml pack /path/to/config -o output.yml --check
 fyaml -v pack /path/to/config
 ```
 
-### Examples
+### More examples and patterns
 
-Given a directory structure:
-
-```
-config/
-  components/
-    database.yml
-    cache.yml
-  features/
-    auth.yml
-    payments.yml
-```
-
-Running `fyaml pack config` produces:
-
-```yaml
-components:
-  database: <contents of database.yml>
-  cache: <contents of cache.yml>
-features:
-  auth: <contents of auth.yml>
-  payments: <contents of payments.yml>
-```
-
-For complete runnable examples, see the [`examples/`](examples/) directory.
-
-### Root Files
-
-Files at the root level merge directly into the output (their filename is not used as a key):
-
-```
-config/
-  metadata.yml     # Merges directly into root
-  services/
-    api.yml
-```
-
-Produces:
-
-```yaml
-services:
-  api: <contents>
-metadata: <contents of metadata.yml>
-```
-
-### @ Files
-
-Files starting with `@` merge into their parent directory map:
-
-```
-config/
-  services/
-    @common.yml    # Merges into services map
-    api.yml
-```
-
-Produces:
-
-```yaml
-services:
-  <contents of @common.yml>
-  api: <contents of api.yml>
-```
-
-### YAML Anchors and Aliases
-
-YAML anchors (`&anchor`) and aliases (`*alias`) are resolved within each individual file during parsing. Anchors and aliases **cannot** reference values across different files—they only work within a single YAML document.
-
-When files are processed, any anchors and aliases are expanded to their actual values. The final output contains the expanded values, not the anchor/alias references.
-
-For example, if `config.yml` contains:
-```yaml
-defaults: &defaults
-  timeout: 30
-  retries: 3
-
-service:
-  <<: *defaults
-  name: api
-```
-
-The output will contain the expanded values:
-```yaml
-defaults:
-  timeout: 30
-  retries: 3
-service:
-  timeout: 30
-  retries: 3
-  name: api
-```
-
-**Cross-file sharing:** If you need shared values across files, use the `!include` feature (with `--enable-includes`) to include YAML content from other files at specific locations in your structure. This provides similar functionality to cross-file anchors.
-
-### Multi-Document YAML Files
-
-YAML supports multiple documents in a single file, separated by `---`. However, **fyaml only processes the first document** in multi-document files. Subsequent documents are silently ignored.
-
-**Why this limitation exists:**
-
-fyaml uses the filesystem structure to organize YAML—directory names and file names become keys in the output. This design assumes **one file = one logical unit**. Multi-document files conflict with this model because:
-
-- A single filename cannot represent multiple documents
-- The filesystem structure (which fyaml relies on) already provides a way to organize multiple resources
-- Supporting multi-document files would create ambiguity about which document gets the filename as a key
-
-**What to do instead:**
-
-Instead of using multi-document files, organize your resources using separate files:
-
-```yaml
-# Instead of this (multi-document):
-config.yml:
-  ---
-  database:
-    host: localhost
-    port: 5432
-  ---
-  cache:
-    host: localhost
-    port: 6379
-
-# Use this (fyaml's filesystem-based approach):
-config/
-  database.yml    # Contains the database config
-  cache.yml       # Contains the cache config
-```
-
-This approach:
-- Works naturally with fyaml's directory structure model
-- Makes each resource easy to find and edit
-- Allows you to use directory names to group related resources
-- Produces clear, predictable output structure
-
-### File Content Requirements
-
-**Each YAML/JSON file must contain a map (object/dictionary) at the top level.** The file itself must be a map, but nested values within that map can be any YAML type (scalars, arrays, nested maps, etc.).
-
-This requirement exists because fyaml merges file contents into the parent directory map structure. Only maps can be merged into other maps.
-
-**Examples:**
-
-```yaml
-# ✅ Supported - top-level is a map
-name: api
-items: [1, 2, 3]           # Array nested in map
-value: 42                   # Scalar nested in map
-settings:                   # Nested map
-  timeout: 30
-  retries: 3
-
-# ❌ Not supported - top-level is not a map
-hello                       # Scalar
-- item1                     # Array
-- item2
-- item3
-```
-
-If you attempt to pack a file containing a top-level scalar or array, fyaml will return an error: `expected a map, got a <type> which is not supported at this time for "<filepath>"`.
+- See [docs/usage.md](docs/usage.md) for:
+  - [Directory structure rules](docs/usage.md#directory-structure-rules) - Basic structure, root files, `@` files and directories
+  - [File includes](docs/usage.md#file-includes) - Using `!include`, `!include-text`, and `<<include()>>`
+  - [Limitations](docs/usage.md#limitations) - File content requirements, YAML anchors, multi-document files
+- See [docs/examples.md](docs/examples.md) and the [`examples/`](examples/) directory for runnable examples.
+- See [docs/reference.md](docs/reference.md) for:
+  - [Commands](docs/reference.md#commands) - `pack`, `version`
+  - [Flags reference](docs/reference.md#flags-reference) - All available flags and options
 
 ## Exit Codes
 
 - `0` - Success
 - `1` - Pack or IO error
-- `2` - `--check` mismatch
+- `2` - `--check` mismatch (exits immediately via `os.Exit(2)`)
 
 ## About
 
 fyaml implements the [FYAML specification](SPECIFICATION.md) (also available at [github.com/CircleCI-Public/fyaml](https://github.com/CircleCI-Public/fyaml/blob/master/fyaml-specification.md)).
 
 It's a small, focused tool that:
-- Works with any YAML-based system (CI/CD, Kubernetes, APIs, etc.)
+
+- Works with any YAML-based system
 - Produces deterministic output (identical input always produces identical output)
 - Has a minimal surface area focused on one task
 - Does not implement templating, variables, or conditionals
 
-**Need templating or variable substitution?** Use external tools like `envsubst` alongside fyaml. For example:
-
-If your `config/services/api.yml` contains:
-```yaml
-name: ${SERVICE_NAME}
-replicas: ${REPLICA_COUNT}
-image: ${IMAGE_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}
-```
-
-Set environment variables and run:
-```bash
-export SERVICE_NAME=api
-export REPLICA_COUNT=3
-export IMAGE_REGISTRY=ghcr.io
-export IMAGE_NAME=myapp
-export IMAGE_TAG=v1.0.0
-
-fyaml pack config/ | envsubst > config-final.yml
-```
-
-This keeps fyaml focused on structure compilation while allowing you to use specialized tools for templating.
+**Need templating or variable substitution?** Use external tools like `envsubst` alongside fyaml. This keeps fyaml focused on structure compilation while allowing you to use specialized tools for templating. See [docs/usage.md#integration-with-templating](docs/usage.md#integration-with-templating) for examples.
 
 **Extensions:** fyaml includes optional extensions (like JSON support) that enhance functionality while maintaining spec compliance. See the [Extensions](#extensions) section for details.
 
@@ -394,205 +230,12 @@ This keeps fyaml focused on structure compilation while allowing you to use spec
 
 fyaml includes the following extensions beyond the FYAML specification. These features are opt-in and do not affect spec-compliant behavior.
 
-### JSON Support
+- **JSON Support** - Accept `.json` files and output JSON format. See [docs/usage.md#output-format](docs/usage.md#output-format) and [docs/reference.md#--format--f](docs/reference.md#--format--f) for details.
+- **File Includes** - Use `!include`, `!include-text`, and `<<include()>>` directives to include content from other files. See [docs/usage.md#file-includes](docs/usage.md#file-includes) for complete documentation.
+- **Boolean Conversion** - Convert YAML 1.1 booleans (`on`/`off`, `yes`/`no`) to YAML 1.2 (`true`/`false`). See [docs/usage.md#converting-onoff-and-yesno-to-truefalse](docs/usage.md#converting-onoff-and-yesno-to-truefalse) for details.
+- **@ Directory Support** - Directories starting with `@` merge into parent map, similar to `@` files. See [docs/usage.md#-directories](docs/usage.md#-directories) for details.
 
-**Input:** fyaml accepts `.json` files in addition to `.yml` and `.yaml` files. JSON files are processed the same way as YAML files.
-
-**Output:** Use the `--format` flag (or `-f`) to output JSON instead of YAML:
-
-```bash
-fyaml pack config/ --format json
-fyaml pack config/ -f json -o output.json
-```
-
-The default output format is YAML. JSON output is formatted with 2-space indentation.
-
-**Empty Output Behavior:**
-
-- YAML format: Returns empty output (0 bytes) when no files found (aligns with yq)
-- JSON format: Returns `null` when no files found (aligns with jq)
-
-**Note:** These extensions are not part of the FYAML specification. For spec-compliant behavior, use only `.yml` and `.yaml` files with YAML output (default).
-
-### File Includes
-
-Use the `--enable-includes` flag to process include directives. fyaml supports three include mechanisms:
-
-- `!include` — Include parsed YAML structures
-- `!include-text` — Include raw text content (scripts, SQL, etc.)
-- `<<include()>>` — Backward-compatible alias for `!include-text`
-
-```bash
-fyaml pack config/ --enable-includes
-```
-
-#### Including YAML Structures (`!include`)
-
-Use `!include` to include and merge YAML content from another file:
-
-```yaml
-# services/api.yml
-name: api
-config: !include ../common/defaults.yml
-port: 8080
-```
-
-```yaml
-# common/defaults.yml
-timeout: 30
-retries: 3
-```
-
-This produces:
-```yaml
-services:
-  api:
-    name: api
-    config:
-      timeout: 30
-      retries: 3
-    port: 8080
-```
-
-#### Including Text Content (`!include-text`)
-
-Use `!include-text` to include raw file content as a string value:
-
-```yaml
-# commands/deploy.yml
-steps:
-  - run:
-      name: Deploy
-      command: !include-text scripts/deploy.sh
-```
-
-```bash
-# scripts/deploy.sh
-#!/bin/bash
-echo "Deploying..."
-```
-
-This produces:
-```yaml
-commands:
-  deploy:
-    steps:
-      - run:
-          name: Deploy
-          command: |
-            #!/bin/bash
-            echo "Deploying..."
-```
-
-#### CircleCI Style (`<<include()>>`)
-
-The `<<include()>>` directive syntax is supported as an alias for `!include-text`. This syntax was inspired by CircleCI's orb pack implementation:
-
-```yaml
-command: <<include(scripts/hello.sh)>>
-```
-
-This is equivalent to:
-```yaml
-command: !include-text scripts/hello.sh
-```
-
-#### Include Rules
-
-- **Pack root boundary**: All includes must resolve to paths within the pack root directory
-- **Relative paths**: File paths are resolved relative to the YAML file containing the include
-- **Absolute paths**: Allowed but must be within the pack root
-- **Nested includes**: Supported — included files can contain their own includes
-
-**Error Cases:**
-
-- `!include` on non-scalar — Error: must be used on a scalar value
-- `echo <<include(f)>>` — Error: entire string must be include statement
-- `<<include(a)>> <<include(b)>>` — Error: multiple include statements
-- File not found — Error: could not open path for inclusion
-- Path escapes pack root — Error: include path escapes pack root
-
-**JSON File Support:**
-
-- `<<include()>>` works in JSON files (standard JSON syntax)
-- `!include` and `!include-text` tags work in JSON files (non-standard JSON, but supported by fyaml)
-- YAML files can include JSON files using `!include`
-
-**Note:** Without `--enable-includes`, include directives and tags are passed through unchanged.
-
-### Boolean Conversion
-
-Use the `--convert-booleans` flag to convert `on`/`off` and `yes`/`no` values to `true`/`false` booleans:
-
-```bash
-fyaml pack config/ --convert-booleans
-```
-
-This is useful when your source files use YAML 1.1-style boolean values (`on`, `off`, `yes`, `no`) but your tools expect YAML 1.2 booleans (`true`, `false`). Quoted values like `"on"` remain as strings.
-
-For more details, see the [Usage Guide](https://jksmth.github.io/fyaml/usage/).
-
-### @ Directory Support
-
-Directories starting with `@` merge their contents into the parent directory map, similar to `@` files. This allows directories to be used for organization without creating additional nesting levels.
-
-**Example:**
-```
-components/
-  database.yml
-  @infrastructure/     # Merges into components map
-    cache.yml
-    queue.yml
-  @monitoring/        # Merges into components map
-    metrics.yml
-```
-
-Produces:
-```yaml
-components:
-  cache: <contents>
-  database: <contents>
-  metrics: <contents>
-  queue: <contents>
-```
-
-**Note:** This is an extension to the FYAML specification. See [EXTENSIONS.md](EXTENSIONS.md#-directory-support) for complete documentation.
-
-### Verbose Output
-
-Use the `-v` (or `--verbose`) global flag to see which files are being processed:
-
-```bash
-fyaml -v pack config/
-```
-
-**Behavior:**
-
-- Shows `[DEBUG] Processing: <filepath>` for each YAML/JSON file processed
-- Warnings (e.g., empty directory) are always shown with `[WARN]` prefix
-- All verbose output goes to stderr, so stdout remains clean for piping
-- Useful for debugging which files are being processed
-
-**Example:**
-```bash
-$ fyaml -v pack config/
-[DEBUG] Processing: /path/to/config/services/api.yml
-[DEBUG] Processing: /path/to/config/services/db.yml
-services:
-  api:
-    name: api
-  db:
-    name: db
-```
-
-**Piping:** Since verbose output goes to stderr, you can still pipe YAML output:
-```bash
-# Only YAML to stdout (verbose to stderr)
-fyaml -v pack config/ 2>/dev/null | yq
-
-# Capture verbose output
-fyaml -v pack config/ 2>&1 | grep DEBUG
-```
+For complete documentation on all extensions, see [docs/usage.md](docs/usage.md) and [docs/reference.md](docs/reference.md).
 
 ## License
 
@@ -601,4 +244,3 @@ MIT License - see [LICENSE](LICENSE) for details.
 ## Attribution
 
 Portions of this code are derived from the [CircleCI CLI](https://github.com/CircleCI-Public/circleci-cli), which is also licensed under the MIT License. See [NOTICE](NOTICE) for details.
-

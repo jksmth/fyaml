@@ -1,4 +1,0 @@
-type: prometheus
-endpoint: /metrics
-port: 9090
-

@@ -1,4 +1,2 @@
 #!/bin/bash
-echo "Validating configuration..."
-kubectl validate -f manifests/
-
+echo "Validating..."

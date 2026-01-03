@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -20,6 +21,7 @@ type PackOptions struct {
 	Format          string // Output format: yaml or json
 	EnableIncludes  bool   // Process <<include(file)>> directives
 	ConvertBooleans bool   // Convert unquoted YAML 1.1 booleans to true/false
+	Indent          int    // Number of spaces for indentation
 }
 
 var (
@@ -29,6 +31,7 @@ var (
 	format          string
 	enableIncludes  bool
 	convertBooleans bool
+	indent          int
 )
 
 var packCmd = &cobra.Command{
@@ -56,6 +59,7 @@ Use --enable-includes to process <<include(file)>> directives.`,
 			Format:          format,
 			EnableIncludes:  enableIncludes,
 			ConvertBooleans: convertBooleans,
+			Indent:          indent,
 		}
 
 		result, err := pack(opts, log)
@@ -83,6 +87,8 @@ func init() {
 		"Process <<include(file)>> directives (extension)")
 	packCmd.Flags().BoolVar(&convertBooleans, "convert-booleans", false,
 		"Convert unquoted YAML 1.1 boolean values (on/off, yes/no) to true/false")
+	packCmd.Flags().IntVar(&indent, "indent", 2,
+		"Number of spaces for indentation (default: 2)")
 }
 
 // handleCheck compares the generated output with an existing file.
@@ -164,6 +170,11 @@ func pack(opts PackOptions, log logger.Logger) ([]byte, error) {
 		return nil, fmt.Errorf("invalid format: %s (must be 'yaml' or 'json')", opts.Format)
 	}
 
+	// Validate indent
+	if opts.Indent < 1 {
+		return nil, fmt.Errorf("invalid indent: %d (must be positive)", opts.Indent)
+	}
+
 	// Resolve dir to absolute path to use as pack root
 	absDir, err := filepath.Abs(opts.Dir)
 	if err != nil {
@@ -196,7 +207,7 @@ func pack(opts PackOptions, log logger.Logger) ([]byte, error) {
 	}
 
 	// Marshal based on format
-	result, err := marshalToFormat(marshaledData, opts.Format)
+	result, err := marshalToFormat(marshaledData, opts.Format, opts.Indent)
 	if err != nil {
 		return nil, err
 	}
@@ -218,13 +229,24 @@ func handleEmptyOutput(dir, format string, log logger.Logger) ([]byte, error) {
 	return []byte{}, nil
 }
 
-// marshalToFormat marshals data to the specified format.
-func marshalToFormat(data interface{}, format string) ([]byte, error) {
+// marshalToFormat marshals data to the specified format with the given indent.
+func marshalToFormat(data interface{}, format string, indent int) ([]byte, error) {
 	switch format {
 	case "json":
-		return json.MarshalIndent(data, "", "  ")
+		indentStr := strings.Repeat(" ", indent)
+		return json.MarshalIndent(data, "", indentStr)
 	case "yaml":
-		return yaml.Marshal(data)
+		var buf bytes.Buffer
+		enc := yaml.NewEncoder(&buf)
+		enc.SetIndent(indent)
+		if err := enc.Encode(data); err != nil {
+			_ = enc.Close() // Close on error, ignore close error
+			return nil, err
+		}
+		if err := enc.Close(); err != nil {
+			return nil, err
+		}
+		return buf.Bytes(), nil
 	default:
 		// Should never happen due to early validation, but be safe
 		return nil, fmt.Errorf("invalid format: %s", format)

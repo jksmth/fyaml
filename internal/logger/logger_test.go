@@ -82,4 +82,3 @@ func TestStdLogger_MultipleMessages(t *testing.T) {
 		t.Errorf("output = %q, want %q", got, want)
 	}
 }
-

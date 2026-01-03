@@ -3,6 +3,7 @@ version: "2"
 run:
   timeout: 5m
   tests: true
+  go: "1.25"
 
 linters:
   enable:
@@ -20,4 +21,3 @@ linters:
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
-

@@ -10,13 +10,13 @@ This example demonstrates fyaml's file include functionality using all three inc
 
 ```
 with-includes/
-  common/
+  shared/
     defaults.yml        # Shared YAML configuration
   scripts/
-    deploy.sh          # Deployment script
+    hello.sh           # Simple script
     validate.sh        # Validation script
-  services/
-    api.yml            # Service using includes
+  entities/
+    item1.yml          # Entity using includes
 ```
 
 ## Usage
@@ -36,7 +36,8 @@ fyaml pack . --enable-includes
 
 ## Files
 
-**`common/defaults.yml`** - Shared configuration included as YAML:
+**`shared/defaults.yml`** - Shared configuration included as YAML:
+
 ```yaml
 timeout: 30
 retries: 3
@@ -45,32 +46,36 @@ health_check:
   interval: 60
 ```
 
-**`scripts/deploy.sh`** - Deployment script included as text:
+**`scripts/hello.sh`** - Simple script included as text:
+
 ```bash
 #!/bin/bash
-echo "Deploying application..."
-kubectl apply -f manifests/
+echo "Hello World"
 ```
 
 **`scripts/validate.sh`** - Validation script included as text:
+
 ```bash
 #!/bin/bash
-echo "Validating configuration..."
-kubectl validate -f manifests/
+echo "Validating..."
 ```
 
-**`services/api.yml`** - Service configuration using all include mechanisms:
+**`entities/item1.yml`** - Entity configuration using all include mechanisms:
+
 ```yaml
-name: api
-version: v1
-config: !include ../common/defaults.yml
-steps:
-  - run:
-      name: Deploy
-      command: !include-text ../scripts/deploy.sh
-  - run:
-      name: Validate
-      command: <<include(../scripts/validate.sh)>>
+entity:
+  id: example1
+  attributes:
+    name: sample name
+    tags: []
+  config: !include ../shared/defaults.yml
+  steps:
+    - run:
+        name: Greeting
+        command: !include-text ../scripts/hello.sh
+    - run:
+        name: Validate
+        command: <<include(../scripts/validate.sh)>>
 ```
 
 ## Expected Output
@@ -78,39 +83,40 @@ steps:
 When packed with `--enable-includes`, the includes are processed:
 
 ```yaml
-common:
+entities:
+  item1:
+    entity:
+      id: example1
+      attributes:
+        name: sample name
+        tags: []
+      config:
+        health_check:
+          enabled: true
+          interval: 60
+        retries: 3
+        timeout: 30
+      steps:
+        - run:
+            name: Greeting
+            command: |
+              #!/bin/bash
+              echo "Hello World"
+        - run:
+            name: Validate
+            command: |
+              #!/bin/bash
+              echo "Validating..."
+shared:
   defaults:
     health_check:
       enabled: true
       interval: 60
     retries: 3
     timeout: 30
-services:
-  api:
-    config:
-      health_check:
-        enabled: true
-        interval: 60
-      retries: 3
-      timeout: 30
-    name: api
-    steps:
-      - run:
-          name: Deploy
-          command: |
-            #!/bin/bash
-            echo "Deploying application..."
-            kubectl apply -f manifests/
-      - run:
-          name: Validate
-          command: |
-            #!/bin/bash
-            echo "Validating configuration..."
-            kubectl validate -f manifests/
-    version: v1
 ```
 
-Note: The `common/defaults.yml` file appears in the output because it's part of the directory structure, but its content is also merged into `services.api.config` via the `!include` tag.
+Note: The `shared/defaults.yml` file appears in the output because it's part of the directory structure, but its content is also merged into `entities.item1.entity.config` via the `!include` tag.
 
 ## Notes
 
@@ -119,4 +125,3 @@ Note: The `common/defaults.yml` file appears in the output because it's part of 
 - `!include-text` and `<<include()>>` include raw text content
 - Paths are relative to the file containing the include
 - All includes must be within the pack root directory
-
