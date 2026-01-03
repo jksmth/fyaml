@@ -657,7 +657,19 @@ If you attempt to pack a file containing a top-level scalar or array, fyaml will
 
 YAML anchors (`&anchor`) and aliases (`*alias`) are resolved **within each individual file** during parsing. Anchors and aliases **cannot** reference values across different files—they only work within a single YAML document.
 
-If you need shared values across files, use `@` files to merge common configuration.
+If you need shared values across files, use the `!include` feature (with `--enable-includes`) to include YAML content from other files at specific locations in your structure. This provides similar functionality to cross-file anchors:
+
+```yaml
+# common/defaults.yml
+timeout: 30
+retries: 3
+
+# services/api.yml
+name: api
+config: !include ../common/defaults.yml
+```
+
+**Note:** `@` files can also be used to merge common configuration at the directory level, but `!include` is more flexible as it allows you to include content at any point in your YAML structure, not just at the directory level.
 
 ### Multi-Document YAML Files
 
