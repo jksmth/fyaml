@@ -348,7 +348,7 @@ func IsEmptyContent(v interface{}) bool {
 // mergeTree merges multiple interface{} values into a single map[string]interface{}.
 // This is adapted from the CircleCI CLI implementation.
 // Per CircleCI behavior, later values overwrite earlier values (no collision errors).
-func mergeTree(trees ...interface{}) map[string]interface{} {
+func mergeTree(trees ...interface{}) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 	for _, tree := range trees {
 		if tree == nil {
@@ -357,13 +357,13 @@ func mergeTree(trees ...interface{}) map[string]interface{} {
 
 		kvp := make(map[string]interface{})
 		if err := mapstructure.Decode(tree, &kvp); err != nil {
-			panic(err)
+			return nil, fmt.Errorf("failed to decode tree structure: %w", err)
 		}
 		for k, v := range kvp {
 			result[k] = v
 		}
 	}
-	return result
+	return result, nil
 }
 
 func (n *Node) marshalParent(opts *Options) (interface{}, error) {
@@ -383,14 +383,18 @@ func (n *Node) marshalParent(opts *Options) (interface{}, error) {
 
 		switch c.(type) {
 		case map[string]interface{}, map[interface{}]interface{}:
+			var err error
 			if child.rootFile() {
-				subtree = mergeTree(subtree, c)
+				subtree, err = mergeTree(subtree, c)
 			} else if child.specialCaseDirectory() {
-				subtree = mergeTree(subtree, c)
+				subtree, err = mergeTree(subtree, c)
 			} else if child.specialCase() {
-				subtree = mergeTree(subtree, subtree[child.Parent.name()], c)
+				subtree, err = mergeTree(subtree, subtree[child.Parent.name()], c)
 			} else {
-				subtree[child.name()] = mergeTree(subtree[child.name()], c)
+				subtree[child.name()], err = mergeTree(subtree[child.name()], c)
+			}
+			if err != nil {
+				return nil, fmt.Errorf("failed to merge tree for %s: %w", child.FullPath, err)
 			}
 		default:
 			return nil, fmt.Errorf("expected a map, got a `%T` which is not supported at this time for \"%s\"", c, child.FullPath)

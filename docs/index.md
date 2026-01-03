@@ -45,57 +45,72 @@ Given this directory structure:
 
 ```
 config/
-  components/
-    database.yml
-    cache.yml
-  services/
-    api.yml
+  entities/
+    item1.yml
+    item2.yml
+  items/
+    item3.yml
 ```
 
-**`components/database.yml`:**
+**`entities/item1.yml`:**
+
 ```yaml
-name: database
-type: postgresql
-settings:
-  host: localhost
-  port: 5432
+entity:
+  id: example1
+  attributes:
+    name: sample name
+    tags:
+      - tag1
+      - tag2
 ```
 
-**`components/cache.yml`:**
+**`entities/item2.yml`:**
+
 ```yaml
-name: cache
-type: redis
-settings:
-  host: localhost
-  port: 6379
+entity:
+  id: example2
+  attributes:
+    name: another name
+    tags: []
 ```
 
-**`services/api.yml`:**
+**`items/item3.yml`:**
+
 ```yaml
-name: api
-port: 8080
+entity:
+  id: example3
+  attributes:
+    name: third item
+    tags:
+      - tag3
 ```
 
 Running `fyaml pack config/` produces:
 
 ```yaml
-components:
-  cache:
-    name: cache
-    settings:
-      host: localhost
-      port: 6379
-    type: redis
-  database:
-    name: database
-    settings:
-      host: localhost
-      port: 5432
-    type: postgresql
-services:
-  api:
-    name: api
-    port: 8080
+entities:
+  item1:
+    entity:
+      id: example1
+      attributes:
+        name: sample name
+        tags:
+          - tag1
+          - tag2
+  item2:
+    entity:
+      id: example2
+      attributes:
+        name: another name
+        tags: []
+items:
+  item3:
+    entity:
+      id: example3
+      attributes:
+        name: third item
+        tags:
+          - tag3
 ```
 
 ## When to Use fyaml
@@ -123,9 +138,11 @@ Those concerns are better handled by other tools.
 - **[Examples](examples.md)** - Detailed examples with outputs
 - **[Command Reference](reference.md)** - Complete command and flag reference
 
+For quick installation without Go, see [Installation - Quick Install](installation.md#quick-install-linuxmacos) or [Installation - Docker](installation.md#docker).
+
 ## Learn More
 
 - View the [FYAML Specification](https://github.com/CircleCI-Public/fyaml/blob/master/fyaml-specification.md)
 - Check out the [examples directory](https://github.com/jksmth/fyaml/tree/main/examples) in the repository
+- See the [README](../README.md) for project overview and quick start
 - Report issues or contribute on [GitHub](https://github.com/jksmth/fyaml)
-

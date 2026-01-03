@@ -2,7 +2,9 @@ defaults: &defaults
   timeout: 30
   retries: 3
 
-service:
+entity:
   <<: *defaults
-  name: api
-
+  id: example1
+  attributes:
+    name: sample name
+    tags: []

@@ -6,9 +6,9 @@ This example demonstrates how `@` files merge into their parent directory map.
 
 ```
 with-at-files/
-  services/
-    @common.yml    # Merges into services map
-    api.yml
+  entities/
+    @shared.yml    # Merges into entities map
+    item1.yml
 ```
 
 ## Usage
@@ -28,16 +28,18 @@ fyaml pack .
 
 ## Expected Output
 
-The `@common.yml` file merges into the `services` map alongside `api`:
+The `@shared.yml` file merges into the `entities` map alongside `item1`:
 
 ```yaml
-services:
-  api:
-    endpoints:
-      - /health
-      - /status
-    name: api
-    version: v1
+entities:
+  item1:
+    entity:
+      id: example1
+      attributes:
+        name: sample name
+        tags:
+          - tag1
+          - tag2
   environment: production
   monitoring:
     enabled: true
@@ -45,5 +47,4 @@ services:
   region: us-east-1
 ```
 
-Note how the contents of `@common.yml` appear directly in the `services` map, not nested under a key. Keys are sorted alphabetically for deterministic output.
-
+Note how the contents of `@shared.yml` appear directly in the `entities` map, not nested under a key. Keys are sorted alphabetically for deterministic output.

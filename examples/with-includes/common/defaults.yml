@@ -1,6 +1,0 @@
-timeout: 30
-retries: 3
-health_check:
-  enabled: true
-  interval: 60
-

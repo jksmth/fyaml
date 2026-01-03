@@ -1,17 +1,30 @@
-components:
-    cache:
-        host: cache.example.com
-        port: 6379
-        type: redis
-    database:
-        host: db.example.com
-        port: 5432
-        type: postgresql
-    metrics:
-        endpoint: /metrics
-        port: 9090
-        type: prometheus
-    queue:
-        host: queue.example.com
-        port: 5672
-        type: rabbitmq
+entities:
+  item1:
+    entity:
+      attributes:
+        name: first item
+        tags:
+          - tag1
+          - tag2
+      id: example1
+  item2:
+    entity:
+      attributes:
+        name: second item
+        tags:
+          - tag3
+      id: example2
+  item3:
+    entity:
+      attributes:
+        name: third item
+        tags: []
+      id: example3
+  item4:
+    entity:
+      attributes:
+        name: fourth item
+        tags:
+          - tag4
+          - tag5
+      id: example4

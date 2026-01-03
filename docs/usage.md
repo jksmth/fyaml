@@ -20,7 +20,7 @@ You can also run `fyaml` without arguments to pack the current directory:
 fyaml
 ```
 
-This is equivalent to `fyaml pack .`
+**Note:** `fyaml` without arguments is a convenience alias for `fyaml pack .` - both commands pack the current directory.
 
 ### Pack to a File
 
@@ -73,7 +73,7 @@ fyaml works well with other command-line tools:
 
 ```bash
 # Pipe to jq for JSON processing
-fyaml pack config/ --format json | jq '.services'
+fyaml pack config/ --format json | jq '.entities'
 
 # Use with envsubst for variable substitution
 fyaml pack config/ | envsubst > config-final.yml
@@ -93,33 +93,49 @@ Directory names become map keys in the output:
 
 ```
 config/
-  services/
-    api.yml
-    db.yml
+  entities/
+    item1.yml
+    item2.yml
 ```
 
-**`services/api.yml`:**
+**`entities/item1.yml`:**
+
 ```yaml
-name: api
-port: 8080
+entity:
+  id: example1
+  attributes:
+    name: sample name
+    tags:
+      - tag1
 ```
 
-**`services/db.yml`:**
+**`entities/item2.yml`:**
+
 ```yaml
-name: db
-type: postgresql
+entity:
+  id: example2
+  attributes:
+    name: another name
+    tags: []
 ```
 
 Produces:
 
 ```yaml
-services:
-  api:
-    name: api
-    port: 8080
-  db:
-    name: db
-    type: postgresql
+entities:
+  item1:
+    entity:
+      id: example1
+      attributes:
+        name: sample name
+        tags:
+          - tag1
+  item2:
+    entity:
+      id: example2
+      attributes:
+        name: another name
+        tags: []
 ```
 
 ### Root-Level Files
@@ -128,35 +144,43 @@ Files at the root level merge directly into the output (their filename is not us
 
 ```
 config/
-  metadata.yml     # Merges directly into root
-  services/
-    api.yml
+  shared.yml       # Merges directly into root
+  entities/
+    item1.yml
 ```
 
-**`metadata.yml`:**
+**`shared.yml`:**
+
 ```yaml
 version: 1.0.0
 environment: production
 ```
 
-**`services/api.yml`:**
+**`entities/item1.yml`:**
+
 ```yaml
-name: api
-port: 8080
+entity:
+  id: example1
+  attributes:
+    name: sample name
+    tags: []
 ```
 
 Produces:
 
 ```yaml
+entities:
+  item1:
+    entity:
+      id: example1
+      attributes:
+        name: sample name
+        tags: []
 environment: production
-services:
-  api:
-    name: api
-    port: 8080
 version: 1.0.0
 ```
 
-**Note:** The `metadata.yml` contents merge directly into the root. The filename `metadata` is not used as a key.
+**Note:** The `shared.yml` contents merge directly into the root. The filename `shared` is not used as a key.
 
 ### @ Files
 
@@ -164,30 +188,38 @@ Files starting with `@` merge their contents into the parent directory map:
 
 ```
 config/
-  services/
-    @common.yml    # Merges into services map
-    api.yml
+  entities/
+    @shared.yml    # Merges into entities map
+    item1.yml
 ```
 
-**`services/@common.yml`:**
+**`entities/@shared.yml`:**
+
 ```yaml
 environment: production
 region: us-east-1
 ```
 
-**`services/api.yml`:**
+**`entities/item1.yml`:**
+
 ```yaml
-name: api
-port: 8080
+entity:
+  id: example1
+  attributes:
+    name: sample name
+    tags: []
 ```
 
 Produces:
 
 ```yaml
-services:
-  api:
-    name: api
-    port: 8080
+entities:
+  item1:
+    entity:
+      id: example1
+      attributes:
+        name: sample name
+        tags: []
   environment: production
   region: us-east-1
 ```
@@ -203,65 +235,112 @@ Directories starting with `@` merge their contents into the parent directory map
 **Example:**
 
 Directory structure:
+
 ```
 config/
-  components/
-    database.yml
-    @infrastructure/        # Merges into components map
-      cache.yml
-      queue.yml
-    @monitoring/           # Merges into components map
-      metrics.yml
+  entities/
+    item1.yml
+    @group1/              # Merges into entities map
+      item2.yml
+      item3.yml
+    @group2/             # Merges into entities map
+      item4.yml
 ```
 
-**`components/database.yml`:**
+**`entities/item1.yml`:**
+
 ```yaml
-type: postgresql
-host: db.example.com
+entity:
+  id: example1
+  attributes:
+    name: sample name
+    tags: []
 ```
 
-**`components/@infrastructure/cache.yml`:**
+**`entities/@group1/item2.yml`:**
+
 ```yaml
-type: redis
-host: cache.example.com
+entity:
+  id: example2
+  attributes:
+    name: another name
+    tags:
+      - tag1
 ```
 
-**`components/@infrastructure/queue.yml`:**
+**`entities/@group1/item3.yml`:**
+
 ```yaml
-type: rabbitmq
-host: queue.example.com
+entity:
+  id: example3
+  attributes:
+    name: third item
+    tags:
+      - tag2
 ```
 
-**`components/@monitoring/metrics.yml`:**
+**`entities/@group2/item4.yml`:**
+
 ```yaml
-type: prometheus
-port: 9090
+entity:
+  id: example4
+  attributes:
+    name: fourth item
+    tags: []
 ```
 
 Produces:
+
 ```yaml
-components:
-  cache:
-    host: cache.example.com
-    type: redis
-  database:
-    host: db.example.com
-    type: postgresql
-  metrics:
-    port: 9090
-    type: prometheus
-  queue:
-    host: queue.example.com
-    type: rabbitmq
+entities:
+  item1:
+    entity:
+      id: example1
+      attributes:
+        name: sample name
+        tags: []
+  item2:
+    entity:
+      id: example2
+      attributes:
+        name: another name
+        tags:
+          - tag1
+  item3:
+    entity:
+      id: example3
+      attributes:
+        name: third item
+        tags:
+          - tag2
+  item4:
+    entity:
+      id: example4
+      attributes:
+        name: fourth item
+        tags: []
 ```
 
 **Key Points:**
-- The `@infrastructure` and `@monitoring` directory names do not appear as keys in the output
-- All files from `@` directories merge directly into the parent map (`components` in this example)
+
+- The `@group1` and `@group2` directory names do not appear as keys in the output
+- All files from `@` directories merge directly into the parent map (`entities` in this example)
 - This is useful for organizing large numbers of files without creating deep nesting
 - Empty `@` directories are ignored (no keys created)
 
-**Note:** This is an extension to the FYAML specification. See [EXTENSIONS.md](../EXTENSIONS.md#-directory-support) for complete documentation.
+**Use Cases:**
+
+- Organizing large numbers of files without creating deep nesting
+- Grouping related files logically while keeping flat output structure
+- Maintaining organization in source while producing simpler output
+
+**Edge Cases:**
+
+- Empty `@` directories are ignored (no keys created)
+- If both `@group1/` directory and `@group1.yml` file exist, both merge into parent (order not guaranteed)
+- Nested `@` directories are supported: `@group1/@shared/` merges into parent of `@group1/`
+
+**Note:** This is an extension to the FYAML specification. See [EXTENSIONS.md](../EXTENSIONS.md) for information about extensions to the specification.
 
 ### Nested Directories
 
@@ -269,45 +348,70 @@ Directories can be nested to any depth:
 
 ```
 config/
-  infrastructure/
-    compute/
-      servers.yml
-      load-balancers.yml
-    network/
-      vpc.yml
+  category1/
+    group1/
+      item1.yml
+      item2.yml
+    group2/
+      item3.yml
 ```
 
-**`infrastructure/compute/servers.yml`:**
+**`category1/group1/item1.yml`:**
+
 ```yaml
-type: ec2
-instances: 5
+entity:
+  id: example1
+  attributes:
+    name: first item
+    tags: []
 ```
 
-**`infrastructure/compute/load-balancers.yml`:**
+**`category1/group1/item2.yml`:**
+
 ```yaml
-type: alb
-count: 2
+entity:
+  id: example2
+  attributes:
+    name: second item
+    tags:
+      - tag1
 ```
 
-**`infrastructure/network/vpc.yml`:**
+**`category1/group2/item3.yml`:**
+
 ```yaml
-cidr: 10.0.0.0/16
+entity:
+  id: example3
+  attributes:
+    name: third item
+    tags: []
 ```
 
 Produces:
 
 ```yaml
-infrastructure:
-  compute:
-    load-balancers:
-      count: 2
-      type: alb
-    servers:
-      instances: 5
-      type: ec2
-  network:
-    vpc:
-      cidr: 10.0.0.0/16
+category1:
+  group1:
+    item1:
+      entity:
+        id: example1
+        attributes:
+          name: first item
+          tags: []
+    item2:
+      entity:
+        id: example2
+        attributes:
+          name: second item
+          tags:
+            - tag1
+  group2:
+    item3:
+      entity:
+        id: example3
+        attributes:
+          name: third item
+          tags: []
 ```
 
 ## File Naming
@@ -333,8 +437,8 @@ fyaml automatically ignores:
 
 The filename (without extension) becomes the key in the output:
 
-- `database.yml` → key: `database`
-- `api-service.yaml` → key: `api-service`
+- `item1.yml` → key: `item1`
+- `entity-item.yaml` → key: `entity-item`
 - `config.json` → key: `config`
 
 **Exceptions:**
@@ -346,13 +450,13 @@ The filename (without extension) becomes the key in the output:
 
 File and directory names can contain hyphens, underscores, numbers, and mixed case. Special characters are preserved in the output key:
 
-- `api-service.yml` → key: `api-service`
-- `api_service.yml` → key: `api_service`
-- `ServiceV2.yml` → key: `ServiceV2`
+- `entity-item.yml` → key: `entity-item`
+- `entity_item.yml` → key: `entity_item`
+- `ItemV2.yml` → key: `ItemV2`
 
 ### File Name Collisions
 
-If you have files with the same name but different extensions in the same directory (e.g., `service.yml`, `service.yaml`, `service.json`), they all produce the same key. The last one processed will overwrite previous ones, and processing order is not guaranteed. **Use a consistent extension throughout your project to avoid collisions.**
+If you have files with the same name but different extensions in the same directory (e.g., `item1.yml`, `item1.yaml`, `item1.json`), they all produce the same key. The last one processed will overwrite previous ones, and processing order is not guaranteed. **Use a consistent extension throughout your project to avoid collisions.**
 
 ## Output Format
 
@@ -364,7 +468,12 @@ Default output is YAML:
 fyaml pack config/
 ```
 
-YAML output uses standard YAML formatting with proper indentation.
+YAML output uses standard YAML formatting with 2-space indentation by default. You can customize the indent using the `--indent` flag:
+
+```bash
+# Use 4-space indent
+fyaml pack config/ --indent 4
+```
 
 ### JSON
 
@@ -374,7 +483,12 @@ Output JSON using the `--format` flag:
 fyaml pack config/ --format json
 ```
 
-JSON output is formatted with 2-space indentation.
+JSON output is formatted with 2-space indentation by default. You can customize the indent using the `--indent` flag:
+
+```bash
+# Use 4-space indent for JSON
+fyaml pack config/ --format json --indent 4
+```
 
 ### Empty Output
 
@@ -409,15 +523,15 @@ Group related configuration by domain:
 
 ```
 config/
-  services/
-    api.yml
-    worker.yml
-  infrastructure/
-    database.yml
-    cache.yml
-  monitoring/
-    alerts.yml
-    dashboards.yml
+  entities/
+    item1.yml
+    item2.yml
+  category1/
+    item3.yml
+    item4.yml
+  category2/
+    item5.yml
+    item6.yml
 ```
 
 ### Use @ Files for Shared Configuration
@@ -426,13 +540,13 @@ Use `@` files to share common configuration:
 
 ```
 config/
-  services/
-    @common.yml      # Shared settings
-    api.yml          # API-specific
-    worker.yml       # Worker-specific
+  entities/
+    @shared.yml      # Shared settings
+    item1.yml        # Item-specific
+    item2.yml        # Item-specific
 ```
 
-The `@common.yml` might contain:
+The `@shared.yml` might contain:
 
 ```yaml
 environment: production
@@ -449,8 +563,9 @@ fyaml doesn't support templating, but you can combine it with other tools:
 
 ```bash
 # Set environment variables
-export SERVICE_NAME=api
-export REPLICA_COUNT=3
+export ITEM_ID=example1
+export ITEM_NAME=sample
+export ITEM_COUNT=42
 
 # Pack and substitute
 fyaml pack config/ | envsubst > config-final.yml
@@ -469,12 +584,14 @@ fyaml pack config/ | sed 's/{{VERSION}}/v1.0.0/g' > output.yml
 
 ```bash
 # Modify after packing
-fyaml pack config/ | yq eval '.services.api.replicas = 5' - > output.yml
+fyaml pack config/ | yq eval '.entities.item1.entity.attributes.count = 5' - > output.yml
 ```
 
 ## File Includes
 
-fyaml supports including content from other files using the `--enable-includes` flag. This is useful for:
+fyaml supports including content from other files using the `--enable-includes` flag. This is an extension to the FYAML specification. See [EXTENSIONS.md](../EXTENSIONS.md) for information about extensions.
+
+This feature is useful for:
 
 - Sharing common configuration across multiple files
 - Keeping scripts and commands in separate files for better organization
@@ -484,11 +601,11 @@ fyaml supports including content from other files using the `--enable-includes` 
 
 fyaml supports three include mechanisms:
 
-| Syntax | Purpose | Use Case |
-|--------|---------|----------|
-| `!include` | Include parsed YAML structures | Shared config, reusable fragments |
-| `!include-text` | Include raw text content | Scripts, SQL queries, commands |
-| `<<include()>>` | Alias for `!include-text` | CircleCI style syntax |
+| Syntax          | Purpose                        | Use Case                          |
+| --------------- | ------------------------------ | --------------------------------- |
+| `!include`      | Include parsed YAML structures | Shared config, reusable fragments |
+| `!include-text` | Include raw text content       | Scripts, SQL queries, commands    |
+| `<<include()>>` | Alias for `!include-text`      | CircleCI style syntax             |
 
 ### Including YAML Structures (`!include`)
 
@@ -496,37 +613,45 @@ Use `!include` to include and merge YAML content from another file:
 
 ```
 config/
-  services/
-    api.yml
-  common/
+  entities/
+    item1.yml
+  shared/
     defaults.yml
 ```
 
-**`common/defaults.yml`:**
+**`shared/defaults.yml`:**
+
 ```yaml
 timeout: 30
 retries: 3
-health_check: true
+enabled: true
 ```
 
-**`services/api.yml`:**
+**`entities/item1.yml`:**
+
 ```yaml
-name: api
-config: !include ../common/defaults.yml
-port: 8080
+entity:
+  id: example1
+  config: !include ../shared/defaults.yml
+  attributes:
+    name: sample name
+    tags: []
 ```
 
 Running `fyaml pack config/ --enable-includes`:
 
 ```yaml
-services:
-  api:
-    name: api
-    config:
-      timeout: 30
-      retries: 3
-      health_check: true
-    port: 8080
+entities:
+  item1:
+    entity:
+      id: example1
+      config:
+        timeout: 30
+        retries: 3
+        enabled: true
+      attributes:
+        name: sample name
+        tags: []
 ```
 
 ### Including Text Content (`!include-text`)
@@ -535,43 +660,49 @@ Use `!include-text` to include raw file content as a string value. This is ideal
 
 ```
 config/
-  commands/
-    deploy.yml
+  entities/
+    item1.yml
     scripts/
-      deploy.sh
+      hello.sh
 ```
 
-**`commands/scripts/deploy.sh`:**
+**`entities/scripts/hello.sh`:**
+
 ```bash
 #!/bin/bash
-echo "Deploying application..."
-kubectl apply -f manifests/
+echo "Hello, World!"
 ```
 
-**`commands/deploy.yml`:**
+**`entities/item1.yml`:**
+
 ```yaml
-name: deploy
-description: Deploy the application
-steps:
-  - run:
-      name: Deploy
-      command: !include-text scripts/deploy.sh
+entity:
+  id: example1
+  attributes:
+    name: sample name
+    tags: []
+  steps:
+    - run:
+        name: Greeting
+        command: !include-text scripts/hello.sh
 ```
 
 Running `fyaml pack config/ --enable-includes`:
 
 ```yaml
-commands:
-  deploy:
-    name: deploy
-    description: Deploy the application
-    steps:
-      - run:
-          name: Deploy
-          command: |
-            #!/bin/bash
-            echo "Deploying application..."
-            kubectl apply -f manifests/
+entities:
+  item1:
+    entity:
+      id: example1
+      attributes:
+        name: sample name
+        tags: []
+      steps:
+        - run:
+            name: Greeting
+            command: |
+              #!/bin/bash
+              echo "Hello, World!"
 ```
 
 ### CircleCI Style (`<<include()>>`)
@@ -580,8 +711,8 @@ The `<<include()>>` directive syntax is supported as an alias for `!include-text
 
 ```yaml
 # Both are equivalent:
-command: !include-text scripts/deploy.sh
-command: <<include(scripts/deploy.sh)>>
+command: !include-text scripts/hello.sh
+command: <<include(scripts/hello.sh)>>
 ```
 
 ### Combining Include Mechanisms
@@ -589,16 +720,19 @@ command: <<include(scripts/deploy.sh)>>
 You can use all three mechanisms in the same project:
 
 ```yaml
-# commands/full-deploy.yml
-name: full-deploy
-metadata: !include ../common/metadata.yml      # YAML structure
-steps:
-  - run:
-      name: Deploy
-      command: !include-text scripts/deploy.sh  # Text (tag syntax)
-  - run:
-      name: Validate
-      command: <<include(scripts/validate.sh)>> # Text (directive syntax)
+# entities/item1.yml
+entity:
+  id: example1
+  metadata: !include ../shared/metadata.yml # YAML structure
+  attributes:
+    name: sample name
+  steps:
+    - run:
+        name: Greeting
+        command: !include-text scripts/hello.sh # Text (tag syntax)
+    - run:
+        name: Farewell
+        command: <<include(scripts/goodbye.sh)>> # Text (directive syntax)
 ```
 
 ### Nested Includes
@@ -628,16 +762,13 @@ The `<<include()>>` directive works in JSON files since it's processed as a stri
 
 ```json
 {
-  "name": "api",
-  "version": "v1",
-  "steps": [
-    {
-      "run": {
-        "name": "Deploy",
-        "command": "<<include(../scripts/deploy.sh)>>"
-      }
+  "entity": {
+    "id": "example1",
+    "attributes": {
+      "name": "sample name",
+      "command": "<<include(../scripts/hello.sh)>>"
     }
-  ]
+  }
 }
 ```
 
@@ -649,15 +780,14 @@ YAML tags (`!include`, `!include-text`) can also be used in JSON files:
 
 ```json
 {
-  "name": "api",
-  "config": !include ../common/defaults.json,
-  "steps": [
-    {
-      "run": {
-        "command": !include-text ../scripts/deploy.sh
-      }
+  "entity": {
+    "id": "example1",
+    "config": !include ../shared/defaults.json,
+    "attributes": {
+      "name": "sample name",
+      "command": !include-text ../scripts/hello.sh
     }
-  ]
+  }
 }
 ```
 
@@ -668,9 +798,12 @@ YAML tags (`!include`, `!include-text`) can also be used in JSON files:
 YAML files can include JSON files using `!include`:
 
 ```yaml
-# services/api.yml
-name: api
-config: !include ../common/defaults.json
+# entities/item1.yml
+entity:
+  id: example1
+  config: !include ../shared/defaults.json
+  attributes:
+    name: sample name
 ```
 
 The included JSON file will be parsed and merged into the YAML structure.
@@ -700,15 +833,20 @@ All includes are confined to the pack root directory:
 Each YAML/JSON file must contain a map (object/dictionary) at the top level. The file itself must be a map, but nested values within that map can be any YAML type (scalars, arrays, nested maps, etc.).
 
 **Supported:**
+
 ```yaml
 # ✅ Top-level is a map
-name: api
-items: [1, 2, 3]           # Array nested in map
-settings:                   # Nested map
-  timeout: 30
+entity:
+  id: example1
+  attributes:
+    name: sample name
+    tags: [tag1, tag2] # Array nested in map
+    settings: # Nested map
+      timeout: 30
 ```
 
 **Not supported:**
+
 ```yaml
 # ❌ Top-level is a scalar
 hello
@@ -718,7 +856,13 @@ hello
 - item2
 ```
 
-If you attempt to pack a file containing a top-level scalar or array, fyaml will return an error: `expected a map, got a <type> which is not supported at this time for "<filepath>"`.
+If you attempt to pack a file containing a top-level scalar or array, fyaml will return an error with the exact format:
+
+```
+expected a map, got a <type> which is not supported at this time for "<filepath>"
+```
+
+Where `<type>` is the Go type (e.g., `string`, `[]interface{}`) and `<filepath>` is the full path to the problematic file.
 
 ### YAML Anchors and Aliases
 
@@ -727,13 +871,16 @@ YAML anchors (`&anchor`) and aliases (`*alias`) are resolved **within each indiv
 If you need shared values across files, use the `!include` feature (with `--enable-includes`) to include YAML content from other files at specific locations in your structure. This provides similar functionality to cross-file anchors:
 
 ```yaml
-# common/defaults.yml
+# shared/defaults.yml
 timeout: 30
 retries: 3
 
-# services/api.yml
-name: api
-config: !include ../common/defaults.yml
+# entities/item1.yml
+entity:
+  id: example1
+  config: !include ../shared/defaults.yml
+  attributes:
+    name: sample name
 ```
 
 **Note:** `@` files can also be used to merge common configuration at the directory level, but `!include` is more flexible as it allows you to include content at any point in your YAML structure, not just at the directory level.
@@ -748,16 +895,20 @@ Instead of using multi-document files, organize your resources using separate fi
 # Instead of this (multi-document):
 config.yml:
   ---
-  database:
-    host: localhost
+  entity:
+    id: example1
+    attributes:
+      name: first item
   ---
-  cache:
-    host: localhost
+  entity:
+    id: example2
+    attributes:
+      name: second item
 
 # Use this (fyaml's filesystem-based approach):
 config/
-  database.yml    # Contains the database config
-  cache.yml       # Contains the cache config
+  item1.yml    # Contains the first entity config
+  item2.yml    # Contains the second entity config
 ```
 
 ### Converting `on`/`off` and `yes`/`no` to `true`/`false`
@@ -767,19 +918,23 @@ If your YAML files use `on`/`off` or `yes`/`no` for boolean values, fyaml will t
 **The Problem:**
 
 If your source file contains:
+
 ```yaml
-parameters:
-  enabled:
-    type: boolean
-    default: on
+entity:
+  id: example1
+  attributes:
+    enabled: on
+    active: yes
 ```
 
 The output will be:
+
 ```yaml
-parameters:
-    enabled:
-        default: "on"  # String, not boolean
-        type: boolean
+entity:
+  attributes:
+    active: "yes" # String, not boolean
+    enabled: "on" # String, not boolean
+  id: example1
 ```
 
 This can cause validation errors or unexpected behavior in tools that expect boolean values.
@@ -793,30 +948,32 @@ fyaml pack config/ --convert-booleans
 ```
 
 Now the output will be:
+
 ```yaml
-parameters:
-    enabled:
-        default: true  # Boolean, not string
-        type: boolean
+entity:
+  attributes:
+    active: true # Boolean, not string
+    enabled: true # Boolean, not string
+  id: example1
 ```
 
 **What Gets Converted:**
 
 The flag converts unquoted values to booleans:
 
-| Input | Output (with `--convert-booleans`) |
-|-------|-----------------------------------|
-| `enabled: on` | `enabled: true` |
-| `enabled: off` | `enabled: false` |
-| `enabled: yes` | `enabled: true` |
-| `enabled: no` | `enabled: false` |
-| `enabled: y` | `enabled: true` |
-| `enabled: n` | `enabled: false` |
+| Input          | Output (with `--convert-booleans`) |
+| -------------- | ---------------------------------- |
+| `enabled: on`  | `enabled: true`                    |
+| `enabled: off` | `enabled: false`                   |
+| `enabled: yes` | `enabled: true`                    |
+| `enabled: no`  | `enabled: false`                   |
+| `enabled: y`   | `enabled: true`                    |
+| `enabled: n`   | `enabled: false`                   |
 
 **Important:** Quoted values are preserved as strings. If you want a value to remain a string, quote it:
 
-| Input | Output |
-|-------|--------|
+| Input           | Output                   |
+| --------------- | ------------------------ |
 | `enabled: "on"` | `enabled: "on"` (string) |
 | `name: on_call` | `name: on_call` (string) |
 
@@ -825,10 +982,11 @@ The flag converts unquoted values to booleans:
 For new files, use `true`/`false` directly in your source files. This avoids the need for the conversion flag:
 
 ```yaml
-parameters:
-  enabled:
-    type: boolean
-    default: true  # Recommended: use true/false directly
+entity:
+  id: example1
+  attributes:
+    enabled: true # Recommended: use true/false directly
+    active: true
 ```
 
 **Technical Note:** fyaml outputs YAML 1.2 format, which only recognizes `true`/`false` as booleans. Values like `on`/`off` and `yes`/`no` were valid booleans in YAML 1.1 but are treated as strings in YAML 1.2. The `--convert-booleans` flag converts these legacy values to their YAML 1.2 equivalents.
@@ -837,8 +995,113 @@ parameters:
 
 fyaml processes files in memory. For very large files (hundreds of MB), this could consume significant memory. However, for typical configuration files (KB to low MB range), performance is excellent. Keep individual files focused and reasonably sized.
 
+## Troubleshooting
+
+### Common Error Messages
+
+**"pack error: failed to build filetree: ..."**
+
+- Directory doesn't exist or path is incorrect
+- Permission denied accessing the directory
+- Invalid path format
+
+**Solution:** Verify the directory path exists and you have read permissions.
+
+**"pack error: failed to marshal tree: ..."**
+
+- Invalid YAML/JSON syntax in one or more files
+- File contains non-map top-level value (scalar or array)
+
+**Solution:** Check the error message for the specific file path, then validate that file's YAML/JSON syntax.
+
+**"expected a map, got a `<type>` which is not supported at this time for \"<filepath>\"**
+
+- File has top-level scalar (e.g., just `hello`) or array (e.g., `- item1`) instead of a map
+- Each file must start with a map/object structure
+
+**Solution:** Wrap the content in a map. For example, change `hello` to `value: hello` or `- item1` to `items: [item1]`.
+
+**"invalid format: <format> (must be 'yaml' or 'json')"**
+
+- Invalid `--format` value provided
+
+**Solution:** Use only `yaml` or `json` as the format value.
+
+**"--check requires --output to be specified"**
+
+- `--check` flag used without `--output`
+
+**Solution:** Always specify `-o` or `--output` when using `--check`.
+
+**"failed to read output file: ..."**
+
+- Error reading file for `--check` comparison
+- File may be unreadable (permission issue)
+
+**Solution:** Check file permissions and ensure the file is readable.
+
+**"warning: no YAML/JSON files found in directory: <path>"**
+
+- Directory contains no `.yml`, `.yaml`, or `.json` files
+- Not an error, but output will be empty/null
+
+**Solution:** Verify you're pointing to the correct directory and that it contains YAML/JSON files.
+
+### Debugging Tips
+
+**Use verbose mode to see which files are processed:**
+
+```bash
+fyaml -v pack config/
+```
+
+This shows `[DEBUG] Processing: <filepath>` for each file, helping you identify:
+
+- Which files are being read
+- If files are being ignored (not shown in debug output)
+- The order files are processed
+
+**Verify directory structure:**
+
+```bash
+# List all YAML/JSON files
+find config/ -type f \( -name "*.yml" -o -name "*.yaml" -o -name "*.json" \)
+
+# Check file permissions
+ls -la config/
+```
+
+**Check file syntax:**
+
+```bash
+# Validate YAML syntax
+yamllint config/**/*.yml
+
+# Or use yq to check syntax
+yq eval . config/entities/item1.yml
+```
+
+**Understand unexpected output:**
+
+1. Check if files are being processed: use `-v` flag
+2. Verify file structure matches expected output structure
+3. Remember that keys are sorted alphabetically in output
+4. Check for `@` files that might be merging unexpectedly
+5. Verify root-level files are merging as expected
+
+**Verify includes are working:**
+
+If using `--enable-includes`, check:
+
+- Include paths are relative to the file containing the include
+- Included files exist and are within the pack root
+- Include syntax is correct (`!include`, `!include-text`, or `<<include()>>`)
+
+**Check for file name collisions:**
+
+Files with the same name but different extensions (e.g., `item1.yml` and `item1.yaml`) produce the same key. The last one processed overwrites previous ones. Use a consistent extension throughout your project.
+
 ## Next Steps
 
 - See [Examples](examples.md) for detailed examples
 - Review [Command Reference](reference.md) for all options
-

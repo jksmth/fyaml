@@ -12,6 +12,8 @@ curl -sSL https://raw.githubusercontent.com/jksmth/fyaml/main/install.sh | bash
 
 This script downloads the latest release for your platform and installs it to `/usr/local/bin/fyaml`.
 
+**Note:** This command downloads and executes a script. If you prefer to verify the script before execution, see the [Verification](#verification) section below for steps to verify releases.
+
 ## From Source (Go)
 
 If you have Go installed, you can install fyaml directly:
@@ -160,4 +162,3 @@ If Docker commands fail:
 1. Ensure Docker is running: `docker ps`
 2. Check image availability: `docker pull ghcr.io/jksmth/fyaml:latest`
 3. Verify volume mount syntax for your OS (Windows uses different path format)
-

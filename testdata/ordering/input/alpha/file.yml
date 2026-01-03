@@ -1,2 +1,4 @@
-value: first
-
+entity:
+  id: example1
+  attributes:
+    value: first

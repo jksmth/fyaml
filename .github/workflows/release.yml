@@ -2,7 +2,7 @@ name: Release
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
 
 permissions:
   contents: read
@@ -48,7 +48,7 @@ jobs:
         if: ${{ steps.rp.outputs.release_created == 'true' }}
         uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
         with:
-          cosign-release: 'v3.0.3'
+          cosign-release: "v3.0.3"
 
       - name: Set up Docker Buildx
         if: ${{ steps.rp.outputs.release_created == 'true' }}

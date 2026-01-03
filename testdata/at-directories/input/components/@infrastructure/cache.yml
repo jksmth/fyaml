@@ -1,4 +1,0 @@
-type: redis
-host: cache.example.com
-port: 6379
-

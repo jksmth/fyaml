@@ -1,13 +1,19 @@
-services:
-    api:
+entities:
+  item1:
+    entity:
+      attributes:
         enabled: true
-        name: api
+        name: sample name
         settings:
-            retries: 3
-            timeout: 300
-    db:
+          retries: 3
+          timeout: 300
+      id: example1
+  item2:
+    entity:
+      attributes:
         enabled: true
-        name: db
+        name: another name
         settings:
-            retries: 5
-            timeout: 600
+          retries: 5
+          timeout: 600
+      id: example2

@@ -1,7 +1,10 @@
 defaults:
-    retries: 3
-    timeout: 30
-service:
-    name: api
-    retries: 3
-    timeout: 30
+  retries: 3
+  timeout: 30
+entity:
+  attributes:
+    name: sample name
+    tags: []
+  id: example1
+  retries: 3
+  timeout: 30

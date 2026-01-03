@@ -1,7 +1,10 @@
 level1:
-    level2:
-        level3:
+  level2:
+    level3:
+      deep:
+        entity:
+          attributes:
             deep:
-                deep:
-                    nested:
-                        value: true
+              nested:
+                value: true
+          id: example1

@@ -8,8 +8,8 @@ Older versions may not receive security patches.
 
 | Version | Supported |
 | ------- | --------- |
-| Latest  | ✅ |
-| Older  | ❌ |
+| Latest  | ✅        |
+| Older   | ❌        |
 
 ---
 

@@ -11,6 +11,7 @@ These flags apply to all commands:
 Show debug output. All verbose output is written to stderr, so it doesn't interfere with piped stdout.
 
 **Usage:**
+
 ```bash
 fyaml -v pack config/
 fyaml --verbose pack config/ -o output.yml
@@ -26,15 +27,22 @@ fyaml --verbose pack config/ -o output.yml
 - Useful for debugging which files are being processed
 
 **Output Example:**
+
 ```bash
 $ fyaml -v pack config/
-[DEBUG] Processing: /path/to/config/services/api.yml
-[DEBUG] Processing: /path/to/config/services/db.yml
-services:
-  api:
-    name: api
-  db:
-    name: db
+[DEBUG] Processing: /path/to/config/entities/item1.yml
+[DEBUG] Processing: /path/to/config/entities/item2.yml
+entities:
+  item1:
+    entity:
+      id: example1
+      attributes:
+        name: sample name
+  item2:
+    entity:
+      id: example2
+      attributes:
+        name: another name
 ```
 
 ## Commands
@@ -44,6 +52,7 @@ services:
 Compile a directory of YAML/JSON files into a single document.
 
 **Synopsis:**
+
 ```bash
 fyaml [global flags] pack [DIR] [flags]
 ```
@@ -57,10 +66,12 @@ fyaml [global flags] pack [DIR] [flags]
 - `-o, --output string` - Write output to file (default: stdout)
 - `--check` - Compare generated output to `--output`, exit non-zero if different
 - `-f, --format string` - Output format: `yaml` or `json` (default: `yaml`)
+- `--indent int` - Number of spaces for indentation (default: `2`)
 - `--enable-includes` - Process `<<include(file)>>` directives (extension)
 - `--convert-booleans` - Convert unquoted YAML 1.1 booleans to `true`/`false`
 
 **Examples:**
+
 ```bash
 # Pack current directory to stdout
 fyaml pack
@@ -92,11 +103,13 @@ fyaml -v pack config/
 Print version information.
 
 **Synopsis:**
+
 ```bash
 fyaml version
 ```
 
 **Output:**
+
 ```
 1.0.3 (commit: c56e30ab7375f56ea0a57944b1354b970e66d7b2, date: 2025-12-29T23:31:56Z)
 ```
@@ -112,6 +125,7 @@ fyaml version
 Specify the output file path. If not provided, output is written to stdout.
 
 **Usage:**
+
 ```bash
 fyaml pack config/ -o output.yml
 fyaml pack config/ --output /path/to/output.yml
@@ -125,6 +139,7 @@ fyaml pack config/ --output /path/to/output.yml
 - Parent directories are not created automatically (must exist)
 
 **Examples:**
+
 ```bash
 # Write to current directory
 fyaml pack config/ -o config.yml
@@ -138,9 +153,10 @@ fyaml pack config/ -o build/config.yml
 
 ### `--check`
 
-Compare the generated output with an existing file specified by `--output`. Exits with code 2 if they differ.
+Compare the generated output with an existing file specified by `--output`. Uses `os.Exit(2)` if they differ (terminates immediately).
 
 **Usage:**
+
 ```bash
 fyaml pack config/ -o output.yml --check
 ```
@@ -150,16 +166,17 @@ fyaml pack config/ -o output.yml --check
 - Requires `--output` to be specified
 - Reads the existing file (if it exists)
 - Compares byte-by-byte with generated output
-- Exits with code 2 if different, 0 if same
+- Uses `os.Exit(2)` if different (terminates immediately), returns normally with code 0 if same
 - Useful in CI/CD to verify configuration hasn't changed
 
 **Exit Codes:**
 
 - `0` - Output matches the file
-- `2` - Output differs from the file
+- `2` - Output differs from the file (exits immediately via `os.Exit(2)`)
 - `1` - Error (file read error, etc.)
 
 **Examples:**
+
 ```bash
 # Verify in CI
 fyaml pack config/ -o config.yml --check
@@ -176,6 +193,7 @@ fi
 Specify the output format. Valid values: `yaml` or `json`.
 
 **Usage:**
+
 ```bash
 fyaml pack config/ --format json
 fyaml pack config/ -f yaml
@@ -190,6 +208,7 @@ fyaml pack config/ -f yaml
 - Empty output behavior differs by format (see below)
 
 **Examples:**
+
 ```bash
 # YAML output (default)
 fyaml pack config/
@@ -206,11 +225,54 @@ fyaml pack config/ -f json -o config.json
 - YAML format: Returns empty output (0 bytes) when no files found
 - JSON format: Returns `null` when no files found
 
+**See also:** [Usage Guide - Output Format](usage.md#output-format) for more details on YAML and JSON output behavior.
+
+### `--indent`
+
+Specify the number of spaces used for indentation in both YAML and JSON output.
+
+**Usage:**
+
+```bash
+fyaml pack config/ --indent 2
+fyaml pack config/ --indent 4
+```
+
+**Default:** `2`
+
+**Behavior:**
+
+- Applies to both YAML and JSON output formats
+- Must be a positive integer (error message: "must be positive")
+- YAML output uses the specified indent spacing
+- JSON output uses the specified indent spacing
+
+**Examples:**
+
+```bash
+# Default 2-space indent (YAML)
+fyaml pack config/
+
+# 4-space indent (YAML)
+fyaml pack config/ --indent 4
+
+# 2-space indent (JSON)
+fyaml pack config/ --format json --indent 2
+
+# 4-space indent (JSON)
+fyaml pack config/ --format json --indent 4
+```
+
+**Note:** The default indent of 2 spaces is the widely accepted convention for YAML and JSON. You can override this if your project uses a different indentation style.
+
+**See also:** [Usage Guide - Output Format](usage.md#output-format) for more details on YAML and JSON formatting.
+
 ### `--enable-includes`
 
 Enable processing of file includes. This is an extension to the FYAML specification.
 
 **Usage:**
+
 ```bash
 fyaml pack config/ --enable-includes
 ```
@@ -221,11 +283,11 @@ fyaml pack config/ --enable-includes
 
 When enabled, fyaml processes three include mechanisms:
 
-| Syntax | Purpose | Example |
-|--------|---------|---------|
-| `!include` | Include parsed YAML structures | `config: !include defaults.yml` |
-| `!include-text` | Include raw text content | `command: !include-text script.sh` |
-| `<<include()>>` | Alias for `!include-text` (CircleCI style) | `command: <<include(script.sh)>>` |
+| Syntax          | Purpose                                    | Example                            |
+| --------------- | ------------------------------------------ | ---------------------------------- |
+| `!include`      | Include parsed YAML structures             | `config: !include defaults.yml`    |
+| `!include-text` | Include raw text content                   | `command: !include-text script.sh` |
+| `<<include()>>` | Alias for `!include-text` (CircleCI style) | `command: <<include(script.sh)>>`  |
 
 **Processing Order:**
 
@@ -245,6 +307,7 @@ When enabled, fyaml processes three include mechanisms:
   - YAML files can include JSON files using `!include`
 
 **Examples:**
+
 ```bash
 # Process includes
 fyaml pack config/ --enable-includes
@@ -255,24 +318,34 @@ fyaml pack config/ --enable-includes --format json
 ```
 
 **Example: Including YAML Structures**
+
 ```yaml
-# services/api.yml
-name: api
-config: !include ../common/defaults.yml
+# entities/item1.yml
+entity:
+  id: example1
+  config: !include ../shared/defaults.yml
+  attributes:
+    name: sample name
 ```
 
 **Example: Including Text Content**
+
 ```yaml
-# commands/deploy.yml
-steps:
-  - run:
-      command: !include-text scripts/deploy.sh
+# entities/item1.yml
+entity:
+  id: example1
+  attributes:
+    name: sample name
+  steps:
+    - run:
+        command: !include-text scripts/hello.sh
 ```
 
 **Example: CircleCI Style**
+
 ```yaml
 # Equivalent to !include-text
-command: <<include(scripts/deploy.sh)>>
+command: <<include(scripts/hello.sh)>>
 ```
 
 **Error Cases:**
@@ -286,11 +359,14 @@ command: <<include(scripts/deploy.sh)>>
 
 **Note:** Without this flag, include directives and tags are passed through unchanged. This preserves backward compatibility and keeps the default behavior spec-compliant.
 
+**See also:** [Usage Guide - File Includes](usage.md#file-includes) for complete usage documentation and examples.
+
 ### `--convert-booleans`
 
 Convert `on`/`off` and `yes`/`no` values to `true`/`false` booleans.
 
 **Usage:**
+
 ```bash
 fyaml pack config/ --convert-booleans
 ```
@@ -302,22 +378,24 @@ fyaml pack config/ --convert-booleans
 If your YAML files use `on`/`off` or `yes`/`no` for boolean values, they'll be treated as strings by default. Use this flag to convert them to actual boolean values.
 
 **Behavior:**
+
 - Unquoted values (`on`, `off`, `yes`, `no`, `y`, `n`, etc.) are converted to `true`/`false`
 - Quoted strings (`"on"`, `'yes'`) are preserved as strings
 - Non-boolean strings are unchanged
 
 **Conversions:**
 
-| Input | Output |
-|-------|--------|
-| `on`, `On`, `ON` | `true` |
+| Input               | Output  |
+| ------------------- | ------- |
+| `on`, `On`, `ON`    | `true`  |
 | `off`, `Off`, `OFF` | `false` |
-| `yes`, `Yes`, `YES` | `true` |
-| `no`, `No`, `NO` | `false` |
-| `y`, `Y` | `true` |
-| `n`, `N` | `false` |
+| `yes`, `Yes`, `YES` | `true`  |
+| `no`, `No`, `NO`    | `false` |
+| `y`, `Y`            | `true`  |
+| `n`, `N`            | `false` |
 
 **Examples:**
+
 ```bash
 # Convert on/off to true/false
 fyaml pack config/ --convert-booleans
@@ -330,32 +408,43 @@ fyaml pack config/ --convert-booleans -o output.yml
 **Example transformation:**
 
 Input (`config/settings.yml`):
+
 ```yaml
 enabled: on
 debug: off
-name: "on_call_service"
+entity:
+  id: example1
+  attributes:
+    name: "sample_item"
 ```
 
 Output with `--convert-booleans`:
+
 ```yaml
 debug: false
 enabled: true
-name: on_call_service
+entity:
+  attributes:
+    name: sample_item
+  id: example1
 ```
 
-**Note:** fyaml always outputs YAML 1.2 format where only `true` and `false` are booleans. For more details and examples, see the [Usage Guide](usage.md).
+**Note:** fyaml always outputs YAML 1.2 format where only `true` and `false` are booleans.
+
+**See also:** [Usage Guide - Converting on/off and yes/no to true/false](usage.md#converting-onoff-and-yesno-to-truefalse) for more details and examples.
 
 ## Exit Codes
 
 fyaml uses the following exit codes:
 
-| Code | Meaning | When It Occurs |
-|------|---------|----------------|
-| `0` | Success | Packing succeeded, or `--check` found no differences |
-| `1` | Error | Pack error, IO error, invalid format, etc. |
-| `2` | Mismatch | `--check` found differences between output and file |
+| Code | Meaning  | When It Occurs                                       |
+| ---- | -------- | ---------------------------------------------------- |
+| `0`  | Success  | Packing succeeded, or `--check` found no differences |
+| `1`  | Error    | Pack error, IO error, invalid format, etc.           |
+| `2`  | Mismatch | `--check` found differences between output and file  |
 
 **Examples:**
+
 ```bash
 # Success
 fyaml pack config/  # exits 0
@@ -408,31 +497,42 @@ fyaml pack config/ --format json
 ### Common Errors
 
 **"pack error: failed to build filetree: ..."**
+
 - Directory doesn't exist
 - Permission denied
 - Invalid path
+- Error message includes the underlying error details
 
 **"pack error: failed to marshal tree: ..."**
+
 - Invalid YAML/JSON in files
 - File contains non-map top-level value
+- Error message includes the underlying error details (often includes file path and line/column information)
 
-**"expected a map, got a <type> which is not supported at this time for \"<filepath>\"**
+**"expected a map, got a `<type>` which is not supported at this time for \"<filepath>\"**
+
 - File has top-level scalar or array instead of map
-- See [Usage Guide](usage.md) for details
+- `<type>` is the Go type (e.g., `string`, `[]interface{}`)
+- `<filepath>` is the full path to the problematic file
+- See [Usage Guide - File Content Requirements](usage.md#file-content-requirements) for details
 
 **"invalid format: <format> (must be 'yaml' or 'json')"**
+
 - Invalid `--format` value
 - Use `yaml` or `json` only
 
 **"--check requires --output to be specified"**
+
 - `--check` flag used without `--output`
 - Must specify output file when using `--check`
 
 **"failed to read output file: ..."**
+
 - Error reading file for `--check` comparison
 - File may be unreadable (permission issue)
 
 **"warning: no YAML/JSON files found in directory: <path>"**
+
 - Directory contains no `.yml`, `.yaml`, or `.json` files
 - Not an error, but output will be empty/null
 
@@ -447,4 +547,3 @@ fyaml pack config/ --format json
 
 - [Usage Guide](usage.md) - Common usage patterns and limitations
 - [Examples](examples.md) - Detailed examples
-

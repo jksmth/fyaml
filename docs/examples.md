@@ -11,63 +11,84 @@ This example demonstrates how root-level files, @ files, and deep nesting work t
 ```
 config/
   @defaults.yml
-  services/
-    @common.yml
-    api/
-      server.yml
-      routes.yml
-    worker/
+  entities/
+    @shared.yml
+    item1/
       config.yml
-  infrastructure/
-    database.yml
-    cache.yml
+      metadata.yml
+    item2/
+      settings.yml
+  category1/
+    item3.yml
+    item4.yml
 ```
 
 ### Input Files
 
 **`@defaults.yml`:**
+
 ```yaml
 project: example
 version: 1.0.0
 ```
 
-**`services/@common.yml`:**
+**`entities/@shared.yml`:**
+
 ```yaml
 environment: production
 region: us-east-1
 ```
 
-**`services/api/server.yml`:**
+**`entities/item1/config.yml`:**
+
 ```yaml
-port: 8080
-timeout: 30
+entity:
+  id: example1
+  attributes:
+    name: sample name
+    tags: []
 ```
 
-**`services/api/routes.yml`:**
+**`entities/item1/metadata.yml`:**
+
 ```yaml
-paths:
-  - /health
-  - /api
+related:
+  - id: example2
+    attributes:
+      name: related item
+      tags:
+        - tag1
 ```
 
-**`services/worker/config.yml`:**
+**`entities/item2/settings.yml`:**
+
 ```yaml
-workers: 5
-queue: default
+entity:
+  id: example2
+  attributes:
+    name: another item
+    tags:
+      - tag2
 ```
 
-**`infrastructure/database.yml`:**
+**`category1/item3.yml`:**
+
 ```yaml
-type: postgresql
-host: localhost
-port: 5432
+entity:
+  id: example3
+  attributes:
+    name: third item
+    tags: []
 ```
 
-**`infrastructure/cache.yml`:**
+**`category1/item4.yml`:**
+
 ```yaml
-type: redis
-host: localhost
-port: 6379
+entity:
+  id: example4
+  attributes:
+    name: fourth item
+    tags: []
 ```
 
 ### Command
@@ -79,39 +100,53 @@ fyaml pack config/
 ### Output
 
 ```yaml
-environment: production
-infrastructure:
-  cache:
-    host: localhost
-    port: 6379
-    type: redis
-  database:
-    host: localhost
-    port: 5432
-    type: postgresql
-project: example
-region: us-east-1
-services:
-  api:
-    routes:
-      paths:
-        - /api
-        - /health
-    server:
-      port: 8080
-      timeout: 30
-  worker:
+category1:
+  item3:
+    entity:
+      id: example3
+      attributes:
+        name: third item
+        tags: []
+  item4:
+    entity:
+      id: example4
+      attributes:
+        name: fourth item
+        tags: []
+entities:
+  environment: production
+  item1:
     config:
-      queue: default
-      workers: 5
+      entity:
+        id: example1
+        attributes:
+          name: sample name
+          tags: []
+    metadata:
+      related:
+        - attributes:
+            name: related item
+            tags:
+              - tag1
+          id: example2
+  item2:
+    settings:
+      entity:
+        id: example2
+        attributes:
+          name: another item
+          tags:
+            - tag2
+  region: us-east-1
+project: example
 version: 1.0.0
 ```
 
 **Key points:**
 
 - `@defaults.yml` at root merges `project` and `version` into the top level
-- `services/@common.yml` merges `environment` and `region` into the `services` map
-- Deep nesting (3 levels: `services/api/server.yml`) works naturally
+- `entities/@shared.yml` merges `environment` and `region` into the `entities` map
+- Deep nesting (3 levels: `entities/item1/config.yml`) works naturally
 - All concepts work together in a single structure
 
 ## Deep Nesting Example
@@ -135,23 +170,43 @@ config/
 ### Input Files
 
 **`level1/level2/level3/level4/deep.yml`:**
+
 ```yaml
-value: deepest
+entity:
+  id: example1
+  attributes:
+    name: deepest item
+    tags: []
 ```
 
 **`level1/level2/level3/another.yml`:**
+
 ```yaml
-value: level3
+entity:
+  id: example2
+  attributes:
+    name: level3 item
+    tags: []
 ```
 
 **`level1/level2/middle.yml`:**
+
 ```yaml
-value: middle
+entity:
+  id: example3
+  attributes:
+    name: middle item
+    tags: []
 ```
 
 **`level1/top.yml`:**
+
 ```yaml
-value: top
+entity:
+  id: example4
+  attributes:
+    name: top item
+    tags: []
 ```
 
 ### Output
@@ -161,14 +216,30 @@ level1:
   level2:
     level3:
       another:
-        value: level3
+        entity:
+          id: example2
+          attributes:
+            name: level3 item
+            tags: []
       level4:
         deep:
-          value: deepest
+          entity:
+            id: example1
+            attributes:
+              name: deepest item
+              tags: []
     middle:
-      value: middle
+      entity:
+        id: example3
+        attributes:
+          name: middle item
+          tags: []
   top:
-    value: top
+    entity:
+      id: example4
+      attributes:
+        name: top item
+        tags: []
 ```
 
 This demonstrates that fyaml handles arbitrary nesting depth - organize your configuration as deeply as needed.
@@ -181,67 +252,95 @@ Combining root-level files with nested directories:
 
 ```
 config/
-  metadata.yml
+  shared.yml
   settings.yml
-  app/
-    services/
-      api.yml
-      worker.yml
-    database/
-      postgres.yml
+  category1/
+    entities/
+      item1.yml
+      item2.yml
+    group1/
+      item3.yml
 ```
 
 ### Input Files
 
-**`metadata.yml`:**
+**`shared.yml`:**
+
 ```yaml
 name: myapp
 version: 1.0.0
 ```
 
 **`settings.yml`:**
+
 ```yaml
 debug: false
 log_level: info
 ```
 
-**`app/services/api.yml`:**
+**`category1/entities/item1.yml`:**
+
 ```yaml
-port: 8080
+entity:
+  id: example1
+  attributes:
+    name: first item
+    tags: []
 ```
 
-**`app/services/worker.yml`:**
+**`category1/entities/item2.yml`:**
+
 ```yaml
-workers: 3
+entity:
+  id: example2
+  attributes:
+    name: second item
+    tags:
+      - tag1
 ```
 
-**`app/database/postgres.yml`:**
+**`category1/group1/item3.yml`:**
+
 ```yaml
-host: localhost
-port: 5432
+entity:
+  id: example3
+  attributes:
+    name: third item
+    tags: []
 ```
 
 ### Output
 
 ```yaml
-app:
-  database:
-    postgres:
-      host: localhost
-      port: 5432
-  services:
-    api:
-      port: 8080
-    worker:
-      workers: 3
+category1:
+  entities:
+    item1:
+      entity:
+        id: example1
+        attributes:
+          name: first item
+          tags: []
+    item2:
+      entity:
+        id: example2
+        attributes:
+          name: second item
+          tags:
+            - tag1
+  group1:
+    item3:
+      entity:
+        id: example3
+        attributes:
+          name: third item
+          tags: []
 debug: false
 log_level: info
-metadata:
-  name: myapp
-  version: 1.0.0
+name: myapp
+version: 1.0.0
 ```
 
-**Note:** The root-level files (`metadata.yml` and `settings.yml`) merge their contents directly into the output root, while nested directories create the hierarchical structure.
+**Note:** The root-level files (`shared.yml` and `settings.yml`) merge their contents directly into the output root, while nested directories create the hierarchical structure.
 
 ## Try It Yourself
 

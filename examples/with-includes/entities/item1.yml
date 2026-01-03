@@ -1,0 +1,13 @@
+entity:
+  id: example1
+  attributes:
+    name: sample name
+    tags: []
+  config: !include ../shared/defaults.yml
+  steps:
+    - run:
+        name: Greeting
+        command: !include-text ../scripts/hello.sh
+    - run:
+        name: Validate
+        command: <<include(../scripts/validate.sh)>>

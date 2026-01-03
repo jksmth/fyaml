@@ -1,0 +1,5 @@
+entity:
+  id: example2
+  attributes:
+    name: another name
+    tags: []
