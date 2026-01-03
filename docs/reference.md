@@ -208,7 +208,7 @@ fyaml pack config/ -f json -o config.json
 
 ### `--enable-includes`
 
-Enable processing of `<<include(file)>>` directives. This is an extension to the FYAML specification.
+Enable processing of file includes. This is an extension to the FYAML specification.
 
 **Usage:**
 ```bash
@@ -217,14 +217,32 @@ fyaml pack config/ --enable-includes
 
 **Default:** `false` (disabled)
 
+**Include Mechanisms:**
+
+When enabled, fyaml processes three include mechanisms:
+
+| Syntax | Purpose | Example |
+|--------|---------|---------|
+| `!include` | Include parsed YAML structures | `config: !include defaults.yml` |
+| `!include-text` | Include raw text content | `command: !include-text script.sh` |
+| `<<include()>>` | Alias for `!include-text` (CircleCI style) | `command: <<include(script.sh)>>` |
+
+**Processing Order:**
+
+1. `!include` tags are processed first (YAML structures merged)
+2. `!include-text` tags are processed (text content replaced)
+3. `<<include()>>` directives are processed (backward compatibility)
+
 **Behavior:**
 
-- When enabled, `<<include(path)>>` directives in YAML values are replaced with file contents
-- **The directory passed to `pack` (the pack root) defines the include boundary; includes outside this directory are rejected.**
-- File paths are resolved relative to the YAML file containing the directive
-- Both absolute and relative paths are allowed, but must resolve to a path within the pack root directory
-- The include directive must be the **entire value** (not embedded in other text)
-- Only one include per value is allowed
+- **Pack root boundary**: All includes must resolve to paths within the pack root directory
+- **Relative paths**: File paths are resolved relative to the file containing the include
+- **Absolute paths**: Allowed but must be within the pack root
+- **Nested includes**: Supported — included files can contain their own includes
+- **JSON file support**:
+  - `<<include()>>` works in JSON files (standard JSON)
+  - `!include` and `!include-text` tags work in JSON files (non-standard JSON, but supported by fyaml)
+  - YAML files can include JSON files using `!include`
 
 **Examples:**
 ```bash
@@ -236,23 +254,37 @@ fyaml pack config/ --enable-includes -o output.yml
 fyaml pack config/ --enable-includes --format json
 ```
 
-**Example YAML with include:**
+**Example: Including YAML Structures**
 ```yaml
-steps:
-  - run:
-      command: <<include(scripts/deploy.sh)>>
+# services/api.yml
+name: api
+config: !include ../common/defaults.yml
 ```
 
-When packed with `--enable-includes`, the `<<include(...)>>` is replaced with the contents of `scripts/deploy.sh` (relative to the YAML file).
+**Example: Including Text Content**
+```yaml
+# commands/deploy.yml
+steps:
+  - run:
+      command: !include-text scripts/deploy.sh
+```
+
+**Example: CircleCI Style**
+```yaml
+# Equivalent to !include-text
+command: <<include(scripts/deploy.sh)>>
+```
 
 **Error Cases:**
 
+- `!include` on non-scalar — "must be used on a scalar value"
 - `echo <<include(f)>>` — "entire string must be include statement"
 - `<<include(a)>> <<include(b)>>` — "multiple include statements"
 - Missing file — "could not open path/to/file for inclusion"
 - Path escapes pack root — "include path escapes pack root"
+- Invalid YAML/JSON in included file — "failed to parse YAML/JSON in path"
 
-**Note:** Without this flag, include directives are passed through unchanged. This preserves backward compatibility and keeps the default behavior spec-compliant.
+**Note:** Without this flag, include directives and tags are passed through unchanged. This preserves backward compatibility and keeps the default behavior spec-compliant.
 
 ### `--convert-booleans`
 

@@ -1,6 +1,9 @@
 description: A simple command that imports from a file when packed.
+config: !include ../common/defaults.yml
 steps:
   - run:
       name: Hello Greeting
-      command: <<include(scripts/hello.sh)>>
-
+      command: !include-text ../scripts/hello.sh
+  - run:
+      name: Validate
+      command: <<include(../scripts/validate.sh)>>

@@ -31,9 +31,9 @@ func TestPack_InvalidYAML(t *testing.T) {
 		t.Errorf("pack() error = %v, want error containing 'yaml'", err)
 	}
 	// Verify error includes file path for better debugging
-	// Error may be "failed to parse YAML in" or "YAML syntax error in" depending on error type
+	// Error may be "failed to parse YAML/JSON in" or "YAML/JSON syntax error in" depending on error type
 	errStr := err.Error()
-	if err != nil && !strings.Contains(errStr, "failed to parse YAML in") && !strings.Contains(errStr, "YAML syntax error in") && !strings.Contains(errStr, "YAML type errors in") {
+	if err != nil && !strings.Contains(errStr, "failed to parse YAML/JSON in") && !strings.Contains(errStr, "YAML/JSON syntax error in") && !strings.Contains(errStr, "YAML/JSON type errors in") {
 		t.Errorf("pack() error = %v, want error to include file path context", err)
 	}
 }
@@ -122,11 +122,18 @@ func TestPack_Golden(t *testing.T) {
 			dir:      "../testdata/anchors/input",
 			expected: "../testdata/anchors/expected.yml",
 		},
+		{
+			name:     "includes",
+			dir:      "../testdata/includes/input",
+			expected: "../testdata/includes/expected.yml",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := pack(testOpts(tt.dir, "yaml", false, false), nil)
+			// Includes test requires --enable-includes flag
+			enableIncludes := tt.name == "includes"
+			result, err := pack(testOpts(tt.dir, "yaml", enableIncludes, false), nil)
 			if err != nil {
 				t.Fatalf("pack() error = %v", err)
 			}

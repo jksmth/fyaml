@@ -414,68 +414,109 @@ The default output format is YAML. JSON output is formatted with 2-space indenta
 
 ### File Includes
 
-Use the `--enable-includes` flag to process `<<include(file)>>` directives. This replaces the directive with the contents of the referenced file.
+Use the `--enable-includes` flag to process include directives. fyaml supports three include mechanisms:
+
+- `!include` — Include parsed YAML structures
+- `!include-text` — Include raw text content (scripts, SQL, etc.)
+- `<<include()>>` — Backward-compatible alias for `!include-text`
 
 ```bash
 fyaml pack config/ --enable-includes
 ```
 
-**Syntax:** `<<include(path/to/file)>>`
+#### Including YAML Structures (`!include`)
 
-- The include directive must be the **entire value** (not embedded in text)
-- **The directory passed to `pack` (the pack root) defines the include boundary; includes outside this directory are rejected.**
-- File paths are **relative to the YAML file** containing the directive
-- Both absolute and relative paths are allowed, but must resolve to a path within the pack root directory
-- Only **one include per value** is allowed
+Use `!include` to include and merge YAML content from another file:
 
-**Example:**
-
-Given this structure:
-```
-config/
-  commands/
-    hello.yml
-    scripts/
-      hello.sh
-```
-
-**`commands/hello.yml`:**
 ```yaml
-description: A command that imports a script.
+# services/api.yml
+name: api
+config: !include ../common/defaults.yml
+port: 8080
+```
+
+```yaml
+# common/defaults.yml
+timeout: 30
+retries: 3
+```
+
+This produces:
+```yaml
+services:
+  api:
+    name: api
+    config:
+      timeout: 30
+      retries: 3
+    port: 8080
+```
+
+#### Including Text Content (`!include-text`)
+
+Use `!include-text` to include raw file content as a string value:
+
+```yaml
+# commands/deploy.yml
 steps:
   - run:
-      name: Hello Greeting
-      command: <<include(scripts/hello.sh)>>
+      name: Deploy
+      command: !include-text scripts/deploy.sh
 ```
 
-**`commands/scripts/hello.sh`:**
 ```bash
+# scripts/deploy.sh
 #!/bin/bash
-echo "Hello World"
+echo "Deploying..."
 ```
 
-Running `fyaml pack config/ --enable-includes` produces:
-
+This produces:
 ```yaml
 commands:
-  hello:
-    description: A command that imports a script.
+  deploy:
     steps:
       - run:
-          name: Hello Greeting
+          name: Deploy
           command: |
             #!/bin/bash
-            echo "Hello World"
+            echo "Deploying..."
 ```
+
+#### CircleCI Style (`<<include()>>`)
+
+The `<<include()>>` directive syntax is supported as an alias for `!include-text`. This syntax was inspired by CircleCI's orb pack implementation:
+
+```yaml
+command: <<include(scripts/hello.sh)>>
+```
+
+This is equivalent to:
+```yaml
+command: !include-text scripts/hello.sh
+```
+
+#### Include Rules
+
+- **Pack root boundary**: All includes must resolve to paths within the pack root directory
+- **Relative paths**: File paths are resolved relative to the YAML file containing the include
+- **Absolute paths**: Allowed but must be within the pack root
+- **Nested includes**: Supported — included files can contain their own includes
 
 **Error Cases:**
 
+- `!include` on non-scalar — Error: must be used on a scalar value
 - `echo <<include(f)>>` — Error: entire string must be include statement
 - `<<include(a)>> <<include(b)>>` — Error: multiple include statements
 - File not found — Error: could not open path for inclusion
 - Path escapes pack root — Error: include path escapes pack root
 
-**Note:** This feature is adapted from CircleCI's orb pack command. Without `--enable-includes`, directives are passed through unchanged.
+**JSON File Support:**
+
+- `<<include()>>` works in JSON files (standard JSON syntax)
+- `!include` and `!include-text` tags work in JSON files (non-standard JSON, but supported by fyaml)
+- YAML files can include JSON files using `!include`
+
+**Note:** Without `--enable-includes`, include directives and tags are passed through unchanged.
 
 ### Boolean Conversion
 
