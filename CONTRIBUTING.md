@@ -12,7 +12,7 @@ Thank you for your interest in contributing to fyaml!
 
 ### Prerequisites
 
-- Go 1.24 or later
+- Go 1.25 or later
 - Make (optional, for convenience commands)
 - dprint (for formatting Markdown, YAML, JSON, Dockerfiles) - [Install](https://dprint.dev/install/)
 - pre-commit (optional, for git hooks) - `pip install pre-commit` or `brew install pre-commit`
