@@ -78,12 +78,17 @@ fyaml pack config/ --format json | jq '.entities'
 # Use with envsubst for variable substitution
 fyaml pack config/ | envsubst > config-final.yml
 
+# Replace placeholders with sed
+fyaml pack config/ | sed 's/{{VERSION}}/v1.0.0/g' > output.yml
+
 # Validate YAML output
 fyaml pack config/ | yamllint
 
 # Format with yq
 fyaml pack config/ | yq eval -P
 ```
+
+**Note:** fyaml doesn't support templating, but you can pipe output to tools like `envsubst`, `sed`, or `yq` for post-processing.
 
 ## Directory Structure Rules
 
@@ -553,38 +558,6 @@ environment: production
 region: us-east-1
 monitoring:
   enabled: true
-```
-
-## Integration with Templating
-
-fyaml doesn't support templating, but you can combine it with other tools:
-
-### Using envsubst
-
-```bash
-# Set environment variables
-export ITEM_ID=example1
-export ITEM_NAME=sample
-export ITEM_COUNT=42
-
-# Pack and substitute
-fyaml pack config/ | envsubst > config-final.yml
-```
-
-Your YAML files can contain `${VARIABLE}` syntax that `envsubst` will replace.
-
-### Using sed
-
-```bash
-# Replace placeholders
-fyaml pack config/ | sed 's/{{VERSION}}/v1.0.0/g' > output.yml
-```
-
-### Using yq
-
-```bash
-# Modify after packing
-fyaml pack config/ | yq eval '.entities.item1.entity.attributes.count = 5' - > output.yml
 ```
 
 ## File Includes
