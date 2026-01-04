@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.0](https://github.com/jksmth/fyaml/compare/v1.7.0...v1.8.0) (2026-01-04)
+
+
+### Features
+
+* move pack to rootCmd and update docs for default directory ([#54](https://github.com/jksmth/fyaml/issues/54)) ([57e1eaa](https://github.com/jksmth/fyaml/commit/57e1eaa0aed20e9df5e20f18ed54d5b065b61def))
+
 ## [1.7.0](https://github.com/jksmth/fyaml/compare/v1.6.0...v1.7.0) (2026-01-03)
 
 
