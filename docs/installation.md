@@ -49,7 +49,7 @@ chmod +x fyaml
 sudo mv fyaml /usr/local/bin/
 
 # Verify installation
-fyaml version
+fyaml --version
 ```
 
 ### Windows
@@ -57,7 +57,7 @@ fyaml version
 1. Download the `.zip` file from the [releases page](https://github.com/jksmth/fyaml/releases)
 2. Extract the archive
 3. Add the extracted directory to your PATH
-4. Verify installation: `fyaml version`
+4. Verify installation: `fyaml --version`
 
 ## Docker
 
@@ -83,7 +83,7 @@ COPY --from=fyaml /fyaml /usr/local/bin/fyaml
 
 # Use fyaml in your build process
 COPY config/ /config/
-RUN fyaml pack /config > /app/config.yml
+RUN fyaml /config > /app/config.yml
 ```
 
 ### Available Tags
@@ -96,7 +96,7 @@ RUN fyaml pack /config > /app/config.yml
 After installation, verify that fyaml is working:
 
 ```bash
-fyaml version
+fyaml --version
 ```
 
 You should see output like:

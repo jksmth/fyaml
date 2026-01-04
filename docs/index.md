@@ -16,11 +16,14 @@ fyaml lets you work with structure and small files, while still producing the si
 # Install fyaml
 curl -sSL https://raw.githubusercontent.com/jksmth/fyaml/main/install.sh | bash
 
-# Pack a directory to stdout
-fyaml pack config/
+# Pack current directory to stdout
+fyaml
+
+# Pack specific directory
+fyaml config/
 
 # Write to a file
-fyaml pack config/ -o output.yml
+fyaml -o output.yml
 ```
 
 ## Key Features
@@ -85,7 +88,7 @@ entity:
       - tag3
 ```
 
-Running `fyaml pack config/` produces:
+Running `fyaml` (from within config/) or `fyaml config/` (from outside) produces:
 
 ```yaml
 entities:

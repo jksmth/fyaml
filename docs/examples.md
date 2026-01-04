@@ -94,7 +94,7 @@ entity:
 ### Command
 
 ```bash
-fyaml pack config/
+fyaml config/
 ```
 
 ### Output
@@ -406,7 +406,7 @@ echo "Validating..."
 ### Command
 
 ```bash
-fyaml pack config/ --enable-includes
+fyaml config/ --enable-includes
 ```
 
 ### Output
@@ -516,7 +516,7 @@ entity:
 ### Command
 
 ```bash
-fyaml pack config/
+fyaml config/
 ```
 
 ### Output
@@ -568,10 +568,10 @@ git clone https://github.com/jksmth/fyaml.git
 cd fyaml
 
 # Try the basic example
-fyaml pack examples/basic
+fyaml examples/basic
 
 # Try the @ files example
-fyaml pack examples/with-at-files
+fyaml examples/with-at-files
 ```
 
 See the [examples directory](https://github.com/jksmth/fyaml/tree/main/examples) for more runnable examples.

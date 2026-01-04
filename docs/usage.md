@@ -6,28 +6,28 @@ This guide covers basic usage patterns, commands, and common workflows with fyam
 
 ### Pack to stdout
 
-The simplest usage is to pack a directory and output to stdout:
-
-```bash
-fyaml pack config/
-```
-
-This reads all YAML/JSON files in `config/` and outputs a single YAML document.
-
-You can also run `fyaml` without arguments to pack the current directory:
+The simplest usage is to pack the current directory and output to stdout:
 
 ```bash
 fyaml
 ```
 
-**Note:** `fyaml` without arguments is a convenience alias for `fyaml pack .` - both commands pack the current directory.
+This reads all YAML/JSON files in the current directory and outputs a single YAML document.
+
+You can also specify a directory explicitly:
+
+```bash
+fyaml config/
+```
+
+**Note:** `fyaml pack [DIR]` is an alias for `fyaml [DIR]` and works identically for backward compatibility. Both forms pack the current directory when no directory is specified.
 
 ### Pack to a File
 
 Write the output to a file using the `-o` or `--output` flag:
 
 ```bash
-fyaml pack config/ -o output.yml
+fyaml -o output.yml
 ```
 
 ### Pack Current Directory
@@ -37,8 +37,8 @@ If you don't specify a directory, fyaml packs the current directory:
 ```bash
 cd config/
 fyaml          # Packs current directory
-fyaml pack     # Same as above
-fyaml pack .   # Explicitly specify current directory
+fyaml pack     # Same as above (alias)
+fyaml .        # Explicitly specify current directory
 ```
 
 ### Output as JSON
@@ -46,7 +46,7 @@ fyaml pack .   # Explicitly specify current directory
 Use the `--format` or `-f` flag to output JSON instead of YAML:
 
 ```bash
-fyaml pack config/ --format json -o output.json
+fyaml config/ --format json -o output.json
 ```
 
 ## Common Patterns
@@ -56,7 +56,7 @@ fyaml pack config/ --format json -o output.json
 Use the `--check` flag to verify that the generated output matches an existing file:
 
 ```bash
-fyaml pack config/ -o output.yml --check
+fyaml -o output.yml --check
 ```
 
 This is useful in CI/CD pipelines to ensure configuration hasn't changed unexpectedly.
@@ -73,19 +73,19 @@ fyaml works well with other command-line tools:
 
 ```bash
 # Pipe to jq for JSON processing
-fyaml pack config/ --format json | jq '.entities'
+fyaml --format json | jq '.entities'
 
 # Use with envsubst for variable substitution
-fyaml pack config/ | envsubst > config-final.yml
+fyaml | envsubst > config-final.yml
 
 # Replace placeholders with sed
-fyaml pack config/ | sed 's/{{VERSION}}/v1.0.0/g' > output.yml
+fyaml | sed 's/{{VERSION}}/v1.0.0/g' > output.yml
 
 # Validate YAML output
-fyaml pack config/ | yamllint
+fyaml | yamllint
 
 # Format with yq
-fyaml pack config/ | yq eval -P
+fyaml | yq eval -P
 ```
 
 **Note:** fyaml doesn't support templating, but you can pipe output to tools like `envsubst`, `sed`, or `yq` for post-processing.
@@ -470,14 +470,14 @@ If you have files with the same name but different extensions in the same direct
 Default output is YAML:
 
 ```bash
-fyaml pack config/
+fyaml
 ```
 
 YAML output uses standard YAML formatting with 2-space indentation by default. You can customize the indent using the `--indent` flag:
 
 ```bash
 # Use 4-space indent
-fyaml pack config/ --indent 4
+fyaml --indent 4
 ```
 
 ### JSON
@@ -485,14 +485,14 @@ fyaml pack config/ --indent 4
 Output JSON using the `--format` flag:
 
 ```bash
-fyaml pack config/ --format json
+fyaml --format json
 ```
 
 JSON output is formatted with 2-space indentation by default. You can customize the indent using the `--indent` flag:
 
 ```bash
 # Use 4-space indent for JSON
-fyaml pack config/ --format json --indent 4
+fyaml --format json --indent 4
 ```
 
 ### Empty Output
@@ -516,7 +516,7 @@ This means you can safely commit the generated output to version control, and us
 
 ```bash
 # In CI/CD pipeline - verify config hasn't changed
-fyaml pack config/ -o config.yml --check
+fyaml -o config.yml --check
 # Exits with code 2 if source files changed but output wasn't regenerated
 ```
 
@@ -611,7 +611,7 @@ entity:
     tags: []
 ```
 
-Running `fyaml pack config/ --enable-includes`:
+Running `fyaml config/ --enable-includes`:
 
 ```yaml
 entities:
@@ -660,7 +660,7 @@ entity:
         command: !include-text scripts/hello.sh
 ```
 
-Running `fyaml pack config/ --enable-includes`:
+Running `fyaml config/ --enable-includes`:
 
 ```yaml
 entities:
@@ -917,7 +917,7 @@ This can cause validation errors or unexpected behavior in tools that expect boo
 Use the `--convert-booleans` flag to automatically convert these values:
 
 ```bash
-fyaml pack config/ --convert-booleans
+fyaml --convert-booleans
 ```
 
 Now the output will be:
@@ -967,6 +967,55 @@ entity:
 ### Large Files
 
 fyaml processes files in memory. For very large files (hundreds of MB), this could consume significant memory. However, for typical configuration files (KB to low MB range), performance is excellent. Keep individual files focused and reasonably sized.
+
+## Subcommand and Directory Name Conflicts
+
+### The Issue
+
+If you have a directory named `pack` or `version`, you might encounter a conflict because these are also subcommand names. By default, Cobra (the CLI framework fyaml uses) checks for subcommands before processing positional arguments, so `fyaml pack` will always invoke the pack subcommand, not try to pack a directory named "pack".
+
+### The Solution: `--dir` Flag
+
+Use the `--dir` flag to explicitly specify the directory you want to pack. This avoids any ambiguity:
+
+```bash
+# Pack a directory named "pack"
+fyaml --dir pack
+
+# Pack a directory named "version"
+fyaml --dir version
+
+# The --dir flag takes precedence over positional arguments
+fyaml --dir config/ config/  # Uses --dir value (config/)
+```
+
+### Alternative Solutions
+
+If you prefer not to use the `--dir` flag, you can use relative or absolute paths:
+
+```bash
+# Use relative path with ./
+fyaml ./pack
+
+# Use absolute path
+fyaml /path/to/pack
+```
+
+However, the `--dir` flag is the recommended approach as it's explicit and clear.
+
+### Both Forms Work
+
+Remember that both `fyaml` and `fyaml pack` work identically:
+
+```bash
+# These are equivalent:
+fyaml config/
+fyaml pack config/
+
+# These are also equivalent:
+fyaml --dir pack
+fyaml pack --dir pack
+```
 
 ## Troubleshooting
 
@@ -1025,7 +1074,7 @@ fyaml processes files in memory. For very large files (hundreds of MB), this cou
 **Use verbose mode to see which files are processed:**
 
 ```bash
-fyaml -v pack config/
+fyaml -v config/
 ```
 
 This shows `[DEBUG] Processing: <filepath>` for each file, helping you identify:

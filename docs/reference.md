@@ -47,14 +47,14 @@ entities:
 
 ## Commands
 
-### `fyaml pack [DIR]`
+### `fyaml [DIR]`
 
-Compile a directory of YAML/JSON files into a single document.
+Compile a directory of YAML/JSON files into a single document. This is the primary command.
 
 **Synopsis:**
 
 ```bash
-fyaml [global flags] pack [DIR] [flags]
+fyaml [global flags] [DIR] [flags]
 ```
 
 **Arguments:**
@@ -63,33 +63,41 @@ fyaml [global flags] pack [DIR] [flags]
 
 **Flags:**
 
+- `--dir string` - Explicitly specify directory to pack (avoids subcommand conflicts)
 - `-o, --output string` - Write output to file (default: stdout)
-- `--check` - Compare generated output to `--output`, exit non-zero if different
+- `-c, --check` - Compare generated output to `--output`, exit non-zero if different
 - `-f, --format string` - Output format: `yaml` or `json` (default: `yaml`)
 - `--indent int` - Number of spaces for indentation (default: `2`)
 - `--enable-includes` - Process `<<include(file)>>` directives (extension)
 - `--convert-booleans` - Convert unquoted YAML 1.1 booleans to `true`/`false`
+- `-V, --version` - Print version information and exit
 
 **Examples:**
 
 ```bash
 # Pack current directory to stdout
-fyaml pack
+fyaml
 
 # Pack specific directory
-fyaml pack config/
+fyaml config/
 
 # Write to file
-fyaml pack config/ -o output.yml
+fyaml -o output.yml
 
 # Output as JSON
-fyaml pack config/ --format json -o output.json
+fyaml config/ --format json -o output.json
 
 # Verify output matches file
-fyaml pack config/ -o output.yml --check
+fyaml -o output.yml --check
+
+# Pack directory with conflicting name (e.g., directory named "pack")
+fyaml --dir pack
 
 # With verbose output
-fyaml -v pack config/
+fyaml -v config/
+
+# Show version
+fyaml --version
 ```
 
 **Exit Codes:**
@@ -98,14 +106,40 @@ fyaml -v pack config/
 - `1` - Pack or IO error
 - `2` - `--check` mismatch (output differs from file)
 
+### `fyaml pack [DIR]` (Alias)
+
+An alias for `fyaml [DIR]` that works identically. Maintained for backward compatibility.
+
+**Synopsis:**
+
+```bash
+fyaml [global flags] pack [DIR] [flags]
+```
+
+All flags and behavior are identical to the main `fyaml [DIR]` command.
+
+**Examples:**
+
+```bash
+# These are equivalent:
+fyaml config/
+fyaml config/
+
+# Both work with all flags:
+fyaml config/ --enable-includes
+fyaml config/ --enable-includes
+```
+
 ### `fyaml version`
 
-Print version information.
+Print version information. Both `fyaml version` (subcommand) and `fyaml --version` or `fyaml -V` (flag) work identically.
 
 **Synopsis:**
 
 ```bash
 fyaml version
+# or
+fyaml --version
 ```
 
 **Output:**
@@ -120,6 +154,38 @@ fyaml version
 
 ## Flags Reference
 
+### `--dir`
+
+Explicitly specify the directory to pack. This flag takes precedence over positional arguments and is useful for avoiding conflicts when a directory has the same name as a subcommand (e.g., `pack` or `version`).
+
+**Usage:**
+
+```bash
+fyaml --dir config/
+fyaml --dir pack
+```
+
+**Behavior:**
+
+- Takes precedence over positional arguments
+- If both `--dir` and a positional argument are provided, `--dir` is used
+- Useful for packing directories named `pack` or `version` without ambiguity
+
+**Examples:**
+
+```bash
+# Pack directory named "pack" (avoids subcommand conflict)
+fyaml --dir pack
+
+# Pack directory named "version"
+fyaml --dir version
+
+# --dir takes precedence over positional argument
+fyaml --dir config/ other/  # Uses config/, ignores other/
+```
+
+**See also:** [Usage Guide - Subcommand and Directory Name Conflicts](usage.md#subcommand-and-directory-name-conflicts) for more details.
+
 ### `--output`, `-o`
 
 Specify the output file path. If not provided, output is written to stdout.
@@ -127,8 +193,8 @@ Specify the output file path. If not provided, output is written to stdout.
 **Usage:**
 
 ```bash
-fyaml pack config/ -o output.yml
-fyaml pack config/ --output /path/to/output.yml
+fyaml -o output.yml
+fyaml --output /path/to/output.yml
 ```
 
 **Behavior:**
@@ -142,23 +208,26 @@ fyaml pack config/ --output /path/to/output.yml
 
 ```bash
 # Write to current directory
-fyaml pack config/ -o config.yml
+fyaml -o config.yml
 
 # Write to specific path
-fyaml pack config/ -o /tmp/output.yml
+fyaml -o /tmp/output.yml
 
 # Write to subdirectory (must exist)
-fyaml pack config/ -o build/config.yml
+fyaml -o build/config.yml
+
+# Pack specific directory to file
+fyaml config/ -o output.yml
 ```
 
-### `--check`
+### `-c, --check`
 
 Compare the generated output with an existing file specified by `--output`. Uses `os.Exit(2)` if they differ (terminates immediately).
 
 **Usage:**
 
 ```bash
-fyaml pack config/ -o output.yml --check
+fyaml -o output.yml --check
 ```
 
 **Behavior:**
@@ -179,10 +248,10 @@ fyaml pack config/ -o output.yml --check
 
 ```bash
 # Verify in CI
-fyaml pack config/ -o config.yml --check
+fyaml -o config.yml --check
 
 # This will fail if config.yml is out of date
-if ! fyaml pack config/ -o config.yml --check; then
+if ! fyaml -o config.yml --check; then
     echo "Configuration is out of date!"
     exit 1
 fi
@@ -195,8 +264,8 @@ Specify the output format. Valid values: `yaml` or `json`.
 **Usage:**
 
 ```bash
-fyaml pack config/ --format json
-fyaml pack config/ -f yaml
+fyaml config/ --format json
+fyaml config/ -f yaml
 ```
 
 **Default:** `yaml`
@@ -211,13 +280,16 @@ fyaml pack config/ -f yaml
 
 ```bash
 # YAML output (default)
-fyaml pack config/
+fyaml
 
 # JSON output
-fyaml pack config/ --format json
+fyaml --format json
 
 # JSON to file
-fyaml pack config/ -f json -o config.json
+fyaml -f json -o config.json
+
+# Pack specific directory as JSON
+fyaml config/ --format json
 ```
 
 **Empty Output:**
@@ -234,8 +306,8 @@ Specify the number of spaces used for indentation in both YAML and JSON output.
 **Usage:**
 
 ```bash
-fyaml pack config/ --indent 2
-fyaml pack config/ --indent 4
+fyaml config/ --indent 2
+fyaml config/ --indent 4
 ```
 
 **Default:** `2`
@@ -251,16 +323,16 @@ fyaml pack config/ --indent 4
 
 ```bash
 # Default 2-space indent (YAML)
-fyaml pack config/
+fyaml
 
 # 4-space indent (YAML)
-fyaml pack config/ --indent 4
+fyaml --indent 4
 
 # 2-space indent (JSON)
-fyaml pack config/ --format json --indent 2
+fyaml --format json --indent 2
 
 # 4-space indent (JSON)
-fyaml pack config/ --format json --indent 4
+fyaml --format json --indent 4
 ```
 
 **Note:** The default indent of 2 spaces is the widely accepted convention for YAML and JSON. You can override this if your project uses a different indentation style.
@@ -274,7 +346,7 @@ Enable processing of file includes. This is an extension to the FYAML specificat
 **Usage:**
 
 ```bash
-fyaml pack config/ --enable-includes
+fyaml config/ --enable-includes
 ```
 
 **Default:** `false` (disabled)
@@ -310,11 +382,11 @@ When enabled, fyaml processes three include mechanisms:
 
 ```bash
 # Process includes
-fyaml pack config/ --enable-includes
+fyaml config/ --enable-includes
 
 # Combine with other flags
-fyaml pack config/ --enable-includes -o output.yml
-fyaml pack config/ --enable-includes --format json
+fyaml config/ --enable-includes -o output.yml
+fyaml config/ --enable-includes --format json
 ```
 
 **Example: Including YAML Structures**
@@ -368,7 +440,7 @@ Convert `on`/`off` and `yes`/`no` values to `true`/`false` booleans.
 **Usage:**
 
 ```bash
-fyaml pack config/ --convert-booleans
+fyaml --convert-booleans
 ```
 
 **Default:** `false` (disabled)
@@ -398,11 +470,14 @@ If your YAML files use `on`/`off` or `yes`/`no` for boolean values, they'll be t
 
 ```bash
 # Convert on/off to true/false
-fyaml pack config/ --convert-booleans
+fyaml --convert-booleans
 
 # Combine with other flags
-fyaml pack config/ --convert-booleans --enable-includes
-fyaml pack config/ --convert-booleans -o output.yml
+fyaml --convert-booleans --enable-includes
+fyaml --convert-booleans -o output.yml
+
+# Pack specific directory with conversion
+fyaml config/ --convert-booleans
 ```
 
 **Example transformation:**
@@ -447,13 +522,13 @@ fyaml uses the following exit codes:
 
 ```bash
 # Success
-fyaml pack config/  # exits 0
+fyaml  # exits 0
 
 # Error - invalid directory
-fyaml pack /nonexistent  # exits 1
+fyaml /nonexistent  # exits 1
 
 # Mismatch - config out of date
-fyaml pack config/ -o config.yml --check  # exits 2 if different
+fyaml -o config.yml --check  # exits 2 if different
 ```
 
 ## Default Behavior
@@ -464,8 +539,8 @@ If no directory is specified, fyaml packs the current working directory:
 
 ```bash
 # These are equivalent
-fyaml pack
-fyaml pack .
+fyaml
+fyaml .
 ```
 
 ### Default Output
@@ -474,10 +549,13 @@ If no output file is specified, output goes to stdout:
 
 ```bash
 # Output to stdout
-fyaml pack config/
+fyaml
 
 # Output to file
-fyaml pack config/ -o output.yml
+fyaml -o output.yml
+
+# Pack specific directory to stdout
+fyaml config/
 ```
 
 ### Default Format
@@ -486,10 +564,13 @@ Default output format is YAML:
 
 ```bash
 # YAML output (default)
-fyaml pack config/
+fyaml
 
 # JSON output
-fyaml pack config/ --format json
+fyaml --format json
+
+# Pack specific directory as JSON
+fyaml config/ --format json
 ```
 
 ## Error Messages
@@ -542,6 +623,22 @@ fyaml pack config/ --format json
 - Suitable for typical configuration files (KB to low MB)
 - Very large files (hundreds of MB) may consume significant memory
 - Processing is single-threaded
+
+## Troubleshooting
+
+### Subcommand and Directory Name Conflicts
+
+If you have a directory named `pack` or `version`, use the `--dir` flag to explicitly specify the directory:
+
+```bash
+# Pack directory named "pack"
+fyaml --dir pack
+
+# Pack directory named "version"
+fyaml --dir version
+```
+
+The `--dir` flag takes precedence over positional arguments and avoids any ambiguity. See [Usage Guide - Subcommand and Directory Name Conflicts](usage.md#subcommand-and-directory-name-conflicts) for more details.
 
 ## See Also
 

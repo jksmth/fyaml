@@ -24,15 +24,17 @@ with-includes/
 Pack this directory with includes enabled:
 
 ```bash
-fyaml pack examples/with-includes --enable-includes
+fyaml examples/with-includes --enable-includes
 ```
 
 Or from this directory:
 
 ```bash
 cd examples/with-includes
-fyaml pack . --enable-includes
+fyaml . --enable-includes
 ```
+
+**Note:** `fyaml pack` is an alias and works identically for backward compatibility.
 
 ## Files
 

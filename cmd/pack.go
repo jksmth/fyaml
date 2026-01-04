@@ -24,15 +24,7 @@ type PackOptions struct {
 	Indent          int    // Number of spaces for indentation
 }
 
-var (
-	// Pack command flags
-	output          string
-	check           bool
-	format          string
-	enableIncludes  bool
-	convertBooleans bool
-	indent          int
-)
+// Flag variables are now defined in root.go and shared between root and pack commands
 
 var packCmd = &cobra.Command{
 	Use:   "pack [DIR]",
@@ -46,49 +38,19 @@ identical output, with keys sorted alphabetically.
 
 By default, output is YAML. Use --format json to output JSON instead.
 
-Use --enable-includes to process <<include(file)>> directives.`,
+Use --enable-includes to process <<include(file)>> directives.
+
+This is an alias for the root command. Both 'fyaml' and 'fyaml pack' work identically.`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		dir := "."
-		if len(args) > 0 {
-			dir = args[0]
-		}
-
-		opts := PackOptions{
-			Dir:             dir,
-			Format:          format,
-			EnableIncludes:  enableIncludes,
-			ConvertBooleans: convertBooleans,
-			Indent:          indent,
-		}
-
-		result, err := pack(opts, log)
-		if err != nil {
-			return fmt.Errorf("pack error: %w", err)
-		}
-
-		if check {
-			return handleCheck(output, result)
-		}
-
-		return writeOutput(output, result)
+		// Simply delegate to rootCmd - it has all the logic and flags
+		return rootCmd.RunE(rootCmd, args)
 	},
 }
 
 func init() {
-	// Pack-specific flags
-	packCmd.Flags().StringVarP(&output, "output", "o", "",
-		"Write output to file (default: stdout)")
-	packCmd.Flags().BoolVar(&check, "check", false,
-		"Compare generated output to --output, exit non-zero if different")
-	packCmd.Flags().StringVarP(&format, "format", "f", "yaml",
-		"Output format: yaml or json (default: yaml)")
-	packCmd.Flags().BoolVar(&enableIncludes, "enable-includes", false,
-		"Process <<include(file)>> directives (extension)")
-	packCmd.Flags().BoolVar(&convertBooleans, "convert-booleans", false,
-		"Convert unquoted YAML 1.1 boolean values (on/off, yes/no) to true/false")
-	packCmd.Flags().IntVar(&indent, "indent", 2,
-		"Number of spaces for indentation (default: 2)")
+	// Flags are defined as persistent flags on rootCmd, so they're automatically
+	// available to packCmd. No need to define them here.
 }
 
 // handleCheck compares the generated output with an existing file.
