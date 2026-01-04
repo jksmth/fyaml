@@ -11,6 +11,9 @@ func TestVersionCmd(t *testing.T) {
 	// Test that version command prints version information
 	// Capture stdout
 	oldStdout := os.Stdout
+	t.Cleanup(func() {
+		os.Stdout = oldStdout
+	})
 	r, w, err := os.Pipe()
 	if err != nil {
 		t.Fatalf("Failed to create pipe: %v", err)
@@ -20,7 +23,6 @@ func TestVersionCmd(t *testing.T) {
 	versionCmd.Run(versionCmd, []string{})
 
 	_ = w.Close()
-	os.Stdout = oldStdout
 
 	var buf bytes.Buffer
 	_, _ = buf.ReadFrom(r)
@@ -34,6 +36,9 @@ func TestExecute_Version(t *testing.T) {
 	// Test Execute function with version command via rootCmd
 	// This exercises the Execute() -> rootCmd.Execute() path
 	oldStdout := os.Stdout
+	t.Cleanup(func() {
+		os.Stdout = oldStdout
+	})
 	r, w, err := os.Pipe()
 	if err != nil {
 		t.Fatalf("Failed to create pipe: %v", err)
@@ -44,7 +49,6 @@ func TestExecute_Version(t *testing.T) {
 	executeErr := rootCmd.Execute()
 
 	_ = w.Close()
-	os.Stdout = oldStdout
 
 	if executeErr != nil {
 		t.Errorf("Execute() with version command error = %v", executeErr)
