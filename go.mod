@@ -1,6 +1,6 @@
 module github.com/jksmth/fyaml
 
-go 1.25
+go 1.24
 
 require (
 	github.com/mitchellh/mapstructure v1.5.0
