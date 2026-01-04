@@ -10,7 +10,11 @@ The fastest way to install fyaml on Linux or macOS:
 curl -sSL https://raw.githubusercontent.com/jksmth/fyaml/main/install.sh | bash
 ```
 
-This script downloads the latest release for your platform and installs it to `/usr/local/bin/fyaml`.
+This script downloads the latest release for your platform and installs it to `$HOME/.local/bin/fyaml` by default. You can override the installation directory by setting the `DESTDIR` environment variable:
+
+```bash
+DESTDIR=/usr/local/bin curl -sSL https://raw.githubusercontent.com/jksmth/fyaml/main/install.sh | bash
+```
 
 **Note:** This command downloads and executes a script. If you prefer to verify the script before execution, see the [Verification](#verification) section below for steps to verify releases.
 
@@ -135,6 +139,10 @@ If you get a "command not found" error:
 2. **Add to PATH**: Ensure the installation directory is in your PATH
    ```bash
    # Linux/macOS - add to ~/.bashrc or ~/.zshrc
+   # Default install script location
+   export PATH="$PATH:$HOME/.local/bin"
+
+   # Or if installed to /usr/local/bin
    export PATH="$PATH:/usr/local/bin"
 
    # Or add the Go bin directory

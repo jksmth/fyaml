@@ -5,7 +5,6 @@
 [![codecov](https://codecov.io/gh/jksmth/fyaml/graph/badge.svg?token=YZOTQL769O)](https://codecov.io/gh/jksmth/fyaml)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/jksmth/fyaml/badge)](https://securityscorecards.dev/viewer/?uri=github.com/jksmth/fyaml)
 [![Signed Releases](https://img.shields.io/badge/releases-signed-green)](https://github.com/jksmth/fyaml#verification)
-[![Go Version](https://img.shields.io/badge/go-1.25+-00ADD8?style=flat&logo=go)](https://golang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Release](https://img.shields.io/github/v/release/jksmth/fyaml?include_prereleases&sort=semver)](https://github.com/jksmth/fyaml/releases)
 
