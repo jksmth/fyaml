@@ -54,7 +54,9 @@ entity:
 Run:
 
 ```bash
-fyaml pack config/
+fyaml                    # Pack current directory
+fyaml config/            # Pack specific directory
+fyaml -o output.yml      # Pack current directory to file
 ```
 
 Produces:
@@ -172,24 +174,32 @@ For verification steps (binaries, Docker images, SBOMs), see [Installation - Ver
 ### Basic Usage
 
 ```bash
-# Pack current directory to stdout (fyaml is equivalent to fyaml pack .)
+# Pack current directory to stdout
 fyaml
 
 # Pack specific directory
-fyaml pack /path/to/config
+fyaml /path/to/config
 
 # Write to file
-fyaml pack /path/to/config -o output.yml
+fyaml /path/to/config -o output.yml
 
 # Output as JSON
-fyaml pack /path/to/config --format json -o output.json
+fyaml /path/to/config --format json -o output.json
 
 # Check if output matches existing file
-fyaml pack /path/to/config -o output.yml --check
+fyaml /path/to/config -o output.yml --check
 
 # Verbose output (show files being processed)
-fyaml -v pack /path/to/config
+fyaml -v /path/to/config
+
+# Pack directory with conflicting name (e.g., directory named "pack")
+fyaml --dir pack
+
+# Show version
+fyaml --version
 ```
+
+**Note:** `fyaml pack [DIR]` is an alias for `fyaml [DIR]` and works identically for backward compatibility. Both `fyaml version` and `fyaml --version` (or `fyaml -V`) work to show version information.
 
 ### More examples and patterns
 
@@ -199,8 +209,8 @@ fyaml -v pack /path/to/config
   - [Limitations](https://jksmth.github.io/fyaml/usage/#limitations) - File content requirements, YAML anchors, multi-document files
 - See the [Examples](https://jksmth.github.io/fyaml/examples/) and the [`examples/`](examples/) directory for runnable examples.
 - See the [Command Reference](https://jksmth.github.io/fyaml/reference/) for:
-  - [Commands](https://jksmth.github.io/fyaml/reference/#commands) - `pack`, `version`
-  - [Flags reference](https://jksmth.github.io/fyaml/reference/#flags-reference) - All available flags and options
+  - [Commands](https://jksmth.github.io/fyaml/reference/#commands) - Main command, `pack` alias, `version`
+  - [Flags reference](https://jksmth.github.io/fyaml/reference/#flags-reference) - All available flags and options including `--dir` for avoiding subcommand conflicts
 
 ## Exit Codes
 

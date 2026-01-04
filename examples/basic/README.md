@@ -16,15 +16,17 @@ basic/
 Pack this directory:
 
 ```bash
-fyaml pack examples/basic
+fyaml examples/basic
 ```
 
 Or from this directory:
 
 ```bash
 cd examples/basic
-fyaml pack .
+fyaml .
 ```
+
+**Note:** `fyaml pack` is an alias and works identically for backward compatibility.
 
 ## Expected Output
 

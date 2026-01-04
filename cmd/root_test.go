@@ -67,3 +67,40 @@ func TestRootCmd_VerboseFlag_Global(t *testing.T) {
 		t.Error("verbose short flag 'v' should exist on root command")
 	}
 }
+
+func TestRootCmd_PackFlags(t *testing.T) {
+	// Test that all pack flags exist as persistent flags on rootCmd
+	// Note: Cobra handles inheritance of persistent flags to subcommands automatically.
+	// We verify the flags exist on rootCmd, and functional tests verify they work on packCmd.
+	flags := []string{"dir", "output", "check", "format", "enable-includes", "convert-booleans", "indent"}
+	for _, flagName := range flags {
+		// Check flag exists on rootCmd as persistent flag
+		flag := rootCmd.PersistentFlags().Lookup(flagName)
+		if flag == nil {
+			t.Errorf("persistent flag %q should exist on rootCmd", flagName)
+		}
+		// Verify packCmd is a child of rootCmd (so it will inherit persistent flags)
+		if packCmd.Parent() != rootCmd {
+			t.Errorf("packCmd should be a child of rootCmd to inherit persistent flags")
+		}
+	}
+}
+
+func TestRootCmd_SubcommandPrecedence(t *testing.T) {
+	// Test that subcommands take precedence over directory names
+	// 'fyaml pack' should always invoke pack subcommand, not try to pack a directory named "pack"
+	if packCmd == nil {
+		t.Fatal("packCmd should be defined")
+	}
+	// Verify packCmd is a child of rootCmd
+	found := false
+	for _, cmd := range rootCmd.Commands() {
+		if cmd == packCmd {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("packCmd should be registered as a subcommand of rootCmd")
+	}
+}

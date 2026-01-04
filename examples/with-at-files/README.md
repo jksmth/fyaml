@@ -16,15 +16,17 @@ with-at-files/
 Pack this directory:
 
 ```bash
-fyaml pack examples/with-at-files
+fyaml examples/with-at-files
 ```
 
 Or from this directory:
 
 ```bash
 cd examples/with-at-files
-fyaml pack .
+fyaml .
 ```
+
+**Note:** `fyaml pack` is an alias and works identically for backward compatibility.
 
 ## Expected Output
 
