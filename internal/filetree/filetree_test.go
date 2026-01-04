@@ -1,6 +1,7 @@
 package filetree
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -191,22 +192,56 @@ func TestFormatYAMLError_ParserError(t *testing.T) {
 }
 
 func TestFormatYAMLError_TypeError(t *testing.T) {
-	// Test that formatYAMLError properly formats TypeError with position info
-	// Create YAML that will cause a type error (e.g., trying to use a string as a number)
-	tmpDir := createTestDir(t, map[string]string{
-		"test.yml": "key: not_a_number\nnumber: !!int not_a_number",
-	}, nil)
-	testFile := filepath.Join(tmpDir, "test.yml")
+	// Test formatYAMLError with TypeError to ensure coverage.
+	testFile := "/test/path/file.yml"
 
-	tree, err := NewTree(tmpDir)
-	assertNoError(t, err)
+	tests := []struct {
+		name     string
+		typeErr  *yaml.TypeError
+		wantLine bool // Whether error should have "line X:Y:" format
+	}{
+		{
+			name: "with line/column info",
+			typeErr: &yaml.TypeError{
+				Errors: []*yaml.UnmarshalError{
+					{Line: 2, Column: 5, Err: fmt.Errorf("cannot decode !!str as !!int")},
+				},
+			},
+			wantLine: true,
+		},
+		{
+			name: "without line/column info",
+			typeErr: &yaml.TypeError{
+				Errors: []*yaml.UnmarshalError{
+					{Line: 0, Column: 0, Err: fmt.Errorf("type conversion error")},
+				},
+			},
+			wantLine: false,
+		},
+	}
 
-	_, err = yaml.Marshal(tree)
-	// TypeError should be formatted with file path and error details
-	assertErrorContains(t, err, testFile)
-	// Should contain type error indication
-	if !strings.Contains(err.Error(), "type") && !strings.Contains(err.Error(), "YAML/JSON") {
-		t.Errorf("Expected type error indication in error message, got: %s", err.Error())
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			formattedErr := formatYAMLError(tt.typeErr, testFile)
+			errStr := formattedErr.Error()
+
+			assertErrorContains(t, formattedErr, "YAML/JSON type errors in")
+			assertErrorContains(t, formattedErr, testFile)
+
+			// Verify error detail format
+			lines := strings.Split(errStr, "\n")
+			if len(lines) < 2 || lines[1] == "" {
+				t.Fatalf("Expected error detail line, got: %s", errStr)
+			}
+			detailLine := lines[1]
+			hasLineFormat := strings.Contains(detailLine, "line ")
+			if tt.wantLine != hasLineFormat {
+				t.Errorf("wantLine=%v but hasLineFormat=%v, detail: %q", tt.wantLine, hasLineFormat, detailLine)
+			}
+			if !strings.HasPrefix(detailLine, "  ") {
+				t.Errorf("Expected error line to start with '  ', got: %q", detailLine)
+			}
+		})
 	}
 }
 
