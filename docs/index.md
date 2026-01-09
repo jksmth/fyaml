@@ -30,10 +30,9 @@ fyaml -o output.yml
 
 - **Directory structure → YAML structure**: Maps directory structure directly to YAML structure
 - **Split large configs**: Break down thousands of lines into small, focused files
-- **Deterministic output**: Identical input always produces identical output. Choose between canonical mode (sorted keys, no comments) or preserve mode (authored order and comments)
+- **Deterministic output**: Choose between canonical mode (sorted keys, no comments) or preserve mode (authored order and comments). See [Output Modes](usage.md#output-modes) for details.
 - **No logic or templating**: Pure structure compilation, no execution model
 - **JSON support**: Accepts JSON input and can output JSON
-- **Output Modes**: Canonical mode (default) sorts keys alphabetically and removes comments for deterministic output. Preserve mode maintains authored key order and preserves comments, useful for documentation and controlling output ordering via `@` directories
 
 ## How It Works
 
@@ -41,7 +40,7 @@ fyaml -o output.yml
 - File names (without extension) become nested keys
 - Files starting with `@` merge into the parent directory
 - Root-level files merge directly into the output
-- Output is deterministic. In canonical mode (default), keys are sorted alphabetically. Preserve mode maintains authored order and comments
+- Output is deterministic. See [Output Modes](usage.md#output-modes) for details on canonical vs preserve modes
 
 ## Example
 
@@ -52,8 +51,6 @@ config/
   entities/
     item1.yml
     item2.yml
-  items/
-    item3.yml
 ```
 
 **`entities/item1.yml`:**
@@ -63,9 +60,6 @@ entity:
   id: example1
   attributes:
     name: sample name
-    tags:
-      - tag1
-      - tag2
 ```
 
 **`entities/item2.yml`:**
@@ -75,21 +69,9 @@ entity:
   id: example2
   attributes:
     name: another name
-    tags: []
 ```
 
-**`items/item3.yml`:**
-
-```yaml
-entity:
-  id: example3
-  attributes:
-    name: third item
-    tags:
-      - tag3
-```
-
-Running `fyaml` (from within config/) or `fyaml config/` (from outside) produces:
+Running `fyaml config/` produces:
 
 ```yaml
 entities:
@@ -98,24 +80,14 @@ entities:
       id: example1
       attributes:
         name: sample name
-        tags:
-          - tag1
-          - tag2
   item2:
     entity:
       id: example2
       attributes:
         name: another name
-        tags: []
-items:
-  item3:
-    entity:
-      id: example3
-      attributes:
-        name: third item
-        tags:
-          - tag3
 ```
+
+For more examples, see the [Usage Guide](usage.md#basic-usage) or [Examples](examples.md).
 
 ## When to Use fyaml
 

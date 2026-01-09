@@ -2,6 +2,18 @@
 
 This guide covers basic usage patterns, commands, and common workflows with fyaml. fyaml supports two output modes: canonical (default, sorted keys, no comments) and preserve (authored order and comments). Use the `--mode` flag to select a mode.
 
+## Quick Start
+
+Get started quickly with common tasks:
+
+- **[Basic Usage](#basic-usage)** - Pack directories and output to files
+- **[Output Modes](#output-modes)** - Choose between canonical (sorted) or preserve (authored order)
+- **[Directory Structure](#directory-structure-rules)** - How files map to YAML structure
+- **[File Includes](#file-includes)** - Include content from other files
+- **[Troubleshooting](#troubleshooting)** - Common issues and solutions
+
+For a complete example, see the [README Quick Example](../README.md#quick-example).
+
 ## Basic Usage
 
 ### Pack to stdout
@@ -94,7 +106,88 @@ fyaml | yq eval -P
 
 **Note:** fyaml doesn't support templating, but you can pipe output to tools like `envsubst`, `sed`, or `yq` for post-processing.
 
+## Output Modes
+
+fyaml supports two output modes that control how keys are ordered and whether comments are preserved:
+
+### Canonical Mode (Default)
+
+Canonical mode is the default and provides:
+
+- **Sorted keys**: All map keys are sorted alphabetically
+- **No comments**: Comments are removed from the output
+- **Deterministic output**
+
+This mode is ideal for:
+
+- Tools that don't care about key ordering or comments
+- When sorted keys make diffs more readable and predictable
+
+```bash
+fyaml --mode canonical    # Explicit canonical mode (default)
+fyaml                     # Same as above
+```
+
+### Preserve Mode
+
+Preserve mode maintains the authored structure:
+
+- **Authored key order**: Keys appear in the order they were written in source files
+- **Comments preserved**: All YAML comments are maintained in the output
+- **Deterministic output**
+
+This mode is ideal for:
+
+- Maintaining documentation in comments
+- Preserving the authored key order from source files
+
+```bash
+fyaml --mode preserve     # Preserve order and comments
+fyaml -m preserve         # Shorthand
+```
+
+### Mode Comparison Example
+
+Given the same input files, here's how the output differs:
+
+**Input (`entities/item1.yml`):**
+
+```yaml
+# This is a comment
+zebra: value-z
+alpha: value-a
+```
+
+**Canonical mode output:**
+
+```yaml
+alpha: value-a
+zebra: value-z
+```
+
+**Preserve mode output:**
+
+```yaml
+# This is a comment
+zebra: value-z
+alpha: value-a
+```
+
+### JSON Output and Modes
+
+When using JSON output format:
+
+- **Key order**: In preserve mode, key order is maintained in JSON output (JSON preserves object key order)
+- **Comments**: JSON doesn't support comments, so comments are lost regardless of mode
+- Both modes produce deterministic JSON output
+
+```bash
+fyaml --format json --mode preserve    # Key order preserved, comments lost
+```
+
 ## Directory Structure Rules
+
+**Note:** Files and directories are processed in alphabetical order (deterministic across operating systems). This means `@` directories are processed before regular files (because `@` sorts before letters), and within each category, items are sorted alphabetically.
 
 ### Merge Behavior
 
@@ -264,7 +357,7 @@ entities:
 
 The `@` prefix is removed, and the file's contents are merged directly into the parent map.
 
-**Note:** While the specification allows multiple `@` files in the same directory, it's recommended to use only one per directory. If multiple `@` files exist, they all merge into the parent map, and key collisions are resolved by the last file processed. **Merging is shallow**: if two files define the same key with nested maps, the entire nested map from the later file replaces the earlier one (nested values are not merged recursively). In canonical mode, order is not guaranteed. In preserve mode, `@` files are processed in alphabetical order by path (deterministic across operating systems).
+**Note:** While the specification allows multiple `@` files in the same directory, it's recommended to use only one per directory. If multiple `@` files exist, they all merge into the parent map, and key collisions are resolved by the last file processed. **Merging is shallow**: if two files define the same key with nested maps, the entire nested map from the later file replaces the earlier one (nested values are not merged recursively). Files are processed in alphabetical order (see [Directory Structure Rules](#directory-structure-rules) above).
 
 ### @ Directories
 
@@ -281,7 +374,7 @@ config/
     @group1/              # Merges into entities map
       item2.yml
       item3.yml
-    @group2/             # Merges into entities map
+    @group2/              # Merges into entities map
       item4.yml
 ```
 
@@ -375,7 +468,7 @@ entities:
 **Edge Cases:**
 
 - Empty `@` directories are ignored (no keys created)
-- If both `@group1/` directory and `@group1.yml` file exist, both merge into parent. In canonical mode, order is not guaranteed. In preserve mode, `@` directories are processed in alphabetical order by path (deterministic across operating systems), allowing you to control output ordering.
+- If both `@group1/` directory and `@group1.yml` file exist, both merge into parent. Files are processed in alphabetical order (see [Directory Structure Rules](#directory-structure-rules) above).
 - Nested `@` directories are supported: `@group1/@shared/` merges into parent of `@group1/`
 
 **Note:** This is an extension to the FYAML specification. See [EXTENSIONS.md](https://github.com/jksmth/fyaml/blob/main/EXTENSIONS.md) for information about extensions to the specification.
@@ -494,7 +587,7 @@ File and directory names can contain hyphens, underscores, numbers, and mixed ca
 
 ### File Name Collisions
 
-If you have files with the same name but different extensions in the same directory (e.g., `item1.yml`, `item1.yaml`, `item1.json`), they all produce the same key. The last one processed will overwrite previous ones. In canonical mode, processing order is not guaranteed. In preserve mode, files are processed in alphabetical order by path (deterministic across operating systems). **Use a consistent extension throughout your project to avoid collisions.**
+If you have files with the same name but different extensions in the same directory (e.g., `item1.yml`, `item1.yaml`, `item1.json`), they all produce the same key. The last one processed will overwrite previous ones. Files are processed in alphabetical order (see [Directory Structure Rules](#directory-structure-rules) above). **Use a consistent extension throughout your project to avoid collisions.**
 
 ## Output Format
 
@@ -537,111 +630,9 @@ When no files are found:
 
 A warning is printed to stderr in both cases.
 
-## Output Modes
-
-fyaml supports two output modes that control how keys are ordered and whether comments are preserved:
-
-### Canonical Mode (Default)
-
-Canonical mode is the default and provides:
-
-- **Sorted keys**: All map keys are sorted alphabetically
-- **No comments**: Comments are removed from the output
-- **Deterministic**: Identical input always produces identical output
-
-This mode is ideal for:
-
-- Tools that don't care about key ordering or comments
-- When sorted keys make diffs more readable and predictable
-
-```bash
-fyaml --mode canonical    # Explicit canonical mode (default)
-fyaml                     # Same as above
-```
-
-### Preserve Mode
-
-Preserve mode maintains the authored structure:
-
-- **Authored key order**: Keys appear in the order they were written in source files
-- **Comments preserved**: All YAML comments are maintained in the output
-- **Deterministic**: Identical input always produces identical output
-
-This mode is ideal for:
-
-- Maintaining documentation in comments
-- Preserving the authored key order from source files
-
-```bash
-fyaml --mode preserve     # Preserve order and comments
-fyaml -m preserve         # Shorthand
-```
-
-### Using @ Directories for Ordering
-
-**Note:** This is an advanced use case. The primary difference between modes is key ordering within files and comment preservation.
-
-In preserve mode, `@` directories are processed in alphabetical order by path (deterministic across operating systems). Since `@` directories merge into the parent, their processing order affects the order of merged keys. For example:
-
-```
-config/
-  entities/
-    @group1/              # Processed first
-      item-z.yml
-    @group2/              # Processed second
-      item-a.yml
-    item-root.yml         # Processed last
-```
-
-Files and directories are processed in alphabetical order by path in both modes (deterministic across operating systems). The key difference is that preserve mode maintains the key order within each file and preserves comments, while canonical mode sorts all keys alphabetically and removes comments.
-
-### Mode Comparison Example
-
-Given the same input files, here's how the output differs:
-
-**Input (`entities/item1.yml`):**
-
-```yaml
-# This is a comment
-zebra: value-z
-alpha: value-a
-```
-
-**Canonical mode output:**
-
-```yaml
-alpha: value-a
-zebra: value-z
-```
-
-**Preserve mode output:**
-
-```yaml
-# This is a comment
-zebra: value-z
-alpha: value-a
-```
-
-### JSON Output and Modes
-
-When using JSON output format:
-
-- **Key order**: In preserve mode, key order is maintained in JSON output (JSON preserves object key order)
-- **Comments**: JSON doesn't support comments, so comments are lost regardless of mode
-- **Determinism**: Both modes produce deterministic JSON output
-
-```bash
-fyaml --format json --mode preserve    # Key order preserved, comments lost
-```
-
 ## Deterministic Output
 
-fyaml produces deterministic output in both modes:
-
-- **Identical input always produces identical output**: Same directory structure and file contents always produce the same output
-- **Canonical mode**: Map keys are sorted alphabetically and comments are removed
-- **Preserve mode**: Keys maintain authored order and comments are preserved
-- Both modes are deterministic, making output suitable for version control and comparison
+Both modes are deterministic, making output suitable for version control and comparison.
 
 This means you can safely commit the generated output to version control, and use `--check` in CI to ensure the source files and generated output stay in sync:
 

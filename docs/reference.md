@@ -69,7 +69,7 @@ fyaml [global flags] [DIR] [flags]
 - `-f, --format string` - Output format: `yaml` or `json` (default: `yaml`)
 - `-m, --mode string` - Output mode: `canonical` (sorted keys, no comments) or `preserve` (authored order and comments) (default: `canonical`)
 - `--indent int` - Number of spaces for indentation (default: `2`)
-- `--enable-includes` - Process `<<include(file)>>` directives (extension)
+- `--enable-includes` - Process file includes (`!include`, `!include-text`, `<<include()>>`) (extension)
 - `--convert-booleans` - Convert unquoted YAML 1.1 booleans to `true`/`false`
 - `-V, --version` - Print version information and exit
 
@@ -536,21 +536,21 @@ fyaml -m preserve         # Preserve order and comments
 
 - All map keys are sorted alphabetically
 - Comments are removed from output
-- Deterministic: identical input always produces identical output
+- Deterministic output
 - Ideal for tools that don't care about key ordering or comments, and when sorted keys make diffs more readable
 
 **Preserve Mode:**
 
 - Keys maintain the order they appear in source files
 - Comments are preserved in YAML output
-- Deterministic: identical input always produces identical output
+- Deterministic output
 - Ideal for maintaining documentation in comments and preserving the authored structure from source files
 
 **Interaction with JSON Output:**
 
 - **Key order**: In preserve mode, key order is maintained in JSON output (JSON preserves object key order)
 - **Comments**: JSON doesn't support comments, so comments are lost regardless of mode
-- **Determinism**: Both modes produce deterministic JSON output
+- Both modes produce deterministic JSON output
 
 **Examples:**
 
@@ -583,7 +583,7 @@ fyaml -m preserve --convert-booleans
   - You want to preserve the authored key order from source files
   - The target tool or your workflow benefits from maintaining source structure
 
-**Note:** Both modes are deterministic (same input always produces same output) and suitable for version control and CI/CD. The difference is in key ordering (sorted vs. authored) and comment preservation.
+**Note:** Both modes are deterministic and suitable for version control and CI/CD. The difference is in key ordering (sorted vs. authored) and comment preservation.
 
 **See also:** [Usage Guide - Output Modes](usage.md#output-modes) for detailed documentation and examples.
 
