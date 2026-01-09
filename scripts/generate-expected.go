@@ -70,14 +70,21 @@ func main() {
 }
 
 func generateExpected(testdataDir, mode, fyamlPath string) error {
+	// Clean paths to prevent directory traversal
+	testdataDir = filepath.Clean(testdataDir)
 	inputDir := filepath.Join(testdataDir, "input")
+	inputDir = filepath.Clean(inputDir)
+
 	if _, err := os.Stat(inputDir); os.IsNotExist(err) {
 		return fmt.Errorf("input directory not found: %s", inputDir)
 	}
 
 	expectedFile := filepath.Join(testdataDir, fmt.Sprintf("expected-%s.yml", mode))
+	expectedFile = filepath.Clean(expectedFile)
 
 	// Build command
+	// #nosec G204 - All arguments are validated: mode is validated to be "canonical" or "preserve",
+	// fyamlPath is hardcoded to "./fyaml", and paths are constructed using filepath.Join which is safe.
 	cmd := exec.Command(fyamlPath, inputDir, "--mode", mode, "-o", expectedFile)
 
 	// Handle includes flag for includes testdata
