@@ -45,6 +45,8 @@ Examples:
   fyaml -o out.yml                  # Pack current directory to file
   fyaml --format json               # Output as JSON
   fyaml -o out.yml --check          # Verify output matches file
+  fyaml --check < expected.yml      # Verify output matches stdin
+  fyaml --check --output - < expected.yml  # Same as above (explicit)
   fyaml config/                     # Pack specific directory
   fyaml --dir pack                  # Pack directory named "pack" (avoids subcommand conflict)`,
 	Args: cobra.MaximumNArgs(1),
@@ -86,7 +88,7 @@ Examples:
 		}
 
 		if check {
-			return handleCheck(output, result)
+			return handleCheck(output, result, format)
 		}
 
 		return writeOutput(output, result)
@@ -108,9 +110,9 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&dir, "dir", "",
 		"Explicitly specify directory to pack (avoids subcommand conflicts)")
 	rootCmd.PersistentFlags().StringVarP(&output, "output", "o", "",
-		"Write output to file (default: stdout)")
+		"Write output to file, or '-' for stdin when used with --check (default: stdout)")
 	rootCmd.PersistentFlags().BoolVarP(&check, "check", "c", false,
-		"Compare generated output to --output, exit non-zero if different")
+		"Compare generated output to --output file or stdin (if --output omitted or set to '-'), exit non-zero if different")
 	rootCmd.PersistentFlags().StringVarP(&format, "format", "f", "yaml",
 		"Output format: yaml or json (default: yaml)")
 	rootCmd.PersistentFlags().BoolVar(&enableIncludes, "enable-includes", false,

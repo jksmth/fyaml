@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -55,18 +56,52 @@ func init() {
 	// available to packCmd. No need to define them here.
 }
 
-// handleCheck compares the generated output with an existing file.
+// handleCheck compares the generated output with an existing file or stdin.
 // Returns an error if the file cannot be read (except if it doesn't exist).
 // Exits with code 2 if the contents don't match.
-func handleCheck(output string, result []byte) error {
-	if output == "" {
-		return fmt.Errorf("--check requires --output to be specified")
+// format is used to normalize empty stdin/file content to match format-specific empty output.
+func handleCheck(output string, result []byte, format string) error {
+	var existing []byte
+	var err error
+
+	// Determine source: stdin or file
+	if output == "" || output == "-" {
+		// Check if stdin is a terminal (would block)
+		fi, statErr := os.Stdin.Stat()
+		if statErr == nil && (fi.Mode()&os.ModeCharDevice) != 0 {
+			// Stdin is a terminal
+			if output == "" {
+				return fmt.Errorf("--check without --output requires stdin input (use pipe or redirect)")
+			}
+			// output == "-" explicitly requested, but terminal - still error
+			return fmt.Errorf("--output - specified but stdin is a terminal (use pipe or redirect)")
+		}
+
+		// Read from stdin (pipe/file, safe even if empty)
+		existing, err = io.ReadAll(os.Stdin)
+		if err != nil {
+			return fmt.Errorf("failed to read from stdin: %w", err)
+		}
+	} else {
+		// Read from file (existing behavior)
+		// #nosec G304 - user-controlled paths are expected for CLI tools
+		existing, err = os.ReadFile(output)
+		if err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("failed to read output file: %w", err)
+		}
 	}
-	// #nosec G304 - user-controlled paths are expected for CLI tools
-	existing, err := os.ReadFile(output)
-	if err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("failed to read output file: %w", err)
+
+	// Normalize empty input to match format-specific empty output
+	// This ensures that empty stdin/file matches what pack() would produce for empty input
+	// JSON format returns "null\n" for empty output, YAML returns empty bytes
+	if len(existing) == 0 {
+		if format == "json" {
+			existing = []byte("null\n")
+		}
+		// YAML format returns empty bytes, so no change needed
 	}
+
+	// Compare contents
 	if string(existing) != string(result) {
 		os.Exit(2)
 	}

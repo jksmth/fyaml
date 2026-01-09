@@ -64,8 +64,8 @@ fyaml [global flags] [DIR] [flags]
 **Flags:**
 
 - `--dir string` - Explicitly specify directory to pack (avoids subcommand conflicts)
-- `-o, --output string` - Write output to file (default: stdout)
-- `-c, --check` - Compare generated output to `--output`, exit non-zero if different
+- `-o, --output string` - Write output to file, or `-` for stdin when used with `--check` (default: stdout)
+- `-c, --check` - Compare generated output to `--output` file or stdin (if `--output` omitted or set to `-`), exit non-zero if different
 - `-f, --format string` - Output format: `yaml` or `json` (default: `yaml`)
 - `-m, --mode string` - Output mode: `canonical` (sorted keys, no comments) or `preserve` (authored order and comments) (default: `canonical`)
 - `--indent int` - Number of spaces for indentation (default: `2`)
@@ -93,6 +93,12 @@ fyaml config/ --mode preserve -o output.yml
 
 # Verify output matches file
 fyaml -o output.yml --check
+
+# Verify output matches stdin
+fyaml --check < expected.yml
+
+# Verify output matches stdin (explicit)
+fyaml --check --output - < expected.yml
 
 # Pack directory with conflicting name (e.g., directory named "pack")
 fyaml --dir pack
