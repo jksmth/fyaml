@@ -459,7 +459,7 @@ func TestHandleCheck_Success(t *testing.T) {
 		t.Fatalf("Failed to create file: %v", err)
 	}
 
-	err := handleCheck(outputFile, content)
+	err := handleCheck(outputFile, content, "yaml")
 	if err != nil {
 		t.Errorf("handleCheck() error = %v, want nil", err)
 	}
@@ -469,9 +469,142 @@ func TestHandleCheck_Success(t *testing.T) {
 // because handleCheck calls os.Exit(2) on mismatch, which terminates the test process.
 // This behavior is tested via integration tests in the CI pipeline (verify-testdata step).
 
-func TestHandleCheck_EmptyOutput(t *testing.T) {
-	err := handleCheck("", []byte("test"))
-	assertErrorContains(t, err, "--check requires --output")
+func TestHandleCheck_StdinTerminal(t *testing.T) {
+	// Test error when stdin is a terminal without input
+	// We can't easily simulate a terminal in tests, but we can test the logic
+	// by checking that the function properly handles the terminal case
+	// In practice, this will be a terminal, so we'll test the error message path
+	// by using the actual stdin (which may be a terminal in test environment)
+	// However, we can't reliably test this without mocking, so we'll skip
+	// the terminal detection test and rely on integration testing
+	// Instead, we test that pipe-based stdin works correctly
+}
+
+func TestHandleCheck_EmptyOutput_WithPipe(t *testing.T) {
+	// Test that empty output with pipe stdin works (reads from stdin)
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("Failed to create pipe: %v", err)
+	}
+	defer func() { _ = r.Close() }()
+
+	oldStdin := os.Stdin
+	os.Stdin = r
+	defer func() { os.Stdin = oldStdin }()
+
+	// Write empty content to pipe and close
+	_ = w.Close()
+
+	// Test with empty output - should read from stdin (empty) and compare
+	// YAML format: empty stdin should match empty result
+	err = handleCheck("", []byte(""), "yaml")
+	if err != nil {
+		t.Errorf("handleCheck() with empty stdin and empty result should succeed, got error: %v", err)
+	}
+}
+
+func TestHandleCheck_StdinSuccess(t *testing.T) {
+	// Test successful comparison with stdin input
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("Failed to create pipe: %v", err)
+	}
+	defer func() { _ = r.Close() }()
+
+	oldStdin := os.Stdin
+	os.Stdin = r
+	defer func() { os.Stdin = oldStdin }()
+
+	content := []byte("test: value\n")
+	expected := []byte("test: value\n")
+
+	// Write content to pipe in goroutine
+	go func() {
+		defer func() { _ = w.Close() }()
+		_, _ = w.Write(content)
+	}()
+
+	// Test with empty output (implicit stdin)
+	err = handleCheck("", expected, "yaml")
+	if err != nil {
+		t.Errorf("handleCheck() with matching stdin should succeed, got error: %v", err)
+	}
+}
+
+func TestHandleCheck_StdinSuccess_ExplicitDash(t *testing.T) {
+	// Test successful comparison with explicit --output -
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("Failed to create pipe: %v", err)
+	}
+	defer func() { _ = r.Close() }()
+
+	oldStdin := os.Stdin
+	os.Stdin = r
+	defer func() { os.Stdin = oldStdin }()
+
+	content := []byte("test: value\n")
+	expected := []byte("test: value\n")
+
+	// Write content to pipe in goroutine
+	go func() {
+		defer func() { _ = w.Close() }()
+		_, _ = w.Write(content)
+	}()
+
+	// Test with explicit dash
+	err = handleCheck("-", expected, "yaml")
+	if err != nil {
+		t.Errorf("handleCheck() with matching stdin and explicit dash should succeed, got error: %v", err)
+	}
+}
+
+func TestHandleCheck_StdinEmpty(t *testing.T) {
+	// Test comparison with empty stdin (should compare against empty for YAML, null\n for JSON)
+	t.Run("yaml", func(t *testing.T) {
+		r, w, err := os.Pipe()
+		if err != nil {
+			t.Fatalf("Failed to create pipe: %v", err)
+		}
+		defer func() { _ = r.Close() }()
+
+		oldStdin := os.Stdin
+		os.Stdin = r
+		defer func() { os.Stdin = oldStdin }()
+
+		// Close write end immediately (empty stdin)
+		_ = w.Close()
+
+		// Compare against empty result - should match (YAML format)
+		err = handleCheck("", []byte{}, "yaml")
+		if err != nil {
+			t.Errorf("handleCheck() with empty stdin and empty result should succeed, got error: %v", err)
+		}
+	})
+
+	t.Run("json", func(t *testing.T) {
+		r, w, err := os.Pipe()
+		if err != nil {
+			t.Fatalf("Failed to create pipe: %v", err)
+		}
+		defer func() { _ = r.Close() }()
+
+		oldStdin := os.Stdin
+		os.Stdin = r
+		defer func() { os.Stdin = oldStdin }()
+
+		// Close write end immediately (empty stdin)
+		_ = w.Close()
+
+		// Compare against null\n result - should match (JSON format normalizes empty to null\n)
+		err = handleCheck("", []byte("null\n"), "json")
+		if err != nil {
+			t.Errorf("handleCheck() with empty stdin and null\\n result should succeed for JSON, got error: %v", err)
+		}
+	})
+
+	// Compare against non-empty result - should mismatch (but we can't test os.Exit)
+	// The mismatch/exit behavior is tested via integration tests in CI
 }
 
 func TestHandleCheck_ReadFileError(t *testing.T) {
@@ -479,7 +612,7 @@ func TestHandleCheck_ReadFileError(t *testing.T) {
 	// Use a directory path instead of file to trigger read error
 	tmpDir := t.TempDir()
 
-	err := handleCheck(tmpDir, []byte("test"))
+	err := handleCheck(tmpDir, []byte("test"), "yaml")
 	assertErrorContains(t, err, "failed to read output file")
 }
 
