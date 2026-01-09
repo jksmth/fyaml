@@ -1006,6 +1006,41 @@ config/
   item2.yml    # Contains the second entity config
 ```
 
+### Non-String Map Keys
+
+YAML allows map keys to be non-string types (numbers, booleans, etc.), but **fyaml normalizes all keys to strings** in certain modes:
+
+- **Canonical mode** (default): All non-string keys are converted to strings during processing. For example, `123: value` becomes `"123": value`.
+- **Preserve mode** (`--mode preserve`): Non-string keys are preserved in YAML output, but **must be converted to strings for JSON output** (JSON format requirement).
+
+**Example:**
+
+```yaml
+# Input file
+123: "numeric key"
+true: "boolean key"
+```
+
+**Canonical mode output:**
+```yaml
+"123": numeric key
+"true": boolean key
+```
+
+**Preserve mode output (YAML):**
+```yaml
+123: numeric key
+true: boolean key
+```
+
+**Preserve mode output (JSON):**
+```json
+{
+  "123": "numeric key",
+  "true": "boolean key"
+}
+```
+
 ### Converting `on`/`off` and `yes`/`no` to `true`/`false`
 
 If your YAML files use `on`/`off` or `yes`/`no` for boolean values, fyaml will treat them as strings by default. This can cause issues if your tools expect actual boolean values.
