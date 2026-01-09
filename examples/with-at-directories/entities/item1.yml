@@ -2,6 +2,4 @@ entity:
   id: example1
   attributes:
     name: first item
-    tags:
-      - tag1
-      - tag2
+    tags: []

@@ -1,0 +1,4 @@
+# Shared configuration for all entities
+shared_config:
+  enabled: true # Feature flag
+  timeout: 30 # Timeout in seconds

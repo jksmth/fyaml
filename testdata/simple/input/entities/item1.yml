@@ -1,8 +1,9 @@
-entity:
-  id: example1
+# Entity definition for item1
+entity:  # Main entity object
+  id: example1  # Unique identifier
   attributes:
-    name: sample name
-    enabled: true
+    name: sample name  # Display name
+    enabled: true  # Whether entity is active
     settings:
-      timeout: 300
-      retries: 3
+      timeout: 300  # Timeout in seconds
+      retries: 3  # Number of retry attempts

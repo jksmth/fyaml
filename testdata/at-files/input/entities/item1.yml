@@ -1,7 +1,8 @@
-entity:
-  id: example1
+# Entity definition for item1
+entity:  # Main entity object
+  id: example1  # Unique identifier
   attributes:
-    name: sample name
+    name: sample name  # Display name
     actions:
-      - type: execute
-        command: build.sh
+      - type: execute  # Action type
+        command: build.sh  # Command to execute

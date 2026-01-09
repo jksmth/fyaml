@@ -1,3 +1,4 @@
-runtime:
-  type: container
-  image: base:latest
+# Shared runtime configuration for all entities
+runtime:  # Runtime settings
+  type: container  # Container type
+  image: base:latest  # Base image to use

@@ -1,0 +1,4 @@
+# Override settings
+# These override shared settings
+shared:
+  timeout: 60 # Overridden timeout value

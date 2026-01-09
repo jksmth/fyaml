@@ -1,0 +1,5 @@
+# Second entity item
+entity:
+  id: example2 # Unique identifier
+  name: Second Item # Display name
+# Footer comment for item2

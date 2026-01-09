@@ -3,4 +3,4 @@ entity:
   attributes:
     name: second item
     tags:
-      - tag3
+      - tag1

@@ -1,12 +1,13 @@
-entity:
-  id: example1
+# Entity definition with includes
+entity:  # Main entity object
+  id: example1  # Unique identifier
   attributes:
-    description: A simple entity that imports from a file when packed.
-  config: !include ../shared/defaults.yml
+    description: A simple entity that imports from a file when packed.  # Entity description
+  config: !include ../shared/defaults.yml  # Include shared config
   steps:
-    - run:
-        name: Hello Greeting
-        command: !include-text ../scripts/hello.sh
-    - run:
-        name: Validate
-        command: <<include(../scripts/validate.sh)>>
+    - run:  # First step
+        name: Hello Greeting  # Step name
+        command: !include-text ../scripts/hello.sh  # Include script content
+    - run:  # Second step
+        name: Validate  # Step name
+        command: <<include(../scripts/validate.sh)>>  # Include script with extension

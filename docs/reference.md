@@ -67,6 +67,7 @@ fyaml [global flags] [DIR] [flags]
 - `-o, --output string` - Write output to file (default: stdout)
 - `-c, --check` - Compare generated output to `--output`, exit non-zero if different
 - `-f, --format string` - Output format: `yaml` or `json` (default: `yaml`)
+- `-m, --mode string` - Output mode: `canonical` (sorted keys, no comments) or `preserve` (authored order and comments) (default: `canonical`)
 - `--indent int` - Number of spaces for indentation (default: `2`)
 - `--enable-includes` - Process `<<include(file)>>` directives (extension)
 - `--convert-booleans` - Convert unquoted YAML 1.1 booleans to `true`/`false`
@@ -86,6 +87,9 @@ fyaml -o output.yml
 
 # Output as JSON
 fyaml config/ --format json -o output.json
+
+# Preserve authored order and comments
+fyaml config/ --mode preserve -o output.yml
 
 # Verify output matches file
 fyaml -o output.yml --check
@@ -507,6 +511,81 @@ entity:
 **Note:** fyaml always outputs YAML 1.2 format where only `true` and `false` are booleans.
 
 **See also:** [Usage Guide - Converting on/off and yes/no to true/false](usage.md#converting-onoff-and-yesno-to-truefalse) for more details and examples.
+
+### `-m, --mode`
+
+Select the output mode that controls key ordering and comment preservation.
+
+**Usage:**
+
+```bash
+fyaml --mode canonical    # Default: sorted keys, no comments
+fyaml -m preserve         # Preserve order and comments
+```
+
+**Default:** `canonical`
+
+**Valid Values:**
+
+- `canonical` (default) - Keys are sorted alphabetically, comments are removed
+- `preserve` - Maintains authored key order and preserves comments
+
+**Behavior:**
+
+**Canonical Mode (Default):**
+
+- All map keys are sorted alphabetically
+- Comments are removed from output
+- Deterministic: identical input always produces identical output
+- Ideal for tools that don't care about key ordering or comments, and when sorted keys make diffs more readable
+
+**Preserve Mode:**
+
+- Keys maintain the order they appear in source files
+- Comments are preserved in YAML output
+- Deterministic: identical input always produces identical output
+- Ideal for maintaining documentation in comments and preserving the authored structure from source files
+
+**Interaction with JSON Output:**
+
+- **Key order**: In preserve mode, key order is maintained in JSON output (JSON preserves object key order)
+- **Comments**: JSON doesn't support comments, so comments are lost regardless of mode
+- **Determinism**: Both modes produce deterministic JSON output
+
+**Examples:**
+
+```bash
+# Canonical mode (default)
+fyaml
+fyaml --mode canonical
+
+# Preserve mode
+fyaml --mode preserve
+fyaml -m preserve
+
+# Preserve mode with JSON output (key order preserved, comments lost)
+fyaml --mode preserve --format json -o output.json
+
+# Combine with other flags
+fyaml config/ --mode preserve --enable-includes -o output.yml
+fyaml -m preserve --convert-booleans
+```
+
+**When to Use Each Mode:**
+
+- **Use canonical mode when:**
+  - You need sorted keys (makes diffs more readable)
+  - The target tool doesn't care about key ordering or comments
+  - You prefer a consistent, predictable key order
+
+- **Use preserve mode when:**
+  - You want to maintain documentation in comments
+  - You want to preserve the authored key order from source files
+  - The target tool or your workflow benefits from maintaining source structure
+
+**Note:** Both modes are deterministic (same input always produces same output) and suitable for version control and CI/CD. The difference is in key ordering (sorted vs. authored) and comment preservation.
+
+**See also:** [Usage Guide - Output Modes](usage.md#output-modes) for detailed documentation and examples.
 
 ## Exit Codes
 

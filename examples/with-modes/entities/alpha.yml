@@ -1,0 +1,7 @@
+# This entity has a name that sorts earlier alphabetically
+entity:
+  id: alpha
+  attributes:
+    name: Alpha
+    tags:
+      - first

@@ -10,7 +10,7 @@
 
 📖 [Documentation](https://jksmth.github.io/fyaml/) • 🚀 [Installation](https://jksmth.github.io/fyaml/installation/) • 📚 [Usage Guide](https://jksmth.github.io/fyaml/usage/) • 🐛 [Issues](https://github.com/jksmth/fyaml/issues)
 
-**fyaml** compiles a directory tree of YAML or JSON files into a single deterministic document.
+**fyaml** compiles a directory tree of YAML or JSON files into a single deterministic document (with optional comment and key order preservation).
 
 It exists to solve a common, recurring problem:
 
@@ -57,6 +57,7 @@ Run:
 fyaml                    # Pack current directory
 fyaml config/            # Pack specific directory
 fyaml -o output.yml      # Pack current directory to file
+fyaml -m preserve        # Preserve authored order and comments
 ```
 
 Produces:
@@ -111,11 +112,27 @@ There is no logic, templating, or execution model involved.
 fyaml is intentionally limited in scope to keep output predictable and diffs trustworthy.
 
 - **Organize as you want** - Split large configs into small, focused files organized in directories
-- **Predictable output** - Identical input always produces identical output, making diffs meaningful
+- **Predictable output** - Identical input always produces identical output, making diffs meaningful. Choose between canonical mode (sorted keys, no comments) or preserve mode (authored order and comments)
 - **No surprises** - Pure structure compilation with no logic, templating, or execution model
 - **Build-time tool** - Runs as a build step, producing the single file your tools expect
 
 For technical details on how directory structure maps to YAML, see [How It Works](https://jksmth.github.io/fyaml/#how-it-works).
+
+### Output Modes
+
+fyaml supports two output modes:
+
+- **Canonical mode (default)** - Keys are sorted alphabetically and comments are removed. Sorted keys make diffs more readable.
+- **Preserve mode** - Maintains the authored key order and preserves comments. Useful when you want to keep documentation in comments or preserve the structure from source files.
+
+Both modes are deterministic (same input always produces same output). Use `--mode` (or `-m`) to select a mode:
+
+```bash
+fyaml --mode canonical    # Default: sorted keys, no comments
+fyaml -m preserve         # Preserve order and comments
+```
+
+For more details, see [Usage Guide - Output Modes](https://jksmth.github.io/fyaml/usage/#output-modes).
 
 ---
 
@@ -186,6 +203,9 @@ fyaml /path/to/config -o output.yml
 # Output as JSON
 fyaml /path/to/config --format json -o output.json
 
+# Preserve authored order and comments
+fyaml /path/to/config --mode preserve -o output.yml
+
 # Check if output matches existing file
 fyaml /path/to/config -o output.yml --check
 
@@ -233,7 +253,7 @@ It's a small, focused tool that:
 
 **Extensions:** fyaml includes optional extensions (like JSON support) that enhance functionality while maintaining spec compliance. See the [Extensions](#extensions) section for details.
 
-**Implementation Note:** fyaml sorts all map keys alphabetically to ensure deterministic output. The FYAML specification does not specify key ordering, so this is an implementation choice that provides reproducibility and makes output suitable for version control and comparison.
+**Implementation Note:** In canonical mode (default), fyaml sorts all map keys alphabetically to ensure deterministic output. Preserve mode maintains authored key order and comments. Both modes are deterministic and suitable for version control and comparison. The FYAML specification does not specify key ordering, so this is an implementation choice that provides reproducibility.
 
 ## Extensions
 

@@ -1,0 +1,5 @@
+# Entity from @group2 - @ directories are processed in alphabetical order
+entity:
+  id: item-a
+  attributes:
+    name: Item A

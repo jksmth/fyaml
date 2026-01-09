@@ -1,0 +1,15 @@
+entities:
+  item1:
+    # Entity definition for item1
+    entity: # Main entity object
+      id: example1 # Unique identifier
+      attributes:
+        name: sample name # Display name
+        actions:
+          - type: execute # Action type
+            command: hello.sh # Command to execute
+# Shared root-level configuration
+api_version: v1 # API version
+metadata: # Metadata section
+  created: 2024-01-01 # Creation date
+  author: system # Author name

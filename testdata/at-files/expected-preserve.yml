@@ -1,0 +1,14 @@
+entities:
+  # Shared runtime configuration for all entities
+  runtime: # Runtime settings
+    type: container # Container type
+    image: base:latest # Base image to use
+  item1:
+    # Entity definition for item1
+    entity: # Main entity object
+      id: example1 # Unique identifier
+      attributes:
+        name: sample name # Display name
+        actions:
+          - type: execute # Action type
+            command: build.sh # Command to execute

@@ -1,10 +1,11 @@
-defaults: &defaults
-  timeout: 30
-  retries: 3
+# Default configuration using YAML anchors
+defaults: &defaults  # Anchor definition
+  timeout: 30  # Timeout in seconds
+  retries: 3  # Number of retries
 
-entity:
-  <<: *defaults
-  id: example1
+entity:  # Entity using anchor
+  <<: *defaults  # Merge anchor values
+  id: example1  # Unique identifier
   attributes:
-    name: sample name
-    tags: []
+    name: sample name  # Display name
+    tags: []  # Empty tags list
