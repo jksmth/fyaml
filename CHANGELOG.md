@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.10.0](https://github.com/jksmth/fyaml/compare/v1.9.1...v1.10.0) (2026-01-09)
+
+
+### Features
+
+* add shallow and deep merge strategies ([#62](https://github.com/jksmth/fyaml/issues/62)) ([ce94ac6](https://github.com/jksmth/fyaml/commit/ce94ac6fdb43a2f4384dea77490a6c027f718e96))
+
 ## [1.9.1](https://github.com/jksmth/fyaml/compare/v1.9.0...v1.9.1) (2026-01-09)
 
 
