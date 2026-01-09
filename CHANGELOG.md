@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.0](https://github.com/jksmth/fyaml/compare/v1.8.0...v1.9.0) (2026-01-09)
+
+
+### Features
+
+* **mode:** add preserve mode for comment and key order preservation ([#56](https://github.com/jksmth/fyaml/issues/56)) ([b6ea4af](https://github.com/jksmth/fyaml/commit/b6ea4afa2a43a10d63e76744d6d29565ec422aae))
+
 ## [1.8.0](https://github.com/jksmth/fyaml/compare/v1.7.0...v1.8.0) (2026-01-04)
 
 
