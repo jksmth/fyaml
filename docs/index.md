@@ -1,6 +1,6 @@
 # fyaml Documentation
 
-**fyaml** compiles a directory tree of YAML or JSON files into a single deterministic document.
+**fyaml** compiles a directory tree of YAML or JSON files into a single deterministic document (with optional comment and key order preservation).
 
 ## What is fyaml?
 
@@ -30,9 +30,10 @@ fyaml -o output.yml
 
 - **Directory structure → YAML structure**: Maps directory structure directly to YAML structure
 - **Split large configs**: Break down thousands of lines into small, focused files
-- **Deterministic output**: Identical input always produces identical output
+- **Deterministic output**: Identical input always produces identical output. Choose between canonical mode (sorted keys, no comments) or preserve mode (authored order and comments)
 - **No logic or templating**: Pure structure compilation, no execution model
 - **JSON support**: Accepts JSON input and can output JSON
+- **Output Modes**: Canonical mode (default) sorts keys alphabetically and removes comments for deterministic output. Preserve mode maintains authored key order and preserves comments, useful for documentation and controlling output ordering via `@` directories
 
 ## How It Works
 
@@ -40,7 +41,7 @@ fyaml -o output.yml
 - File names (without extension) become nested keys
 - Files starting with `@` merge into the parent directory
 - Root-level files merge directly into the output
-- Output is deterministic with keys sorted alphabetically
+- Output is deterministic. In canonical mode (default), keys are sorted alphabetically. Preserve mode maintains authored order and comments
 
 ## Example
 

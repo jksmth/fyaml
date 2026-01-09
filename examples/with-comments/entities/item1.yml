@@ -1,0 +1,5 @@
+# First entity item
+entity:
+  id: example1 # Unique identifier
+  name: First Item # Display name
+# Footer comment for item1

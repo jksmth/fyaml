@@ -1,0 +1,25 @@
+entities:
+  item1:
+    # Entity definition with includes
+    entity: # Main entity object
+      id: example1 # Unique identifier
+      attributes:
+        description: A simple entity that imports from a file when packed. # Entity description
+      config:
+        timeout: 30
+        retries: 3
+      steps:
+        - run: # First step
+            name: Hello Greeting # Step name
+            command: !!str | # Include script content
+              #!/bin/bash
+              echo "Hello World"
+        - run: # Second step
+            name: Validate # Step name
+            command: | # Include script with extension
+              #!/bin/bash
+              echo "Validating..."
+shared:
+  defaults:
+    timeout: 30
+    retries: 3

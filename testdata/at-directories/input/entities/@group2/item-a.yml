@@ -1,0 +1,8 @@
+# Entity from @group2 - appears second due to @directory ordering
+# Note: item-a would sort first alphabetically, but @group2 comes after @group1
+entity:  # Main entity object
+  id: example-a  # Unique identifier
+  attributes:
+    name: item a  # Display name
+    tags:
+      - tag-a1  # First tag

@@ -1,0 +1,9 @@
+# Entity from @group1 - appears first due to @directory ordering
+# Note: item-z would sort last alphabetically, but @group1 order takes precedence
+entity:  # Main entity object
+  id: example-z  # Unique identifier
+  attributes:
+    name: item z  # Display name
+    tags:
+      - tag-z1  # First tag
+      - tag-z2  # Second tag

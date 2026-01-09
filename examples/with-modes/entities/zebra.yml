@@ -1,0 +1,7 @@
+# This entity has a name that sorts later alphabetically
+entity:
+  id: zebra
+  attributes:
+    name: Zebra
+    tags:
+      - animal

@@ -1,0 +1,5 @@
+# Database configuration
+# This is important for production
+database:
+  host: localhost # Database hostname
+  port: 5432 # Database port

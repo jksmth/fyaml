@@ -1,4 +1,5 @@
-api_version: v1
-metadata:
-  created: 2024-01-01
-  author: system
+# Shared root-level configuration
+api_version: v1  # API version
+metadata:  # Metadata section
+  created: 2024-01-01  # Creation date
+  author: system  # Author name

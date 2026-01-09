@@ -1,0 +1,21 @@
+entities:
+  item1:
+    # Entity definition for item1
+    entity: # Main entity object
+      id: example1 # Unique identifier
+      attributes:
+        name: sample name # Display name
+        enabled: true # Whether entity is active
+        settings:
+          timeout: 300 # Timeout in seconds
+          retries: 3 # Number of retry attempts
+  item2:
+    # Entity definition for item2
+    entity: # Main entity object
+      id: example2 # Unique identifier
+      attributes:
+        name: another name # Display name
+        enabled: true # Whether entity is active
+        settings:
+          timeout: 600 # Timeout in seconds
+          retries: 5 # Number of retry attempts

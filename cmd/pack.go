@@ -22,6 +22,7 @@ type PackOptions struct {
 	EnableIncludes  bool   // Process <<include(file)>> directives
 	ConvertBooleans bool   // Convert unquoted YAML 1.1 booleans to true/false
 	Indent          int    // Number of spaces for indentation
+	Mode            string // Marshaling mode: canonical or preserve
 }
 
 // Flag variables are now defined in root.go and shared between root and pack commands
@@ -132,6 +133,11 @@ func pack(opts PackOptions, log logger.Logger) ([]byte, error) {
 		return nil, fmt.Errorf("invalid format: %s (must be 'yaml' or 'json')", opts.Format)
 	}
 
+	// Validate mode
+	if opts.Mode != "" && opts.Mode != "canonical" && opts.Mode != "preserve" {
+		return nil, fmt.Errorf("invalid mode: %s (must be 'canonical' or 'preserve')", opts.Mode)
+	}
+
 	// Validate indent
 	if opts.Indent < 1 {
 		return nil, fmt.Errorf("invalid indent: %d (must be positive)", opts.Indent)
@@ -154,11 +160,18 @@ func pack(opts PackOptions, log logger.Logger) ([]byte, error) {
 		return handleEmptyOutput(opts.Dir, opts.Format, log)
 	}
 
+	// Parse mode (default to canonical)
+	mode := filetree.ModeCanonical
+	if opts.Mode == "preserve" {
+		mode = filetree.ModePreserve
+	}
+
 	// Create processing options
 	procOpts := &filetree.Options{
 		EnableIncludes:  opts.EnableIncludes,
 		PackRoot:        absDir,
 		ConvertBooleans: opts.ConvertBooleans,
+		Mode:            mode,
 		Logger:          log,
 	}
 
@@ -192,11 +205,19 @@ func handleEmptyOutput(dir, format string, log logger.Logger) ([]byte, error) {
 }
 
 // marshalToFormat marshals data to the specified format with the given indent.
+// data can be *yaml.Node (preserve mode) or interface{} (canonical mode).
 func marshalToFormat(data interface{}, format string, indent int) ([]byte, error) {
 	switch format {
 	case "json":
+		// JSON doesn't support comments - if we got a yaml.Node, decode it first
+		jsonData := data
+		if node, ok := data.(*yaml.Node); ok {
+			if err := node.Decode(&jsonData); err != nil {
+				return nil, fmt.Errorf("failed to decode node for JSON: %w", err)
+			}
+		}
 		indentStr := strings.Repeat(" ", indent)
-		return json.MarshalIndent(data, "", indentStr)
+		return json.MarshalIndent(jsonData, "", indentStr)
 	case "yaml":
 		var buf bytes.Buffer
 		enc := yaml.NewEncoder(&buf)

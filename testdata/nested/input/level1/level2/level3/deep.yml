@@ -1,6 +1,7 @@
-entity:
-  id: example1
+# Deeply nested entity definition
+entity:  # Main entity object
+  id: example1  # Unique identifier
   attributes:
-    deep:
-      nested:
-        value: true
+    deep:  # Deep nesting level
+      nested:  # Nested structure
+        value: true  # Boolean value

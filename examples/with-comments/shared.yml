@@ -1,0 +1,6 @@
+# Global shared settings
+# These apply to all components
+shared:
+  environment: production # Environment name
+  region: us-east-1 # AWS region
+  timeout: 30 # Connection timeout

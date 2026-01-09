@@ -1,0 +1,40 @@
+entities:
+  item-z:
+    # Entity from @group1 - appears first due to @directory ordering
+    # Note: item-z would sort last alphabetically, but @group1 order takes precedence
+    entity: # Main entity object
+      id: example-z # Unique identifier
+      attributes:
+        name: item z # Display name
+        tags:
+          - tag-z1 # First tag
+          - tag-z2 # Second tag
+  item-a:
+    # Entity from @group2 - appears second due to @directory ordering
+    # Note: item-a would sort first alphabetically, but @group2 comes after @group1
+    entity: # Main entity object
+      id: example-a # Unique identifier
+      attributes:
+        name: item a # Display name
+        tags:
+          - tag-a1 # First tag
+  item-m:
+    # Entity from @group3 - appears third due to @directory ordering
+    # Note: item-m would sort middle alphabetically, but @group3 comes after @group2
+    entity: # Main entity object
+      id: example-m # Unique identifier
+      attributes:
+        name: item m # Display name
+        tags:
+          - tag-m1 # First tag
+          - tag-m2 # Second tag
+          - tag-m3 # Third tag
+  item-root:
+    # Entity at root level - appears last (after all @directories)
+    entity: # Main entity object
+      id: example-root # Unique identifier
+      attributes:
+        name: root item # Display name
+        tags:
+          - tag-root1 # First tag
+          - tag-root2 # Second tag

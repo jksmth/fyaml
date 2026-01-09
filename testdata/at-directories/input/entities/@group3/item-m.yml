@@ -1,0 +1,10 @@
+# Entity from @group3 - appears third due to @directory ordering
+# Note: item-m would sort middle alphabetically, but @group3 comes after @group2
+entity:  # Main entity object
+  id: example-m  # Unique identifier
+  attributes:
+    name: item m  # Display name
+    tags:
+      - tag-m1  # First tag
+      - tag-m2  # Second tag
+      - tag-m3  # Third tag

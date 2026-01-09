@@ -1,0 +1,17 @@
+alpha:
+  file:
+    entity:
+      id: example1
+      attributes:
+        value: first
+zebra:
+  alpha:
+    entity:
+      id: example2
+      attributes:
+        value: alpha
+  beta:
+    entity:
+      id: example3
+      attributes:
+        value: beta

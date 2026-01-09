@@ -25,6 +25,7 @@ var (
 	enableIncludes  bool
 	convertBooleans bool
 	indent          int
+	mode            string
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -74,6 +75,7 @@ Examples:
 			EnableIncludes:  enableIncludes,
 			ConvertBooleans: convertBooleans,
 			Indent:          indent,
+			Mode:            mode,
 		}
 
 		result, err := pack(opts, log)
@@ -115,6 +117,8 @@ func init() {
 		"Convert unquoted YAML 1.1 boolean values (on/off, yes/no) to true/false")
 	rootCmd.PersistentFlags().IntVar(&indent, "indent", 2,
 		"Number of spaces for indentation")
+	rootCmd.PersistentFlags().StringVarP(&mode, "mode", "m", "canonical",
+		"Output mode: 'canonical' (sorted keys, no comments) or 'preserve' (authored order and comments)")
 
 	// Version flag
 	rootCmd.Flags().BoolP("version", "V", false,

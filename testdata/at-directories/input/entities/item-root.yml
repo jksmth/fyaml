@@ -1,0 +1,8 @@
+# Entity at root level - appears last (after all @directories)
+entity:  # Main entity object
+  id: example-root  # Unique identifier
+  attributes:
+    name: root item  # Display name
+    tags:
+      - tag-root1  # First tag
+      - tag-root2  # Second tag

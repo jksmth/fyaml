@@ -1,0 +1,33 @@
+entities:
+  item-a:
+    entity:
+      attributes:
+        name: item a
+        tags:
+          - tag-a1
+      id: example-a
+  item-m:
+    entity:
+      attributes:
+        name: item m
+        tags:
+          - tag-m1
+          - tag-m2
+          - tag-m3
+      id: example-m
+  item-root:
+    entity:
+      attributes:
+        name: root item
+        tags:
+          - tag-root1
+          - tag-root2
+      id: example-root
+  item-z:
+    entity:
+      attributes:
+        name: item z
+        tags:
+          - tag-z1
+          - tag-z2
+      id: example-z
