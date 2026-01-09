@@ -23,6 +23,7 @@ type PackOptions struct {
 	ConvertBooleans bool   // Convert unquoted YAML 1.1 booleans to true/false
 	Indent          int    // Number of spaces for indentation
 	Mode            string // Marshaling mode: canonical or preserve
+	MergeStrategy   string // Merge strategy: shallow or deep
 }
 
 // Flag variables are now defined in root.go and shared between root and pack commands
@@ -138,6 +139,11 @@ func pack(opts PackOptions, log logger.Logger) ([]byte, error) {
 		return nil, fmt.Errorf("invalid mode: %s (must be 'canonical' or 'preserve')", opts.Mode)
 	}
 
+	// Validate merge strategy
+	if opts.MergeStrategy != "" && opts.MergeStrategy != "shallow" && opts.MergeStrategy != "deep" {
+		return nil, fmt.Errorf("invalid merge strategy: %s (must be 'shallow' or 'deep')", opts.MergeStrategy)
+	}
+
 	// Validate indent
 	if opts.Indent < 1 {
 		return nil, fmt.Errorf("invalid indent: %d (must be positive)", opts.Indent)
@@ -166,12 +172,19 @@ func pack(opts PackOptions, log logger.Logger) ([]byte, error) {
 		mode = filetree.ModePreserve
 	}
 
+	// Parse merge strategy (default to shallow)
+	mergeStrategy := filetree.MergeShallow
+	if opts.MergeStrategy == "deep" {
+		mergeStrategy = filetree.MergeDeep
+	}
+
 	// Create processing options
 	procOpts := &filetree.Options{
 		EnableIncludes:  opts.EnableIncludes,
 		PackRoot:        absDir,
 		ConvertBooleans: opts.ConvertBooleans,
 		Mode:            mode,
+		MergeStrategy:   mergeStrategy,
 		Logger:          log,
 	}
 

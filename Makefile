@@ -50,6 +50,8 @@ verify-examples: build ## verify example directories
 	@./fyaml examples/basic > /dev/null && echo "✓ examples/basic" || (echo "✗ examples/basic failed" && exit 1)
 	@./fyaml examples/with-at-files > /dev/null && echo "✓ examples/with-at-files" || (echo "✗ examples/with-at-files failed" && exit 1)
 	@./fyaml examples/with-includes --enable-includes > /dev/null && echo "✓ examples/with-includes" || (echo "✗ examples/with-includes failed" && exit 1)
+	@./fyaml examples/with-merge-strategies --merge shallow > /dev/null && echo "✓ examples/with-merge-strategies (shallow)" || (echo "✗ examples/with-merge-strategies (shallow) failed" && exit 1)
+	@./fyaml examples/with-merge-strategies --merge deep > /dev/null && echo "✓ examples/with-merge-strategies (deep)" || (echo "✗ examples/with-merge-strategies (deep) failed" && exit 1)
 
 verify-testdata: verify-testdata-canonical verify-testdata-preserve ## verify testdata matches expected output for both modes
 

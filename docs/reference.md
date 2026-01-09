@@ -587,6 +587,100 @@ fyaml -m preserve --convert-booleans
 
 **See also:** [Usage Guide - Output Modes](usage.md#output-modes) for detailed documentation and examples.
 
+### `--merge`
+
+Control how maps are merged when multiple files contribute to the same key.
+
+**Usage:**
+
+```bash
+fyaml --merge shallow    # Default: later files completely replace earlier ones
+fyaml --merge deep       # Recursively merge nested maps
+```
+
+**Default:** `shallow`
+
+**Valid Values:**
+
+- `shallow`: Later file's value completely replaces earlier one (default, backward compatible)
+- `deep`: Nested maps are merged recursively, only replacing values at the leaf level
+
+**When to use:**
+
+- **Shallow merge** (default): Use when you want later files to completely override earlier ones. This is the default behavior and maintains backward compatibility.
+- **Deep merge**: Use when you want to combine configuration from multiple files, preserving values from earlier files that aren't overridden.
+
+**Behavior:**
+
+- **Shallow merge**: If two files define the same key, the entire value from the later file replaces the earlier one, even for nested maps.
+- **Deep merge**: If both sides are maps, they are merged recursively. Non-map values or type mismatches use shallow behavior (replace).
+
+**Important Notes:**
+
+- Arrays always use "replace" behavior (last wins) even in deep merge mode
+- Deep merge only affects nested maps - scalar values and arrays are always replaced
+- Applies to all merging scenarios: root-level files, `@` files, and `@` directories
+
+**Examples:**
+
+```bash
+# Use shallow merge (default)
+fyaml config/
+
+# Use deep merge to combine nested configurations
+fyaml config/ --merge deep
+
+# Combine with other flags
+fyaml config/ --merge deep --mode preserve
+fyaml config/ --merge deep --format json
+```
+
+**Example transformation:**
+
+Input files:
+
+**`@base.yml`:**
+
+```yaml
+config:
+  setting1: value1
+  nested:
+    a: 1
+    b: 2
+```
+
+**`@override.yml`:**
+
+```yaml
+config:
+  setting2: value2
+  nested:
+    c: 3
+```
+
+Output with `--merge shallow` (default):
+
+```yaml
+config:
+  setting2: value2
+  nested:
+    c: 3
+```
+
+Output with `--merge deep`:
+
+```yaml
+config:
+  setting1: value1
+  setting2: value2
+  nested:
+    a: 1
+    b: 2
+    c: 3
+```
+
+**See also:** [Usage Guide - Merge Behavior](usage.md#merge-behavior) for more details and examples.
+
 ## Exit Codes
 
 fyaml uses the following exit codes:

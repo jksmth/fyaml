@@ -191,9 +191,19 @@ fyaml --format json --mode preserve    # Key order preserved, comments lost
 
 ### Merge Behavior
 
-When multiple files contribute to the same key (e.g., root-level files, `@` files, or `@` directories), fyaml uses **shallow merge** semantics: the later file's value completely replaces the earlier one. Nested maps are not merged recursively.
+When multiple files contribute to the same key (e.g., root-level files, `@` files, or `@` directories), fyaml supports two merge strategies:
 
-**Example:**
+- **Shallow merge** (default): The later file's value completely replaces the earlier one. Nested maps are not merged recursively.
+- **Deep merge**: Nested maps are merged recursively, only replacing values at the leaf level. Non-map values are replaced (shallow behavior).
+
+Use the `--merge` flag to control merge behavior:
+
+```bash
+fyaml --merge shallow    # Default: later files completely replace earlier ones
+fyaml --merge deep       # Recursively merge nested maps
+```
+
+**Shallow Merge Example (default):**
 
 If you have two files that both define `config`:
 
@@ -214,9 +224,17 @@ config:
     port: 3306
 ```
 
-The result is `config: {database: {port: 3306}}` (the entire nested map from `@shared2.yml` replaces the one from `@shared1.yml`), not `config: {database: {host: localhost, port: 3306}}`.
+With `--merge shallow` (default), the result is `config: {database: {port: 3306}}` (the entire nested map from `@shared2.yml` replaces the one from `@shared1.yml`), not `config: {database: {host: localhost, port: 3306}}`.
 
-This behavior applies to all merging scenarios: root-level files, `@` files, and `@` directories.
+**Deep Merge Example:**
+
+With the same files and `--merge deep`, the result is `config: {database: {host: localhost, port: 3306}}` (nested maps are merged recursively).
+
+**Important Notes:**
+
+- Arrays always use "replace" behavior (last wins) even in deep merge mode
+- If both sides are maps, they are merged recursively in deep mode. Otherwise, the source replaces the target (shallow behavior)
+- This behavior applies to all merging scenarios: root-level files, `@` files, and `@` directories
 
 ### Basic Structure
 
@@ -1008,10 +1026,10 @@ config/
 
 ### Non-String Map Keys
 
-YAML allows map keys to be non-string types (numbers, booleans, etc.), but **fyaml normalizes all keys to strings** in certain modes:
+YAML allows map keys to be non-string types (numbers, booleans, etc.). **fyaml preserves these key types for YAML output** but normalizes them to strings for JSON output (JSON format requirement).
 
-- **Canonical mode** (default): All non-string keys are converted to strings during processing. For example, `123: value` becomes `"123": value`.
-- **Preserve mode** (`--mode preserve`): Non-string keys are preserved in YAML output, but **must be converted to strings for JSON output** (JSON format requirement).
+- **YAML output** (both modes): Non-string keys are preserved. For example, `123: value` stays as `123: value`.
+- **JSON output** (both modes): Non-string keys are converted to strings. For example, `123: value` becomes `"123": value`.
 
 **Example:**
 
@@ -1021,25 +1039,23 @@ YAML allows map keys to be non-string types (numbers, booleans, etc.), but **fya
 true: "boolean key"
 ```
 
-**Canonical mode output:**
-```yaml
-"123": numeric key
-"true": boolean key
-```
+**YAML output (canonical or preserve mode):**
 
-**Preserve mode output (YAML):**
 ```yaml
 123: numeric key
 true: boolean key
 ```
 
-**Preserve mode output (JSON):**
+**JSON output (canonical or preserve mode):**
+
 ```json
 {
   "123": "numeric key",
   "true": "boolean key"
 }
 ```
+
+**Note:** When non-string keys are present, canonical mode sorts them in type order: booleans first, then numbers (sorted numerically), then strings (sorted alphabetically).
 
 ### Converting `on`/`off` and `yes`/`no` to `true`/`false`
 

@@ -1,0 +1,4 @@
+config:
+  setting3: value3
+  nested:
+    c: 3

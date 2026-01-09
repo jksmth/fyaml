@@ -2,3 +2,6 @@ enabled: on
 disabled: off
 maybe: "yes"
 name: on_call_service
+# Boolean keys (YAML 1.1 style)
+on: feature enabled
+off: feature disabled

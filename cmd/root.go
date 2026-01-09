@@ -26,6 +26,7 @@ var (
 	convertBooleans bool
 	indent          int
 	mode            string
+	mergeStrategy   string
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -76,6 +77,7 @@ Examples:
 			ConvertBooleans: convertBooleans,
 			Indent:          indent,
 			Mode:            mode,
+			MergeStrategy:   mergeStrategy,
 		}
 
 		result, err := pack(opts, log)
@@ -119,6 +121,8 @@ func init() {
 		"Number of spaces for indentation")
 	rootCmd.PersistentFlags().StringVarP(&mode, "mode", "m", "canonical",
 		"Output mode: 'canonical' (sorted keys, no comments) or 'preserve' (authored order and comments)")
+	rootCmd.PersistentFlags().StringVar(&mergeStrategy, "merge", "shallow",
+		"Merge strategy: 'shallow' (last wins) or 'deep' (recursive)")
 
 	// Version flag
 	rootCmd.Flags().BoolP("version", "V", false,

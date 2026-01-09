@@ -123,7 +123,7 @@ func TestMergeMapping(t *testing.T) {
 	mappingSet(src, newScalarKey("key1"), &yaml.Node{Kind: yaml.ScalarNode, Value: "value1_updated"})
 	mappingSet(src, newScalarKey("key2"), &yaml.Node{Kind: yaml.ScalarNode, Value: "value2"})
 
-	mergeMapping(dst, src)
+	mergeMapping(dst, src, MergeShallow)
 
 	val1, ok := mappingGet(dst, "key1")
 	if !ok {
@@ -165,14 +165,14 @@ func TestIsEmptyNode(t *testing.T) {
 }
 
 func TestMergeMapping_NilInputs(t *testing.T) {
-	mergeMapping(nil, newMapping())
+	mergeMapping(nil, newMapping(), MergeShallow)
 
 	dst := newMapping()
-	mergeMapping(dst, nil)
+	mergeMapping(dst, nil, MergeShallow)
 
 	scalar := &yaml.Node{Kind: yaml.ScalarNode, Value: "test"}
-	mergeMapping(dst, scalar)
-	mergeMapping(scalar, dst)
+	mergeMapping(dst, scalar, MergeShallow)
+	mergeMapping(scalar, dst, MergeShallow)
 }
 
 func TestMappingGet_EdgeCases(t *testing.T) {
@@ -789,5 +789,132 @@ func TestMarshalPreserve_NestedAtDirectories(t *testing.T) {
 	// Verify comments are preserved
 	if !strings.Contains(outStr, "Item 1") || !strings.Contains(outStr, "Item 2") || !strings.Contains(outStr, "Item 3") {
 		t.Error("Comments should be preserved")
+	}
+}
+
+func TestMarshalPreserve_ShallowMerge(t *testing.T) {
+	// Test that shallow merge (default) replaces entire nested maps
+	tmpDir := createTestDir(t, map[string]string{
+		"@base.yml": `config:
+  setting1: value1
+  setting2: value2
+  nested:
+    a: 1
+    b: 2`,
+		"@override.yml": `config:
+  setting3: value3
+  nested:
+    c: 3`,
+	}, nil)
+
+	absDir, err := filepath.Abs(tmpDir)
+	assertNoError(t, err)
+
+	opts := &Options{
+		PackRoot:      absDir,
+		Mode:          ModePreserve,
+		MergeStrategy: MergeShallow,
+		Logger:        logger.Nop(),
+	}
+
+	tree, err := NewTree(tmpDir)
+	assertNoError(t, err)
+
+	result, err := tree.Marshal(opts)
+	assertNoError(t, err)
+
+	node, ok := result.(*yaml.Node)
+	if !ok {
+		t.Fatalf("Expected *yaml.Node, got %T", result)
+	}
+
+	out, err := yaml.Marshal(node)
+	assertNoError(t, err)
+	outStr := string(out)
+
+	// In shallow merge, later file completely replaces earlier one
+	// So setting1 and setting2 should be gone, setting3 should exist
+	if strings.Contains(outStr, "setting1:") {
+		t.Error("Shallow merge should replace entire map - setting1 should not exist")
+	}
+	if strings.Contains(outStr, "setting2:") {
+		t.Error("Shallow merge should replace entire map - setting2 should not exist")
+	}
+	if !strings.Contains(outStr, "setting3: value3") {
+		t.Error("Shallow merge should include values from later file")
+	}
+
+	// Nested map should also be completely replaced
+	if strings.Contains(outStr, "a: 1") {
+		t.Error("Shallow merge should replace nested map - 'a' should not exist")
+	}
+	if strings.Contains(outStr, "b: 2") {
+		t.Error("Shallow merge should replace nested map - 'b' should not exist")
+	}
+	if !strings.Contains(outStr, "c: 3") {
+		t.Error("Shallow merge should include nested values from later file")
+	}
+}
+
+func TestMarshalPreserve_DeepMerge(t *testing.T) {
+	// Test that deep merge recursively merges nested maps
+	tmpDir := createTestDir(t, map[string]string{
+		"@base.yml": `config:
+  setting1: value1
+  setting2: value2
+  nested:
+    a: 1
+    b: 2`,
+		"@override.yml": `config:
+  setting3: value3
+  nested:
+    c: 3`,
+	}, nil)
+
+	absDir, err := filepath.Abs(tmpDir)
+	assertNoError(t, err)
+
+	opts := &Options{
+		PackRoot:      absDir,
+		Mode:          ModePreserve,
+		MergeStrategy: MergeDeep,
+		Logger:        logger.Nop(),
+	}
+
+	tree, err := NewTree(tmpDir)
+	assertNoError(t, err)
+
+	result, err := tree.Marshal(opts)
+	assertNoError(t, err)
+
+	node, ok := result.(*yaml.Node)
+	if !ok {
+		t.Fatalf("Expected *yaml.Node, got %T", result)
+	}
+
+	out, err := yaml.Marshal(node)
+	assertNoError(t, err)
+	outStr := string(out)
+
+	// In deep merge, values from both files should exist
+	if !strings.Contains(outStr, "setting1: value1") {
+		t.Error("Deep merge should preserve setting1 from base file")
+	}
+	if !strings.Contains(outStr, "setting2: value2") {
+		t.Error("Deep merge should preserve setting2 from base file")
+	}
+	if !strings.Contains(outStr, "setting3: value3") {
+		t.Error("Deep merge should include setting3 from override file")
+	}
+
+	// Nested map should be merged recursively
+	if !strings.Contains(outStr, "a: 1") {
+		t.Error("Deep merge should preserve 'a' from base file")
+	}
+	if !strings.Contains(outStr, "b: 2") {
+		t.Error("Deep merge should preserve 'b' from base file")
+	}
+	if !strings.Contains(outStr, "c: 3") {
+		t.Error("Deep merge should include 'c' from override file")
 	}
 }

@@ -1,3 +1,5 @@
+false: feature disabled
+true: feature enabled
 disabled: false
 enabled: true
 maybe: "yes"

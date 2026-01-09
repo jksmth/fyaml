@@ -11,6 +11,25 @@ import (
 
 // marshal_canonical_test.go contains tests for canonical mode marshaling.
 
+// asMap converts interface{} to map[interface{}]interface{} for test assertions.
+// Handles both map[string]interface{} and map[interface{}]interface{}.
+func asMap(t *testing.T, v interface{}) map[interface{}]interface{} {
+	t.Helper()
+	switch m := v.(type) {
+	case map[interface{}]interface{}:
+		return m
+	case map[string]interface{}:
+		result := make(map[interface{}]interface{}, len(m))
+		for k, val := range m {
+			result[k] = val
+		}
+		return result
+	default:
+		t.Fatalf("Expected map, got %T", v)
+		return nil
+	}
+}
+
 func TestMarshalCanonical_WithIncludes(t *testing.T) {
 	tmpDir := createTestDir(t, map[string]string{
 		"entities/scripts/test.sh": "#!/bin/bash\necho 'test'",
@@ -36,20 +55,9 @@ func TestMarshalCanonical_WithIncludes(t *testing.T) {
 	result, err := testNode.marshalLeaf(opts)
 	assertNoError(t, err)
 
-	resultMap, ok := result.(map[string]interface{})
-	if !ok {
-		t.Fatalf("marshalLeaf() returned %T, want map[string]interface{}", result)
-	}
-
-	entityMap, ok := resultMap["entity"].(map[string]interface{})
-	if !ok {
-		t.Fatalf("marshalLeaf() entity value is %T, want map[string]interface{}", resultMap["entity"])
-	}
-
-	attributesMap, ok := entityMap["attributes"].(map[string]interface{})
-	if !ok {
-		t.Fatalf("marshalLeaf() attributes value is %T, want map[string]interface{}", entityMap["attributes"])
-	}
+	resultMap := asMap(t, result)
+	entityMap := asMap(t, resultMap["entity"])
+	attributesMap := asMap(t, entityMap["attributes"])
 
 	commandVal, ok := attributesMap["command"].(string)
 	if !ok {
@@ -86,18 +94,9 @@ name: on_call_service`,
 	result, err := tree.Marshal(opts)
 	assertNoError(t, err)
 
-	resultMap, ok := result.(map[string]interface{})
-	if !ok {
-		t.Fatalf("Expected map[string]interface{}, got %T", result)
-	}
-	configMap, ok := resultMap["config"].(map[string]interface{})
-	if !ok {
-		t.Fatalf("Expected config to be map[string]interface{}, got %T", resultMap["config"])
-	}
-	testMap, ok := configMap["test"].(map[string]interface{})
-	if !ok {
-		t.Fatalf("Expected test to be map[string]interface{}, got %T", configMap["test"])
-	}
+	resultMap := asMap(t, result)
+	configMap := asMap(t, resultMap["config"])
+	testMap := asMap(t, configMap["test"])
 
 	if enabled, ok := testMap["enabled"].(bool); !ok || !enabled {
 		t.Errorf("enabled should be bool true, got %T: %v", testMap["enabled"], testMap["enabled"])
@@ -131,18 +130,9 @@ disabled: off`,
 	result, err := tree.Marshal(opts)
 	assertNoError(t, err)
 
-	resultMap, ok := result.(map[string]interface{})
-	if !ok {
-		t.Fatalf("Expected map[string]interface{}, got %T", result)
-	}
-	configMap, ok := resultMap["config"].(map[string]interface{})
-	if !ok {
-		t.Fatalf("Expected config to be map[string]interface{}, got %T", resultMap["config"])
-	}
-	testMap, ok := configMap["test"].(map[string]interface{})
-	if !ok {
-		t.Fatalf("Expected test to be map[string]interface{}, got %T", configMap["test"])
-	}
+	resultMap := asMap(t, result)
+	configMap := asMap(t, resultMap["config"])
+	testMap := asMap(t, configMap["test"])
 
 	if enabled, ok := testMap["enabled"].(string); !ok || enabled != "on" {
 		t.Errorf("enabled should be string 'on' without normalization, got %T: %v", testMap["enabled"], testMap["enabled"])
@@ -201,14 +191,8 @@ func TestMarshalCanonical_RootFile(t *testing.T) {
 	if resultMap["key1"] != "value1" {
 		t.Errorf("Root file content key1 = %v, want 'value1'", resultMap["key1"])
 	}
-	subdirMap, ok := resultMap["subdir"].(map[string]interface{})
-	if !ok {
-		t.Fatal("Subdirectory should be nested under 'subdir' key")
-	}
-	fileMap, ok := subdirMap["file"].(map[string]interface{})
-	if !ok {
-		t.Fatal("File should be nested under 'file' key in subdirectory")
-	}
+	subdirMap := asMap(t, resultMap["subdir"])
+	fileMap := asMap(t, subdirMap["file"])
 	if fileMap["key2"] != "value2" {
 		t.Errorf("Subdirectory file content key2 = %v, want 'value2'", fileMap["key2"])
 	}
@@ -245,25 +229,25 @@ func TestMergeTree_InvalidInput(t *testing.T) {
 		input       interface{}
 		expectError bool
 		errorSubstr string
-		validate    func(t *testing.T, result map[string]interface{})
+		validate    func(t *testing.T, result map[interface{}]interface{})
 	}{
 		{
 			name:        "channel",
 			input:       make(chan int),
 			expectError: true,
-			errorSubstr: "failed to decode tree structure",
+			errorSubstr: "expected map",
 		},
 		{
 			name:        "function",
 			input:       func() {},
 			expectError: true,
-			errorSubstr: "failed to decode tree structure",
+			errorSubstr: "expected map",
 		},
 		{
 			name:        "nil",
 			input:       nil,
 			expectError: false,
-			validate: func(t *testing.T, result map[string]interface{}) {
+			validate: func(t *testing.T, result map[interface{}]interface{}) {
 				if result == nil {
 					t.Error("mergeTree() returned nil result for nil input")
 				}
@@ -276,7 +260,7 @@ func TestMergeTree_InvalidInput(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := mergeTree(tt.input)
+			result, err := mergeTree(nil, tt.input, MergeShallow)
 			if tt.expectError {
 				assertErrorContains(t, err, tt.errorSubstr)
 			} else {
@@ -360,11 +344,7 @@ func TestMarshal_AtDirectory(t *testing.T) {
 	}, nil)
 
 	resultMap := createTreeAndMarshal(t, tmpDir)
-
-	entitiesMap, ok := resultMap["entities"].(map[string]interface{})
-	if !ok {
-		t.Fatal("MarshalYAML() result missing 'entities' key or not a map")
-	}
+	entitiesMap := asMap(t, resultMap["entities"])
 
 	if entitiesMap["item1"] == nil {
 		t.Error("MarshalYAML() item1.yml from @group1 not found in entities map")
@@ -398,11 +378,7 @@ func TestMarshal_EmptyAtDirectory(t *testing.T) {
 	}, []string{"entities/@group1"})
 
 	resultMap := createTreeAndMarshal(t, tmpDir)
-
-	entitiesMap, ok := resultMap["entities"].(map[string]interface{})
-	if !ok {
-		t.Fatal("MarshalYAML() result missing 'entities' key or not a map")
-	}
+	entitiesMap := asMap(t, resultMap["entities"])
 
 	if entitiesMap["@group1"] != nil {
 		t.Error("MarshalYAML() empty @group1 directory should not create a key")
@@ -423,11 +399,7 @@ func TestMarshal_NestedAtDirectories(t *testing.T) {
 	}, nil)
 
 	resultMap := createTreeAndMarshal(t, tmpDir)
-
-	entitiesMap, ok := resultMap["entities"].(map[string]interface{})
-	if !ok {
-		t.Fatal("MarshalYAML() result missing 'entities' key or not a map")
-	}
+	entitiesMap := asMap(t, resultMap["entities"])
 
 	if entitiesMap["item1"] == nil {
 		t.Error("MarshalYAML() item1.yml from @group1/@group2 not found in entities map")
@@ -464,35 +436,14 @@ func TestMarshalCanonical_Nested(t *testing.T) {
 	resultMap := createTreeAndMarshal(t, tmpDir)
 
 	// Verify nested structure is preserved
-	level1Map, ok := resultMap["level1"].(map[string]interface{})
-	if !ok {
-		t.Fatal("Nested structure should be preserved")
-	}
-	level2Map, ok := level1Map["level2"].(map[string]interface{})
-	if !ok {
-		t.Fatal("Nested structure should be preserved")
-	}
-	level3Map, ok := level2Map["level3"].(map[string]interface{})
-	if !ok {
-		t.Fatal("Nested structure should be preserved")
-	}
-	deepMap, ok := level3Map["deep"].(map[string]interface{})
-	if !ok {
-		t.Fatal("Nested structure should be preserved")
-	}
+	level1Map := asMap(t, resultMap["level1"])
+	level2Map := asMap(t, level1Map["level2"])
+	level3Map := asMap(t, level2Map["level3"])
+	deepMap := asMap(t, level3Map["deep"])
 	// Verify file content is nested correctly
-	outerMap, ok := deepMap["outer"].(map[string]interface{})
-	if !ok {
-		t.Fatal("File content nested structure should be preserved")
-	}
-	middleMap, ok := outerMap["middle"].(map[string]interface{})
-	if !ok {
-		t.Fatal("File content nested structure should be preserved")
-	}
-	innerMap, ok := middleMap["inner"].(map[string]interface{})
-	if !ok {
-		t.Fatal("File content nested structure should be preserved")
-	}
+	outerMap := asMap(t, deepMap["outer"])
+	middleMap := asMap(t, outerMap["middle"])
+	innerMap := asMap(t, middleMap["inner"])
 	if innerMap["key"] != "value" {
 		t.Error("Deep nested values should be preserved")
 	}
@@ -508,11 +459,7 @@ func TestMarshalCanonical_AtFiles(t *testing.T) {
 	}, nil)
 
 	resultMap := createTreeAndMarshal(t, tmpDir)
-
-	entitiesMap, ok := resultMap["entities"].(map[string]interface{})
-	if !ok {
-		t.Fatal("MarshalYAML() result missing 'entities' key or not a map")
-	}
+	entitiesMap := asMap(t, resultMap["entities"])
 
 	// Verify @common.yml content is merged
 	if entitiesMap["timeout"] == nil {
@@ -540,32 +487,199 @@ func TestMarshalCanonical_JSONFiles(t *testing.T) {
 	result, err := tree.Marshal(opts)
 	assertNoError(t, err)
 
-	resultMap, ok := result.(map[string]interface{})
-	if !ok {
-		t.Fatalf("Expected map[string]interface{}, got %T", result)
-	}
+	resultMap := asMap(t, result)
 
 	// Verify JSON content is parsed correctly
-	entitiesMap, ok := resultMap["entities"].(map[string]interface{})
-	if !ok {
-		t.Fatal("MarshalCanonical() result missing 'entities' key")
-	}
-	item1Map, ok := entitiesMap["item1"].(map[string]interface{})
-	if !ok {
-		t.Fatal("MarshalCanonical() result missing 'item1' key from JSON file")
-	}
-	entityMap, ok := item1Map["entity"].(map[string]interface{})
-	if !ok {
-		t.Fatal("MarshalCanonical() result missing 'entity' key from JSON file")
-	}
+	entitiesMap := asMap(t, resultMap["entities"])
+	item1Map := asMap(t, entitiesMap["item1"])
+	entityMap := asMap(t, item1Map["entity"])
 	if entityMap["id"] != "example1" {
 		t.Error("MarshalCanonical() JSON content id not parsed correctly")
 	}
-	attributesMap, ok := entityMap["attributes"].(map[string]interface{})
-	if !ok {
-		t.Fatal("MarshalCanonical() result missing 'attributes' key from JSON file")
-	}
+	attributesMap := asMap(t, entityMap["attributes"])
 	if attributesMap["name"] != "sample name" {
 		t.Error("MarshalCanonical() JSON content name not parsed correctly")
+	}
+}
+
+func TestMarshalCanonical_ShallowMerge(t *testing.T) {
+	// Test that shallow merge (default) replaces entire nested maps
+	tmpDir := createTestDir(t, map[string]string{
+		"@base.yml": `config:
+  setting1: value1
+  setting2: value2
+  nested:
+    a: 1
+    b: 2`,
+		"@override.yml": `config:
+  setting3: value3
+  nested:
+    c: 3`,
+	}, nil)
+
+	absDir, err := filepath.Abs(tmpDir)
+	assertNoError(t, err)
+
+	opts := &Options{
+		PackRoot:      absDir,
+		MergeStrategy: MergeShallow,
+		Logger:        logger.Nop(),
+	}
+
+	tree, err := NewTree(tmpDir)
+	assertNoError(t, err)
+
+	result, err := tree.Marshal(opts)
+	assertNoError(t, err)
+
+	resultMap := asMap(t, result)
+	configMap := asMap(t, resultMap["config"])
+
+	// In shallow merge, later file completely replaces earlier one
+	// So setting1 and setting2 should be gone, setting3 should exist
+	if configMap["setting1"] != nil {
+		t.Error("Shallow merge should replace entire map - setting1 should not exist")
+	}
+	if configMap["setting2"] != nil {
+		t.Error("Shallow merge should replace entire map - setting2 should not exist")
+	}
+	if configMap["setting3"] != "value3" {
+		t.Error("Shallow merge should include values from later file")
+	}
+
+	// Nested map should also be completely replaced
+	nestedMap := asMap(t, configMap["nested"])
+	if nestedMap["a"] != nil {
+		t.Error("Shallow merge should replace nested map - 'a' should not exist")
+	}
+	if nestedMap["b"] != nil {
+		t.Error("Shallow merge should replace nested map - 'b' should not exist")
+	}
+	if nestedMap["c"] != 3 {
+		t.Error("Shallow merge should include nested values from later file")
+	}
+}
+
+func TestMarshalCanonical_DeepMerge(t *testing.T) {
+	// Test that deep merge recursively merges nested maps
+	tmpDir := createTestDir(t, map[string]string{
+		"@base.yml": `config:
+  setting1: value1
+  setting2: value2
+  nested:
+    a: 1
+    b: 2`,
+		"@override.yml": `config:
+  setting3: value3
+  nested:
+    c: 3`,
+	}, nil)
+
+	absDir, err := filepath.Abs(tmpDir)
+	assertNoError(t, err)
+
+	opts := &Options{
+		PackRoot:      absDir,
+		MergeStrategy: MergeDeep,
+		Logger:        logger.Nop(),
+	}
+
+	tree, err := NewTree(tmpDir)
+	assertNoError(t, err)
+
+	result, err := tree.Marshal(opts)
+	assertNoError(t, err)
+
+	resultMap := asMap(t, result)
+	configMap := asMap(t, resultMap["config"])
+
+	// In deep merge, values from both files should exist
+	if configMap["setting1"] != "value1" {
+		t.Error("Deep merge should preserve setting1 from base file")
+	}
+	if configMap["setting2"] != "value2" {
+		t.Error("Deep merge should preserve setting2 from base file")
+	}
+	if configMap["setting3"] != "value3" {
+		t.Error("Deep merge should include setting3 from override file")
+	}
+
+	// Nested map should be merged recursively
+	nestedMap := asMap(t, configMap["nested"])
+	if nestedMap["a"] != 1 {
+		t.Error("Deep merge should preserve 'a' from base file")
+	}
+	if nestedMap["b"] != 2 {
+		t.Error("Deep merge should preserve 'b' from base file")
+	}
+	if nestedMap["c"] != 3 {
+		t.Error("Deep merge should include 'c' from override file")
+	}
+}
+
+// TestYAMLEncoderSortsBoolIntString verifies that the yaml.v4 encoder sorts mixed-type keys
+// in a deterministic order: bool < int < string. This test will catch any changes in yaml.v4
+// encoder behavior that would break our assumption about key sorting.
+func TestYAMLEncoderSortsBoolIntString(t *testing.T) {
+	m := map[interface{}]interface{}{
+		"zebra": 1,
+		100:     2,
+		true:    3,
+		5:       4,
+		"apple": 5,
+	}
+
+	out, err := yaml.Marshal(m)
+	assertNoError(t, err)
+
+	outStr := string(out)
+
+	// Find positions of each key in output
+	trueIdx := strings.Index(outStr, "true:")
+	fiveIdx := strings.Index(outStr, "5:")
+	hundredIdx := strings.Index(outStr, "100:")
+	appleIdx := strings.Index(outStr, "apple:")
+	zebraIdx := strings.Index(outStr, "zebra:")
+
+	if trueIdx == -1 || fiveIdx == -1 || hundredIdx == -1 || appleIdx == -1 || zebraIdx == -1 {
+		t.Fatalf("Could not find all keys in output:\n%s", outStr)
+	}
+
+	// Verify order: bool < int (sorted numerically) < string (sorted alphabetically)
+	// Expected: true, 5, 100, apple, zebra
+	if trueIdx >= fiveIdx {
+		t.Errorf("Expected bool before int: true should come before 5\n%s", outStr)
+	}
+	if fiveIdx >= hundredIdx {
+		t.Errorf("Expected ints sorted numerically: 5 should come before 100\n%s", outStr)
+	}
+	if hundredIdx >= appleIdx {
+		t.Errorf("Expected int before string: 100 should come before apple\n%s", outStr)
+	}
+	if appleIdx >= zebraIdx {
+		t.Errorf("Expected strings sorted alphabetically: apple should come before zebra\n%s", outStr)
+	}
+}
+
+// TestYAMLEncoderDeterministic verifies that the yaml.v4 encoder produces identical output
+// for the same input across multiple runs. This test will catch any changes in yaml.v4
+// encoder behavior that would break deterministic output.
+func TestYAMLEncoderDeterministic(t *testing.T) {
+	m := map[interface{}]interface{}{
+		"z": 1, "a": 2, 100: 3, 5: 4, true: 5, false: 6,
+	}
+
+	var outputs []string
+	for i := 0; i < 10; i++ {
+		out, err := yaml.Marshal(m)
+		assertNoError(t, err)
+		outputs = append(outputs, string(out))
+	}
+
+	// All outputs should be identical
+	for i := 1; i < len(outputs); i++ {
+		if outputs[i] != outputs[0] {
+			t.Errorf("Output not deterministic:\nRun 0:\n%s\nRun %d:\n%s", outputs[0], i, outputs[i])
+		}
 	}
 }

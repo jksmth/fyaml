@@ -9,6 +9,25 @@ import (
 
 // Test helpers - shared across test files
 
+// asMapShared converts interface{} to map[interface{}]interface{} for test assertions.
+// Handles both map[string]interface{} and map[interface{}]interface{}.
+func asMapShared(t *testing.T, v interface{}) map[interface{}]interface{} {
+	t.Helper()
+	switch m := v.(type) {
+	case map[interface{}]interface{}:
+		return m
+	case map[string]interface{}:
+		result := make(map[interface{}]interface{}, len(m))
+		for k, val := range m {
+			result[k] = val
+		}
+		return result
+	default:
+		t.Fatalf("Expected map, got %T", v)
+		return nil
+	}
+}
+
 // assertNoError asserts that an error is nil. If the error is not nil, the test fails.
 func assertNoError(t *testing.T, err error) {
 	t.Helper()
@@ -56,16 +75,16 @@ func createTestDir(t *testing.T, files map[string]string, emptyDirs []string) st
 }
 
 // createTreeAndMarshal creates a tree from the given directory, marshals it to YAML,
-// and returns the result as a map[string]interface{}.
-func createTreeAndMarshal(t *testing.T, dir string) map[string]interface{} {
+// and returns the result as a map[interface{}]interface{}.
+func createTreeAndMarshal(t *testing.T, dir string) map[interface{}]interface{} {
 	t.Helper()
 	tree, err := NewTree(dir)
 	assertNoError(t, err)
 	result, err := tree.MarshalYAML()
 	assertNoError(t, err)
-	resultMap, ok := result.(map[string]interface{})
+	resultMap, ok := result.(map[interface{}]interface{})
 	if !ok {
-		t.Fatalf("MarshalYAML() returned %T, want map[string]interface{}", result)
+		t.Fatalf("MarshalYAML() returned %T, want map[interface{}]interface{}", result)
 	}
 	return resultMap
 }
@@ -128,29 +147,15 @@ func TestNewTree_JSONFiles(t *testing.T) {
 
 	resultMap := createTreeAndMarshal(t, tmpDir)
 
-	entitiesMap, ok := resultMap["entities"].(map[string]interface{})
-	if !ok {
-		t.Fatal("MarshalYAML() result missing 'entities' key or not a map")
-	}
-
-	item1Map, ok := entitiesMap["item1"].(map[string]interface{})
-	if !ok {
-		t.Fatal("MarshalYAML() result missing 'item1' key from JSON file or not a map")
-	}
-
-	entityMap, ok := item1Map["entity"].(map[string]interface{})
-	if !ok {
-		t.Fatal("MarshalYAML() result missing 'entity' key from JSON file or not a map")
-	}
+	entitiesMap := asMapShared(t, resultMap["entities"])
+	item1Map := asMapShared(t, entitiesMap["item1"])
+	entityMap := asMapShared(t, item1Map["entity"])
 
 	if entityMap["id"] != "example1" {
 		t.Errorf("MarshalYAML() JSON content id not parsed correctly. Got: %v", entityMap["id"])
 	}
 
-	attributesMap, ok := entityMap["attributes"].(map[string]interface{})
-	if !ok {
-		t.Fatal("MarshalYAML() result missing 'attributes' key from JSON file or not a map")
-	}
+	attributesMap := asMapShared(t, entityMap["attributes"])
 
 	if attributesMap["name"] != "sample name" {
 		t.Errorf("MarshalYAML() JSON content name not parsed correctly. Got: %v", attributesMap["name"])
@@ -164,11 +169,7 @@ func TestNewTree_JSONSpecialCase(t *testing.T) {
 	}, nil)
 
 	resultMap := createTreeAndMarshal(t, tmpDir)
-
-	entitiesMap, ok := resultMap["entities"].(map[string]interface{})
-	if !ok {
-		t.Fatal("MarshalYAML() result missing 'entities' key or not a map")
-	}
+	entitiesMap := asMapShared(t, resultMap["entities"])
 
 	timeout := entitiesMap["timeout"]
 	if timeout != 30 && timeout != float64(30) {

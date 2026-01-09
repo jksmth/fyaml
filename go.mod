@@ -3,7 +3,6 @@ module github.com/jksmth/fyaml
 go 1.25
 
 require (
-	github.com/mitchellh/mapstructure v1.5.0
 	github.com/spf13/cobra v1.10.2
 	go.yaml.in/yaml/v4 v4.0.0-rc.3
 )
