@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.1](https://github.com/jksmth/fyaml/compare/v1.9.0...v1.9.1) (2026-01-09)
+
+
+### Bug Fixes
+
+* normalize non-string map keys for canonical mode and JSON output ([#60](https://github.com/jksmth/fyaml/issues/60)) ([75557ad](https://github.com/jksmth/fyaml/commit/75557ad6f4dd493dce4236aa71ce30dc112c19e6))
+
 ## [1.9.0](https://github.com/jksmth/fyaml/compare/v1.8.0...v1.9.0) (2026-01-09)
 
 
