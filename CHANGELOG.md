@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.0](https://github.com/jksmth/fyaml/compare/v1.10.0...v1.11.0) (2026-01-09)
+
+
+### Features
+
+* add stdin support for --check command ([#64](https://github.com/jksmth/fyaml/issues/64)) ([c918a88](https://github.com/jksmth/fyaml/commit/c918a88f8fb8e2e7b0e7fb584b330e0d5d4a4970))
+
 ## [1.10.0](https://github.com/jksmth/fyaml/compare/v1.9.1...v1.10.0) (2026-01-09)
 
 
