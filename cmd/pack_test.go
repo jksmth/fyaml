@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -841,5 +842,38 @@ func TestPack_Indent_Invalid(t *testing.T) {
 			_, err := pack(testOptsWithIndent("../testdata/simple/input", "yaml", false, false, tt.indent), nil)
 			assertErrorContains(t, err, "invalid indent")
 		})
+	}
+}
+
+func TestPack_NonStringKeys_Canonical(t *testing.T) {
+	// Bug fix: canonical mode would fail with mapstructure.Decode error on non-string keys
+	tmpDir := createTestDir(t, map[string]string{
+		"test.yml": `123: "numeric key"
+true: "boolean key"
+nested:
+  456: "nested numeric"`,
+	}, nil)
+
+	// Before the fix, this would error with: mapstructure decode error on non-string key
+	_, err := pack(testOpts(tmpDir, "yaml", false, false, "canonical"), nil)
+	assertNoError(t, err)
+}
+
+func TestPack_NonStringKeys_Preserve_JSON(t *testing.T) {
+	// Bug fix: preserve mode + JSON would fail with "unsupported type: map[interface{}]interface{}"
+	tmpDir := createTestDir(t, map[string]string{
+		"test.yml": `123: "numeric key"
+true: "boolean key"
+nested:
+  456: "nested numeric"`,
+	}, nil)
+
+	result, err := pack(testOpts(tmpDir, "json", false, false, "preserve"), nil)
+	assertNoError(t, err)
+
+	// Verify it's valid JSON (the bug was json.Marshal failing entirely)
+	var jsonData interface{}
+	if err := json.Unmarshal(result, &jsonData); err != nil {
+		t.Errorf("Output is not valid JSON: %v", err)
 	}
 }

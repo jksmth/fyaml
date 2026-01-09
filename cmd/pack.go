@@ -216,8 +216,10 @@ func marshalToFormat(data interface{}, format string, indent int) ([]byte, error
 				return nil, fmt.Errorf("failed to decode node for JSON: %w", err)
 			}
 		}
+		// JSON only supports string keys, so normalize any non-string keys
+		normalizedData := filetree.NormalizeKeys(jsonData)
 		indentStr := strings.Repeat(" ", indent)
-		return json.MarshalIndent(jsonData, "", indentStr)
+		return json.MarshalIndent(normalizedData, "", indentStr)
 	case "yaml":
 		var buf bytes.Buffer
 		enc := yaml.NewEncoder(&buf)

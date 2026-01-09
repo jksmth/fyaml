@@ -77,6 +77,33 @@ func isEmptyContent(v interface{}) bool {
 	return false
 }
 
+// NormalizeKeys recursively converts non-string map keys to strings.
+// This handles map[interface{}]interface{} from YAML decoding, converting to map[string]interface{}.
+func NormalizeKeys(v interface{}) interface{} {
+	switch val := v.(type) {
+	case map[interface{}]interface{}:
+		result := make(map[string]interface{})
+		for k, v := range val {
+			result[fmt.Sprintf("%v", k)] = NormalizeKeys(v)
+		}
+		return result
+	case map[string]interface{}:
+		result := make(map[string]interface{})
+		for k, v := range val {
+			result[k] = NormalizeKeys(v)
+		}
+		return result
+	case []interface{}:
+		result := make([]interface{}, len(val))
+		for i, elem := range val {
+			result[i] = NormalizeKeys(elem)
+		}
+		return result
+	default:
+		return v
+	}
+}
+
 // mergeTree merges multiple interface{} values into a single map[string]interface{}.
 // Per CircleCI behavior, later values overwrite earlier values (no collision errors).
 func mergeTree(trees ...interface{}) (map[string]interface{}, error) {
@@ -86,8 +113,11 @@ func mergeTree(trees ...interface{}) (map[string]interface{}, error) {
 			continue
 		}
 
+		// Normalize keys to strings (handles non-string keys from YAML)
+		normalizedTree := NormalizeKeys(tree)
+
 		kvp := make(map[string]interface{})
-		if err := mapstructure.Decode(tree, &kvp); err != nil {
+		if err := mapstructure.Decode(normalizedTree, &kvp); err != nil {
 			return nil, fmt.Errorf("failed to decode tree structure: %w", err)
 		}
 		for k, v := range kvp {
