@@ -3,9 +3,6 @@ package filetree
 
 import (
 	"fmt"
-	"sort"
-
-	"github.com/mitchellh/mapstructure"
 )
 
 // marshal_canonical.go contains canonical mode marshaling (sorted keys, no comments).
@@ -28,7 +25,13 @@ func (n *Node) marshalLeaf(opts *Options) (interface{}, error) {
 }
 
 func (n *Node) marshalParent(opts *Options) (interface{}, error) {
-	subtree := map[string]interface{}{}
+	subtree := map[interface{}]interface{}{}
+
+	// Get merge strategy from options (default to shallow)
+	strategy := MergeShallow
+	if opts != nil && opts.MergeStrategy == MergeDeep {
+		strategy = MergeDeep
+	}
 
 	for _, child := range n.Children {
 		c, err := child.Marshal(opts)
@@ -47,9 +50,9 @@ func (n *Node) marshalParent(opts *Options) (interface{}, error) {
 		}
 
 		if child.rootFile() || child.specialCaseDirectory() || child.specialCase() {
-			subtree, err = mergeTree(subtree, c)
+			subtree, err = mergeTree(subtree, c, strategy)
 		} else {
-			subtree[child.name()], err = mergeTree(subtree[child.name()], c)
+			subtree[child.name()], err = mergeTree(subtree[child.name()], c, strategy)
 		}
 		if err != nil {
 			return nil, fmt.Errorf("failed to merge tree for %s: %w", child.FullPath, err)
@@ -60,7 +63,7 @@ func (n *Node) marshalParent(opts *Options) (interface{}, error) {
 		return nil, nil
 	}
 
-	return sortMapKeys(subtree), nil
+	return subtree, nil
 }
 
 // isEmptyContent checks if a value is nil or an empty map.
@@ -77,71 +80,59 @@ func isEmptyContent(v interface{}) bool {
 	return false
 }
 
-// NormalizeKeys recursively converts non-string map keys to strings.
-// This handles map[interface{}]interface{} from YAML decoding, converting to map[string]interface{}.
-func NormalizeKeys(v interface{}) interface{} {
-	switch val := v.(type) {
-	case map[interface{}]interface{}:
-		result := make(map[string]interface{})
-		for k, v := range val {
-			result[fmt.Sprintf("%v", k)] = NormalizeKeys(v)
-		}
-		return result
-	case map[string]interface{}:
-		result := make(map[string]interface{})
-		for k, v := range val {
-			result[k] = NormalizeKeys(v)
-		}
-		return result
-	case []interface{}:
-		result := make([]interface{}, len(val))
-		for i, elem := range val {
-			result[i] = NormalizeKeys(elem)
-		}
-		return result
-	default:
-		return v
-	}
-}
-
-// mergeTree merges multiple interface{} values into a single map[string]interface{}.
+// mergeTree merges dst and src maps based on strategy, returning the merged result.
+//
+// Note: We don't need to sort keys here because yaml.v4's encoder automatically sorts
+// map keys during encoding. For map[interface{}]interface{}, it sorts by type order
+// (bool < int < string) then by value within each type. This provides deterministic
+// canonical output without explicit sorting.
 // Per CircleCI behavior, later values overwrite earlier values (no collision errors).
-func mergeTree(trees ...interface{}) (map[string]interface{}, error) {
-	result := make(map[string]interface{})
-	for _, tree := range trees {
-		if tree == nil {
-			continue
-		}
-
-		// Normalize keys to strings (handles non-string keys from YAML)
-		normalizedTree := NormalizeKeys(tree)
-
-		kvp := make(map[string]interface{})
-		if err := mapstructure.Decode(normalizedTree, &kvp); err != nil {
-			return nil, fmt.Errorf("failed to decode tree structure: %w", err)
-		}
-		for k, v := range kvp {
-			result[k] = v
-		}
+func mergeTree(dst, src interface{}, strategy MergeStrategy) (map[interface{}]interface{}, error) {
+	// Handle nil dst - start with empty map
+	result := toInterfaceMap(dst)
+	if result == nil {
+		result = make(map[interface{}]interface{})
 	}
-	return result, nil
-}
 
-// sortMapKeys recursively sorts all map keys for deterministic output.
-func sortMapKeys(m map[string]interface{}) map[string]interface{} {
-	result := make(map[string]interface{})
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
+	// Handle nil src - just return dst
+	if src == nil {
+		return result, nil
 	}
-	sort.Strings(keys)
 
-	for _, k := range keys {
-		v := m[k]
-		if nestedMap, ok := v.(map[string]interface{}); ok {
-			v = sortMapKeys(nestedMap)
+	srcMap := toInterfaceMap(src)
+	if srcMap == nil {
+		return nil, fmt.Errorf("expected map, got %T", src)
+	}
+
+	// Merge src into result
+	for k, v := range srcMap {
+		if strategy == MergeDeep {
+			dstVal := toInterfaceMap(result[k])
+			srcVal := toInterfaceMap(v)
+			if dstVal != nil && srcVal != nil {
+				// Recursive merge - error can't happen since types are already validated
+				merged, _ := mergeTree(dstVal, srcVal, strategy)
+				result[k] = merged
+				continue
+			}
 		}
 		result[k] = v
 	}
-	return result
+
+	return result, nil
+}
+
+// toInterfaceMap converts either map type to map[interface{}]interface{}, or returns nil.
+func toInterfaceMap(v interface{}) map[interface{}]interface{} {
+	switch m := v.(type) {
+	case map[interface{}]interface{}:
+		return m
+	case map[string]interface{}:
+		result := make(map[interface{}]interface{}, len(m))
+		for k, val := range m {
+			result[k] = val
+		}
+		return result
+	}
+	return nil
 }

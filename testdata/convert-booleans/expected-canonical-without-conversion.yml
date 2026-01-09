@@ -2,3 +2,5 @@ disabled: "off"
 enabled: "on"
 maybe: "yes"
 name: on_call_service
+"off": feature disabled
+"on": feature enabled

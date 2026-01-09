@@ -16,6 +16,12 @@ func (n *Node) marshalLeafPreserve(opts *Options) (*yaml.Node, error) {
 func (n *Node) marshalParentPreserve(opts *Options) (*yaml.Node, error) {
 	subtree := newMapping()
 
+	// Get merge strategy from options (default to shallow)
+	strategy := MergeShallow
+	if opts != nil && opts.MergeStrategy == MergeDeep {
+		strategy = MergeDeep
+	}
+
 	for _, child := range n.Children {
 		var c *yaml.Node
 		var err error
@@ -35,7 +41,7 @@ func (n *Node) marshalParentPreserve(opts *Options) (*yaml.Node, error) {
 		}
 
 		if child.rootFile() || child.specialCaseDirectory() || child.specialCase() {
-			mergeMapping(subtree, c)
+			mergeMapping(subtree, c, strategy)
 		} else {
 			childName := child.name()
 			dv, ok := mappingGet(subtree, childName)
@@ -43,7 +49,7 @@ func (n *Node) marshalParentPreserve(opts *Options) (*yaml.Node, error) {
 				dv = newMapping()
 				mappingSet(subtree, newScalarKey(childName), dv)
 			}
-			mergeMapping(dv, c)
+			mergeMapping(dv, c, strategy)
 		}
 	}
 
@@ -96,7 +102,7 @@ func newScalarKey(s string) *yaml.Node {
 
 // mergeMapping merges src mapping node into dst mapping node.
 // Later (src) values overwrite earlier (dst) values - "later wins" semantics.
-func mergeMapping(dst, src *yaml.Node) {
+func mergeMapping(dst, src *yaml.Node, strategy MergeStrategy) {
 	if src == nil || dst == nil {
 		return
 	}
@@ -124,7 +130,14 @@ func mergeMapping(dst, src *yaml.Node) {
 			continue
 		}
 
-		// Existing key - later wins, just replace the value
+		// Existing key - deep merge if both are maps, otherwise replace
+		if strategy == MergeDeep {
+			dstVal := dst.Content[dstKeyPos+1]
+			if dstVal.Kind == yaml.MappingNode && srcVal.Kind == yaml.MappingNode {
+				mergeMapping(dstVal, srcVal, strategy)
+				continue
+			}
+		}
 		dst.Content[dstKeyPos+1] = srcVal
 	}
 }

@@ -26,7 +26,15 @@ func testOpts(dir, format string, enableIncludes, convertBooleans bool, mode ...
 		ConvertBooleans: convertBooleans,
 		Indent:          2, // Default indent for tests
 		Mode:            m,
+		MergeStrategy:   "shallow", // Default merge strategy
 	}
+}
+
+// Helper to create PackOptions with merge strategy
+func testOptsWithMerge(dir, format string, enableIncludes, convertBooleans bool, mergeStrategy string, mode ...string) PackOptions {
+	opts := testOpts(dir, format, enableIncludes, convertBooleans, mode...)
+	opts.MergeStrategy = mergeStrategy
+	return opts
 }
 
 // Helper to create PackOptions with custom indent
@@ -875,5 +883,196 @@ nested:
 	var jsonData interface{}
 	if err := json.Unmarshal(result, &jsonData); err != nil {
 		t.Errorf("Output is not valid JSON: %v", err)
+	}
+}
+
+func TestPack_DeepMerge_Canonical(t *testing.T) {
+	// Test deep merge in canonical mode with nested maps
+	tmpDir := createTestDir(t, map[string]string{
+		"@base.yml": `config:
+  setting1: value1
+  setting2: value2
+  nested:
+    a: 1
+    b: 2`,
+		"@override.yml": `config:
+  setting3: value3
+  nested:
+    c: 3`,
+	}, nil)
+
+	result, err := pack(testOptsWithMerge(tmpDir, "yaml", false, false, "deep", "canonical"), nil)
+	assertNoError(t, err)
+
+	resultStr := string(result)
+
+	// In deep merge, values from both files should exist
+	if !strings.Contains(resultStr, "setting1: value1") {
+		t.Error("Deep merge should preserve setting1 from base file")
+	}
+	if !strings.Contains(resultStr, "setting2: value2") {
+		t.Error("Deep merge should preserve setting2 from base file")
+	}
+	if !strings.Contains(resultStr, "setting3: value3") {
+		t.Error("Deep merge should include setting3 from override file")
+	}
+
+	// Nested map should be merged recursively
+	if !strings.Contains(resultStr, "a: 1") {
+		t.Error("Deep merge should preserve 'a' from base file")
+	}
+	if !strings.Contains(resultStr, "b: 2") {
+		t.Error("Deep merge should preserve 'b' from base file")
+	}
+	if !strings.Contains(resultStr, "c: 3") {
+		t.Error("Deep merge should include 'c' from override file")
+	}
+}
+
+func TestPack_DeepMerge_Preserve(t *testing.T) {
+	// Test deep merge in preserve mode with nested maps
+	tmpDir := createTestDir(t, map[string]string{
+		"@base.yml": `config:
+  setting1: value1
+  setting2: value2
+  nested:
+    a: 1
+    b: 2`,
+		"@override.yml": `config:
+  setting3: value3
+  nested:
+    c: 3`,
+	}, nil)
+
+	result, err := pack(testOptsWithMerge(tmpDir, "yaml", false, false, "deep", "preserve"), nil)
+	assertNoError(t, err)
+
+	resultStr := string(result)
+
+	// In deep merge, values from both files should exist
+	if !strings.Contains(resultStr, "setting1: value1") {
+		t.Error("Deep merge should preserve setting1 from base file")
+	}
+	if !strings.Contains(resultStr, "setting2: value2") {
+		t.Error("Deep merge should preserve setting2 from base file")
+	}
+	if !strings.Contains(resultStr, "setting3: value3") {
+		t.Error("Deep merge should include setting3 from override file")
+	}
+
+	// Nested map should be merged recursively
+	if !strings.Contains(resultStr, "a: 1") {
+		t.Error("Deep merge should preserve 'a' from base file")
+	}
+	if !strings.Contains(resultStr, "b: 2") {
+		t.Error("Deep merge should preserve 'b' from base file")
+	}
+	if !strings.Contains(resultStr, "c: 3") {
+		t.Error("Deep merge should include 'c' from override file")
+	}
+}
+
+func TestPack_ShallowMerge_Default(t *testing.T) {
+	// Test that default (shallow) merge replaces entire nested maps
+	tmpDir := createTestDir(t, map[string]string{
+		"@base.yml": `config:
+  setting1: value1
+  setting2: value2
+  nested:
+    a: 1
+    b: 2`,
+		"@override.yml": `config:
+  setting3: value3
+  nested:
+    c: 3`,
+	}, nil)
+
+	result, err := pack(testOpts(tmpDir, "yaml", false, false, "canonical"), nil)
+	assertNoError(t, err)
+
+	resultStr := string(result)
+
+	// In shallow merge (default), later file completely replaces earlier one
+	if strings.Contains(resultStr, "setting1:") {
+		t.Error("Shallow merge (default) should replace entire map - setting1 should not exist")
+	}
+	if strings.Contains(resultStr, "setting2:") {
+		t.Error("Shallow merge (default) should replace entire map - setting2 should not exist")
+	}
+	if !strings.Contains(resultStr, "setting3: value3") {
+		t.Error("Shallow merge should include values from later file")
+	}
+
+	// Nested map should also be completely replaced
+	if strings.Contains(resultStr, "a: 1") {
+		t.Error("Shallow merge should replace nested map - 'a' should not exist")
+	}
+	if strings.Contains(resultStr, "b: 2") {
+		t.Error("Shallow merge should replace nested map - 'b' should not exist")
+	}
+	if !strings.Contains(resultStr, "c: 3") {
+		t.Error("Shallow merge should include nested values from later file")
+	}
+}
+
+func TestPack_NonStringKeys_Canonical_YAML_Preserved(t *testing.T) {
+	// Test that non-string keys are preserved in canonical YAML output
+	tmpDir := createTestDir(t, map[string]string{
+		"config.yml": `123: numeric key
+true: boolean key
+string_key: string value`,
+	}, nil)
+
+	result, err := pack(testOpts(tmpDir, "yaml", false, false, "canonical"), nil)
+	assertNoError(t, err)
+
+	resultStr := string(result)
+
+	// Numeric key should be preserved as number (not quoted as "123")
+	if !strings.Contains(resultStr, "123:") {
+		t.Errorf("Non-string numeric key should be preserved. Got:\n%s", resultStr)
+	}
+	// Should not be quoted
+	if strings.Contains(resultStr, `"123":`) {
+		t.Errorf("Numeric key should not be quoted as string. Got:\n%s", resultStr)
+	}
+
+	// Boolean key should be preserved
+	if !strings.Contains(resultStr, "true:") {
+		t.Errorf("Non-string boolean key should be preserved. Got:\n%s", resultStr)
+	}
+
+	// String key should work normally
+	if !strings.Contains(resultStr, "string_key:") {
+		t.Errorf("String key should be preserved. Got:\n%s", resultStr)
+	}
+}
+
+func TestPack_NonStringKeys_Canonical_JSON_Normalized(t *testing.T) {
+	// Test that non-string keys are normalized to strings for JSON output
+	tmpDir := createTestDir(t, map[string]string{
+		"config.yml": `123: numeric key
+true: boolean key
+string_key: string value`,
+	}, nil)
+
+	result, err := pack(testOpts(tmpDir, "json", false, false, "canonical"), nil)
+	assertNoError(t, err)
+
+	resultStr := string(result)
+
+	// JSON requires string keys, so numeric key should be converted to string "123"
+	if !strings.Contains(resultStr, `"123":`) {
+		t.Errorf("Numeric key should be normalized to string for JSON. Got:\n%s", resultStr)
+	}
+
+	// Boolean key should be converted to string "true"
+	if !strings.Contains(resultStr, `"true":`) {
+		t.Errorf("Boolean key should be normalized to string for JSON. Got:\n%s", resultStr)
+	}
+
+	// String key should be quoted
+	if !strings.Contains(resultStr, `"string_key":`) {
+		t.Errorf("String key should be quoted in JSON. Got:\n%s", resultStr)
 	}
 }

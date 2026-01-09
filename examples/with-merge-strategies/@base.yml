@@ -1,0 +1,6 @@
+config:
+  setting1: value1
+  setting2: value2
+  nested:
+    a: 1
+    b: 2

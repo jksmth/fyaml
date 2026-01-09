@@ -23,6 +23,16 @@ const (
 	ModePreserve Mode = "preserve"
 )
 
+// MergeStrategy controls how maps are merged when multiple files contribute to the same key.
+type MergeStrategy string
+
+const (
+	// MergeShallow uses "last wins" behavior - later values completely replace earlier ones (default).
+	MergeShallow MergeStrategy = "shallow"
+	// MergeDeep recursively merges nested maps, only replacing values at the leaf level.
+	MergeDeep MergeStrategy = "deep"
+)
+
 // Options controls how the filetree is processed during marshaling.
 type Options struct {
 	// Include processing
@@ -30,8 +40,9 @@ type Options struct {
 	PackRoot       string // Absolute path to pack root (confinement boundary)
 
 	// YAML processing
-	ConvertBooleans bool // Convert unquoted YAML 1.1 booleans to true/false
-	Mode            Mode // Marshaling mode: canonical (default) or preserve
+	ConvertBooleans bool          // Convert unquoted YAML 1.1 booleans to true/false
+	Mode            Mode          // Marshaling mode: canonical (default) or preserve
+	MergeStrategy   MergeStrategy // Merge strategy: shallow (default) or deep
 
 	// Logging
 	Logger logger.Logger // Logger for verbose output (nil-safe: defaults to Nop())
@@ -181,4 +192,35 @@ func formatYAMLError(err error, filePath string) error {
 
 	// Fallback to generic error with file path
 	return fmt.Errorf("failed to parse YAML/JSON in %s: %w", filePath, err)
+}
+
+// NormalizeKeys recursively converts all map keys to strings.
+// This is required for JSON output because JSON only supports string keys.
+// YAML allows non-string keys (numbers, booleans, etc.), so this function
+// converts them using fmt.Sprintf("%v", key).
+//
+// Example: map[interface{}]interface{}{123: "value"} becomes map[string]interface{}{"123": "value"}
+func NormalizeKeys(v interface{}) interface{} {
+	switch val := v.(type) {
+	case map[interface{}]interface{}:
+		result := make(map[string]interface{})
+		for k, v := range val {
+			result[fmt.Sprintf("%v", k)] = NormalizeKeys(v)
+		}
+		return result
+	case map[string]interface{}:
+		result := make(map[string]interface{})
+		for k, v := range val {
+			result[k] = NormalizeKeys(v)
+		}
+		return result
+	case []interface{}:
+		result := make([]interface{}, len(val))
+		for i, elem := range val {
+			result[i] = NormalizeKeys(elem)
+		}
+		return result
+	default:
+		return v
+	}
 }
