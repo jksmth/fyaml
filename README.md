@@ -112,7 +112,7 @@ There is no logic, templating, or execution model involved.
 fyaml is intentionally limited in scope to keep output predictable and diffs trustworthy.
 
 - **Organize as you want** - Split large configs into small, focused files organized in directories
-- **Predictable output** - Identical input always produces identical output, making diffs meaningful. Choose between canonical mode (sorted keys, no comments) or preserve mode (authored order and comments)
+- **Predictable output** - Deterministic output makes diffs meaningful. Choose between canonical mode (sorted keys, no comments) or preserve mode (authored order and comments). See [Output Modes](#output-modes) below.
 - **No surprises** - Pure structure compilation with no logic, templating, or execution model
 - **Build-time tool** - Runs as a build step, producing the single file your tools expect
 
@@ -125,7 +125,7 @@ fyaml supports two output modes:
 - **Canonical mode (default)** - Keys are sorted alphabetically and comments are removed. Sorted keys make diffs more readable.
 - **Preserve mode** - Maintains the authored key order and preserves comments. Useful when you want to keep documentation in comments or preserve the structure from source files.
 
-Both modes are deterministic (same input always produces same output). Use `--mode` (or `-m`) to select a mode:
+Both modes are deterministic. Use `--mode` (or `-m`) to select a mode:
 
 ```bash
 fyaml --mode canonical    # Default: sorted keys, no comments
@@ -245,7 +245,7 @@ fyaml implements the [FYAML specification](SPECIFICATION.md) (also available at 
 It's a small, focused tool that:
 
 - Works with any YAML-based system
-- Produces deterministic output (identical input always produces identical output)
+- Produces deterministic output
 - Has a minimal surface area focused on one task
 - Does not implement templating, variables, or conditionals
 
@@ -253,7 +253,7 @@ It's a small, focused tool that:
 
 **Extensions:** fyaml includes optional extensions (like JSON support) that enhance functionality while maintaining spec compliance. See the [Extensions](#extensions) section for details.
 
-**Implementation Note:** In canonical mode (default), fyaml sorts all map keys alphabetically to ensure deterministic output. Preserve mode maintains authored key order and comments. Both modes are deterministic and suitable for version control and comparison. The FYAML specification does not specify key ordering, so this is an implementation choice that provides reproducibility.
+**Implementation Note:** In canonical mode (default), fyaml sorts all map keys alphabetically to ensure deterministic output. Preserve mode maintains authored key order and comments. Both modes are deterministic. The FYAML specification does not specify key ordering, so this is an implementation choice that provides reproducibility.
 
 ## Extensions
 

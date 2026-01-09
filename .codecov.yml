@@ -16,3 +16,4 @@ ignore:
   - "main.go" # Entry point, tested via integration
   - "internal/version/version.go" # Constants and simple getters, no logic to test
   - "cmd/root.go" # Thin wrapper, tested via CLI integration
+  - "scripts/generate-expected.go" # Utility script, not part of main codebase

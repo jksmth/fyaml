@@ -707,19 +707,18 @@ entities:
 
 **Key points:**
 
-- Files and directories are processed in alphabetical order by canonical path (deterministic across operating systems)
+- Files and directories are processed in alphabetical order (see [Usage Guide - Directory Structure Rules](usage.md#directory-structure-rules))
 - `@` directories are processed first (because `@` sorts before letters), then regular files
 - Within each category, items are sorted alphabetically: `@group1` before `@group2`, `alpha` before `zebra`
 - Comments are preserved
 - Key order within each file is maintained (authored order)
-- The order is deterministic and cross-platform, not dependent on filesystem order
 
 ### When to Use Each Mode
 
 - **Canonical mode**: Use when you need sorted keys and don't need comments. Sorted keys make diffs more readable and predictable.
 - **Preserve mode**: Use when you want to maintain documentation in comments or preserve the authored key order from your source files.
 
-Both modes are deterministic (same input always produces same output) and suitable for version control and CI/CD. The difference is in key ordering (sorted vs. authored) and comment preservation.
+Both modes are deterministic and suitable for version control and CI/CD. The difference is in key ordering (sorted vs. authored) and comment preservation.
 
 ## Try It Yourself
 
