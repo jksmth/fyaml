@@ -4,7 +4,7 @@ project_name: fyaml
 
 builds:
   - id: fyaml
-    main: .
+    main: ./cmd/fyaml
     binary: fyaml
     goos:
       - linux

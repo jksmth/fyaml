@@ -1,50 +1,59 @@
-package cmd
+package cli
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/jksmth/fyaml"
 	"github.com/jksmth/fyaml/internal/logger"
 )
 
 // Helper to create PackOptions for tests.
 // Mode defaults to "canonical" if not specified (for mode-agnostic tests).
 // Mode-specific tests (golden tests) should explicitly specify the mode.
-func testOpts(dir, format string, enableIncludes, convertBooleans bool, mode ...string) PackOptions {
+func testOpts(dir, format string, enableIncludes, convertBooleans bool, mode ...string) fyaml.PackOptions {
 	m := "canonical" // default for mode-agnostic tests
 	if len(mode) > 0 && mode[0] != "" {
 		m = mode[0]
 	}
-	return PackOptions{
+	return fyaml.PackOptions{
 		Dir:             dir,
-		Format:          format,
+		Format:          fyaml.Format(format),
 		EnableIncludes:  enableIncludes,
 		ConvertBooleans: convertBooleans,
 		Indent:          2, // Default indent for tests
-		Mode:            m,
-		MergeStrategy:   "shallow", // Default merge strategy
+		Mode:            fyaml.Mode(m),
+		MergeStrategy:   fyaml.MergeShallow, // Default merge strategy
 	}
 }
 
 // Helper to create PackOptions with merge strategy
-func testOptsWithMerge(dir, format string, enableIncludes, convertBooleans bool, mergeStrategy string, mode ...string) PackOptions {
+func testOptsWithMerge(dir, format string, enableIncludes, convertBooleans bool, mergeStrategy string, mode ...string) fyaml.PackOptions {
 	opts := testOpts(dir, format, enableIncludes, convertBooleans, mode...)
-	opts.MergeStrategy = mergeStrategy
+	if mergeStrategy == "deep" {
+		opts.MergeStrategy = fyaml.MergeDeep
+	} else {
+		opts.MergeStrategy = fyaml.MergeShallow
+	}
 	return opts
 }
 
 // Helper to create PackOptions with custom indent
-func testOptsWithIndent(dir, format string, enableIncludes, convertBooleans bool, indent int) PackOptions {
-	return PackOptions{
+func testOptsWithIndent(dir, format string, enableIncludes, convertBooleans bool, indent int) fyaml.PackOptions {
+	return fyaml.PackOptions{
 		Dir:             dir,
-		Format:          format,
+		Format:          fyaml.Format(format),
 		EnableIncludes:  enableIncludes,
 		ConvertBooleans: convertBooleans,
 		Indent:          indent,
+		Mode:            fyaml.ModeCanonical,
+		MergeStrategy:   fyaml.MergeShallow,
 	}
 }
 
@@ -106,7 +115,7 @@ func assertOutputEqual(t *testing.T, got, want []byte) {
 func TestPack_InvalidYAML(t *testing.T) {
 	// Test error handling for invalid YAML
 	// Other successful cases are covered by TestPack_Golden_Canonical
-	_, err := pack(testOpts("../testdata/invalid-yaml", "yaml", false, false), nil)
+	_, err := fyaml.Pack(context.Background(), testOpts("../../testdata/invalid-yaml", "yaml", false, false))
 	assertErrorContains(t, err, "yaml")
 
 	// Verify error includes file path for better debugging
@@ -137,7 +146,7 @@ func TestPack_ScalarFile(t *testing.T) {
 				"value.yml": tt.content,
 			}, nil)
 
-			_, err := pack(testOpts(tmpDir, "yaml", false, false), nil)
+			_, err := fyaml.Pack(context.Background(), testOpts(tmpDir, "yaml", false, false))
 			assertErrorContains(t, err, "expected a map")
 		})
 	}
@@ -145,7 +154,7 @@ func TestPack_ScalarFile(t *testing.T) {
 
 func TestPack_ArrayFile(t *testing.T) {
 	// Test that files containing only an array (not a map) return an error using fixture
-	_, err := pack(testOpts("../testdata/array-file/input", "yaml", false, false), nil)
+	_, err := fyaml.Pack(context.Background(), testOpts("../../testdata/array-file/input", "yaml", false, false))
 	assertErrorContains(t, err, "expected a map")
 }
 
@@ -157,43 +166,43 @@ func TestPack_Golden_Canonical(t *testing.T) {
 	}{
 		{
 			name:     "simple",
-			dir:      "../testdata/simple/input",
-			expected: "../testdata/simple/expected-canonical.yml",
+			dir:      "../../testdata/simple/input",
+			expected: "../../testdata/simple/expected-canonical.yml",
 		},
 		{
 			name:     "nested",
-			dir:      "../testdata/nested/input",
-			expected: "../testdata/nested/expected-canonical.yml",
+			dir:      "../../testdata/nested/input",
+			expected: "../../testdata/nested/expected-canonical.yml",
 		},
 		{
 			name:     "at-root",
-			dir:      "../testdata/at-root/input",
-			expected: "../testdata/at-root/expected-canonical.yml",
+			dir:      "../../testdata/at-root/input",
+			expected: "../../testdata/at-root/expected-canonical.yml",
 		},
 		{
 			name:     "at-files",
-			dir:      "../testdata/at-files/input",
-			expected: "../testdata/at-files/expected-canonical.yml",
+			dir:      "../../testdata/at-files/input",
+			expected: "../../testdata/at-files/expected-canonical.yml",
 		},
 		{
 			name:     "ordering",
-			dir:      "../testdata/ordering/input",
-			expected: "../testdata/ordering/expected-canonical.yml",
+			dir:      "../../testdata/ordering/input",
+			expected: "../../testdata/ordering/expected-canonical.yml",
 		},
 		{
 			name:     "anchors",
-			dir:      "../testdata/anchors/input",
-			expected: "../testdata/anchors/expected-canonical.yml",
+			dir:      "../../testdata/anchors/input",
+			expected: "../../testdata/anchors/expected-canonical.yml",
 		},
 		{
 			name:     "includes",
-			dir:      "../testdata/includes/input",
-			expected: "../testdata/includes/expected-canonical.yml",
+			dir:      "../../testdata/includes/input",
+			expected: "../../testdata/includes/expected-canonical.yml",
 		},
 		{
 			name:     "at-directories",
-			dir:      "../testdata/at-directories/input",
-			expected: "../testdata/at-directories/expected-canonical.yml",
+			dir:      "../../testdata/at-directories/input",
+			expected: "../../testdata/at-directories/expected-canonical.yml",
 		},
 	}
 
@@ -201,7 +210,7 @@ func TestPack_Golden_Canonical(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Includes test requires --enable-includes flag
 			enableIncludes := tt.name == "includes"
-			result, err := pack(testOpts(tt.dir, "yaml", enableIncludes, false, "canonical"), nil)
+			result, err := fyaml.Pack(context.Background(), testOpts(tt.dir, "yaml", enableIncludes, false, "canonical"))
 			assertNoError(t, err)
 
 			expected, err := os.ReadFile(tt.expected)
@@ -222,43 +231,43 @@ func TestPack_Golden_Preserve(t *testing.T) {
 	}{
 		{
 			name:     "simple",
-			dir:      "../testdata/simple/input",
-			expected: "../testdata/simple/expected-preserve.yml",
+			dir:      "../../testdata/simple/input",
+			expected: "../../testdata/simple/expected-preserve.yml",
 		},
 		{
 			name:     "nested",
-			dir:      "../testdata/nested/input",
-			expected: "../testdata/nested/expected-preserve.yml",
+			dir:      "../../testdata/nested/input",
+			expected: "../../testdata/nested/expected-preserve.yml",
 		},
 		{
 			name:     "at-root",
-			dir:      "../testdata/at-root/input",
-			expected: "../testdata/at-root/expected-preserve.yml",
+			dir:      "../../testdata/at-root/input",
+			expected: "../../testdata/at-root/expected-preserve.yml",
 		},
 		{
 			name:     "at-files",
-			dir:      "../testdata/at-files/input",
-			expected: "../testdata/at-files/expected-preserve.yml",
+			dir:      "../../testdata/at-files/input",
+			expected: "../../testdata/at-files/expected-preserve.yml",
 		},
 		{
 			name:     "ordering",
-			dir:      "../testdata/ordering/input",
-			expected: "../testdata/ordering/expected-preserve.yml",
+			dir:      "../../testdata/ordering/input",
+			expected: "../../testdata/ordering/expected-preserve.yml",
 		},
 		{
 			name:     "anchors",
-			dir:      "../testdata/anchors/input",
-			expected: "../testdata/anchors/expected-preserve.yml",
+			dir:      "../../testdata/anchors/input",
+			expected: "../../testdata/anchors/expected-preserve.yml",
 		},
 		{
 			name:     "includes",
-			dir:      "../testdata/includes/input",
-			expected: "../testdata/includes/expected-preserve.yml",
+			dir:      "../../testdata/includes/input",
+			expected: "../../testdata/includes/expected-preserve.yml",
 		},
 		{
 			name:     "at-directories",
-			dir:      "../testdata/at-directories/input",
-			expected: "../testdata/at-directories/expected-preserve.yml",
+			dir:      "../../testdata/at-directories/input",
+			expected: "../../testdata/at-directories/expected-preserve.yml",
 		},
 	}
 
@@ -266,7 +275,7 @@ func TestPack_Golden_Preserve(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Includes test requires --enable-includes flag
 			enableIncludes := tt.name == "includes"
-			result, err := pack(testOpts(tt.dir, "yaml", enableIncludes, false, "preserve"), nil)
+			result, err := fyaml.Pack(context.Background(), testOpts(tt.dir, "yaml", enableIncludes, false, "preserve"))
 			assertNoError(t, err)
 
 			expected, err := os.ReadFile(tt.expected)
@@ -280,7 +289,7 @@ func TestPack_Golden_Preserve(t *testing.T) {
 }
 
 func TestPack_NonexistentDir(t *testing.T) {
-	_, err := pack(testOpts("nonexistent/dir", "yaml", false, false), nil)
+	_, err := fyaml.Pack(context.Background(), testOpts("nonexistent/dir", "yaml", false, false))
 	// Error message may vary, but should contain something about the directory
 	// Common error messages: "no such file", "not a directory", etc.
 	if err == nil {
@@ -298,7 +307,7 @@ func TestPack_EmptyDir(t *testing.T) {
 
 	// Test YAML format - should return empty bytes (aligns with yq)
 	t.Run("yaml", func(t *testing.T) {
-		result, err := pack(testOpts(tmpDir, "yaml", false, false), nil)
+		result, err := fyaml.Pack(context.Background(), testOpts(tmpDir, "yaml", false, false))
 		if err != nil {
 			t.Fatalf("pack() error = %v, expected no error for empty directory", err)
 		}
@@ -310,7 +319,7 @@ func TestPack_EmptyDir(t *testing.T) {
 
 	// Test JSON format - should return "null\n" (aligns with jq/yq)
 	t.Run("json", func(t *testing.T) {
-		result, err := pack(testOpts(tmpDir, "json", false, false), nil)
+		result, err := fyaml.Pack(context.Background(), testOpts(tmpDir, "json", false, false))
 		if err != nil {
 			t.Fatalf("pack() error = %v, expected no error for empty directory", err)
 		}
@@ -326,7 +335,7 @@ func TestPack_EmptySubdirs(t *testing.T) {
 	// Empty directories don't appear in output - only directories with YAML content
 	tmpDir := createTestDir(t, nil, []string{"services", "database"})
 
-	result, err := pack(testOpts(tmpDir, "yaml", false, false, "canonical"), nil)
+	result, err := fyaml.Pack(context.Background(), testOpts(tmpDir, "yaml", false, false, "canonical"))
 	if err != nil {
 		t.Fatalf("pack() error = %v, expected no error for directories with empty subdirs", err)
 	}
@@ -344,10 +353,10 @@ func TestPack_EmptySubdirs(t *testing.T) {
 
 func TestPack_JSONInput_Golden(t *testing.T) {
 	// Test that JSON files are processed correctly using fixtures
-	result, err := pack(testOpts("../testdata/json-input/input", "yaml", false, false), nil)
+	result, err := fyaml.Pack(context.Background(), testOpts("../../testdata/json-input/input", "yaml", false, false))
 	assertNoError(t, err)
 
-	expected, err := os.ReadFile("../testdata/json-input/expected-canonical.yml")
+	expected, err := os.ReadFile("../../testdata/json-input/expected-canonical.yml")
 	if err != nil {
 		t.Fatalf("Failed to read expected file: %v", err)
 	}
@@ -358,7 +367,7 @@ func TestPack_JSONInput_Golden(t *testing.T) {
 func TestPack_JSONOutput(t *testing.T) {
 	// Test JSON output format with content
 	// Note: Empty directory JSON output is tested in TestPack_EmptyDir
-	result, err := pack(testOpts("../testdata/simple/input", "json", false, false), nil)
+	result, err := fyaml.Pack(context.Background(), testOpts("../../testdata/simple/input", "json", false, false))
 	assertNoError(t, err)
 
 	resultStr := string(result)
@@ -373,8 +382,13 @@ func TestPack_JSONOutput(t *testing.T) {
 
 func TestPack_InvalidFormat(t *testing.T) {
 	// Test invalid format parameter
-	_, err := pack(testOpts("../testdata/simple/input", "invalid", false, false), nil)
-	assertErrorContains(t, err, "invalid format")
+	_, err := fyaml.Pack(context.Background(), testOpts("../../testdata/simple/input", "invalid", false, false))
+	if err == nil {
+		t.Error("Pack() should return error for invalid format")
+	}
+	if !errors.Is(err, fyaml.ErrInvalidFormat) {
+		t.Errorf("error should be ErrInvalidFormat, got: %v", err)
+	}
 }
 
 func TestWriteOutput_Stdout(t *testing.T) {
@@ -628,7 +642,7 @@ steps:
 	}, nil)
 
 	// Test WITHOUT includes enabled - directive should remain as-is
-	result, err := pack(testOpts(tmpDir, "yaml", false, false), nil)
+	result, err := fyaml.Pack(context.Background(), testOpts(tmpDir, "yaml", false, false))
 	assertNoError(t, err)
 	resultStr := string(result)
 	if !strings.Contains(resultStr, "<<include(scripts/hello.sh)>>") {
@@ -636,7 +650,7 @@ steps:
 	}
 
 	// Test WITH includes enabled - directive should be replaced
-	result, err = pack(testOpts(tmpDir, "yaml", true, false), nil)
+	result, err = fyaml.Pack(context.Background(), testOpts(tmpDir, "yaml", true, false))
 	assertNoError(t, err)
 	resultStr = string(result)
 	if strings.Contains(resultStr, "<<include") {
@@ -653,7 +667,7 @@ func TestPack_EnableIncludes_ErrorFileNotFound(t *testing.T) {
 		"commands/hello.yml": `command: <<include(nonexistent.sh)>>`,
 	}, nil)
 
-	_, err := pack(testOpts(tmpDir, "yaml", true, false), nil)
+	_, err := fyaml.Pack(context.Background(), testOpts(tmpDir, "yaml", true, false))
 	assertErrorContains(t, err, "could not open")
 }
 
@@ -664,7 +678,7 @@ func TestPack_EnableIncludes_RelativePathWithParent(t *testing.T) {
 		"commands/test.yml": `command: <<include(../scripts/script.sh)>>`,
 	}, nil)
 
-	result, err := pack(testOpts(tmpDir, "yaml", true, false, "canonical"), nil)
+	result, err := fyaml.Pack(context.Background(), testOpts(tmpDir, "yaml", true, false, "canonical"))
 	assertNoError(t, err)
 
 	resultStr := string(result)
@@ -679,7 +693,7 @@ func TestPack_EnableIncludes_InvalidYAMLWithIncludes(t *testing.T) {
 		"invalid.yml": "key: [unclosed", // Invalid YAML that would fail Unmarshal
 	}, nil)
 
-	_, err := pack(testOpts(tmpDir, "yaml", true, false), nil)
+	_, err := fyaml.Pack(context.Background(), testOpts(tmpDir, "yaml", true, false))
 	if err == nil {
 		t.Error("pack() expected error for invalid YAML even with includes enabled")
 	}
@@ -699,7 +713,9 @@ func TestPack_EmptyDir_Warning(t *testing.T) {
 	var buf bytes.Buffer
 	log := logger.New(&buf, false) // Even without verbose, warnings should show
 
-	_, err := pack(testOpts(tmpDir, "yaml", false, false), log)
+	opts := testOpts(tmpDir, "yaml", false, false)
+	opts.Logger = log
+	_, err := fyaml.Pack(context.Background(), opts)
 	if err != nil {
 		t.Fatalf("pack() error = %v", err)
 	}
@@ -723,18 +739,18 @@ func TestPack_ConvertBooleans(t *testing.T) {
 		{
 			name:            "without conversion",
 			convertBooleans: false,
-			expectedFile:    "../testdata/convert-booleans/expected-canonical-without-conversion.yml",
+			expectedFile:    "../../testdata/convert-booleans/expected-canonical-without-conversion.yml",
 		},
 		{
 			name:            "with conversion",
 			convertBooleans: true,
-			expectedFile:    "../testdata/convert-booleans/expected-canonical-with-conversion.yml",
+			expectedFile:    "../../testdata/convert-booleans/expected-canonical-with-conversion.yml",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := pack(testOpts("../testdata/convert-booleans/input", "yaml", false, tt.convertBooleans), nil)
+			result, err := fyaml.Pack(context.Background(), testOpts("../../testdata/convert-booleans/input", "yaml", false, tt.convertBooleans))
 			assertNoError(t, err)
 
 			expected, err := os.ReadFile(tt.expectedFile)
@@ -749,10 +765,10 @@ func TestPack_ConvertBooleans(t *testing.T) {
 
 func TestPack_ConvertBooleans_WithIncludes(t *testing.T) {
 	// Test that normalization works together with includes using fixtures
-	result, err := pack(testOpts("../testdata/convert-booleans-with-includes/input", "yaml", true, true), nil)
+	result, err := fyaml.Pack(context.Background(), testOpts("../../testdata/convert-booleans-with-includes/input", "yaml", true, true))
 	assertNoError(t, err)
 
-	expected, err := os.ReadFile("../testdata/convert-booleans-with-includes/expected-canonical.yml")
+	expected, err := os.ReadFile("../../testdata/convert-booleans-with-includes/expected-canonical.yml")
 	if err != nil {
 		t.Fatalf("Failed to read expected file: %v", err)
 	}
@@ -785,7 +801,7 @@ false_values:
 		"config.yml": yamlContent,
 	}, nil)
 
-	result, err := pack(testOpts(tmpDir, "yaml", false, true), nil)
+	result, err := fyaml.Pack(context.Background(), testOpts(tmpDir, "yaml", false, true))
 	if err != nil {
 		t.Fatalf("pack() error = %v", err)
 	}
@@ -815,7 +831,7 @@ func TestPack_ConvertBooleans_AlreadyBoolean(t *testing.T) {
 disabled: false`,
 	}, nil)
 
-	result, err := pack(testOpts(tmpDir, "yaml", false, true), nil)
+	result, err := fyaml.Pack(context.Background(), testOpts(tmpDir, "yaml", false, true))
 	assertNoError(t, err)
 	resultStr := string(result)
 
@@ -830,10 +846,10 @@ disabled: false`,
 
 func TestPack_ConvertBooleans_DeeplyNested(t *testing.T) {
 	// Test convert-booleans in deeply nested structures using fixtures
-	result, err := pack(testOpts("../testdata/convert-booleans-deeply-nested/input", "yaml", false, true), nil)
+	result, err := fyaml.Pack(context.Background(), testOpts("../../testdata/convert-booleans-deeply-nested/input", "yaml", false, true))
 	assertNoError(t, err)
 
-	expected, err := os.ReadFile("../testdata/convert-booleans-deeply-nested/expected-canonical.yml")
+	expected, err := os.ReadFile("../../testdata/convert-booleans-deeply-nested/expected-canonical.yml")
 	if err != nil {
 		t.Fatalf("Failed to read expected file: %v", err)
 	}
@@ -897,7 +913,9 @@ func TestPack_WithLogger(t *testing.T) {
 				testLogger = logger.New(&buf, tt.verbose)
 			}
 
-			result, err := pack(testOpts(tmpDir, "yaml", false, false), testLogger)
+			opts := testOpts(tmpDir, "yaml", false, false)
+			opts.Logger = testLogger
+			result, err := fyaml.Pack(context.Background(), opts)
 			if err != nil {
 				t.Fatalf("pack() error = %v", err)
 			}
@@ -922,7 +940,7 @@ func TestPack_Indent_YAML(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := pack(testOptsWithIndent("../testdata/simple/input", "yaml", false, false, tt.indent), nil)
+			result, err := fyaml.Pack(context.Background(), testOptsWithIndent("../../testdata/simple/input", "yaml", false, false, tt.indent))
 			if err != nil {
 				t.Fatalf("pack() error = %v", err)
 			}
@@ -952,7 +970,7 @@ func TestPack_Indent_JSON(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := pack(testOptsWithIndent("../testdata/simple/input", "json", false, false, tt.indent), nil)
+			result, err := fyaml.Pack(context.Background(), testOptsWithIndent("../../testdata/simple/input", "json", false, false, tt.indent))
 			if err != nil {
 				t.Fatalf("pack() error = %v", err)
 			}
@@ -970,18 +988,23 @@ func TestPack_Indent_JSON(t *testing.T) {
 
 func TestPack_Indent_Invalid(t *testing.T) {
 	// Test that invalid indent values are rejected
+	// Note: 0 is valid and defaults to 2, only negative values are invalid
 	tests := []struct {
 		name   string
 		indent int
 	}{
-		{"zero", 0},
 		{"negative", -1},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := pack(testOptsWithIndent("../testdata/simple/input", "yaml", false, false, tt.indent), nil)
-			assertErrorContains(t, err, "invalid indent")
+			_, err := fyaml.Pack(context.Background(), testOptsWithIndent("../../testdata/simple/input", "yaml", false, false, tt.indent))
+			if err == nil {
+				t.Error("Pack() should return error for invalid indent")
+			}
+			if !errors.Is(err, fyaml.ErrInvalidIndent) {
+				t.Errorf("error should be ErrInvalidIndent, got: %v", err)
+			}
 		})
 	}
 }
@@ -996,7 +1019,7 @@ nested:
 	}, nil)
 
 	// Before the fix, this would error with: mapstructure decode error on non-string key
-	_, err := pack(testOpts(tmpDir, "yaml", false, false, "canonical"), nil)
+	_, err := fyaml.Pack(context.Background(), testOpts(tmpDir, "yaml", false, false, "canonical"))
 	assertNoError(t, err)
 }
 
@@ -1009,7 +1032,7 @@ nested:
   456: "nested numeric"`,
 	}, nil)
 
-	result, err := pack(testOpts(tmpDir, "json", false, false, "preserve"), nil)
+	result, err := fyaml.Pack(context.Background(), testOpts(tmpDir, "json", false, false, "preserve"))
 	assertNoError(t, err)
 
 	// Verify it's valid JSON (the bug was json.Marshal failing entirely)
@@ -1034,7 +1057,7 @@ func TestPack_DeepMerge_Canonical(t *testing.T) {
     c: 3`,
 	}, nil)
 
-	result, err := pack(testOptsWithMerge(tmpDir, "yaml", false, false, "deep", "canonical"), nil)
+	result, err := fyaml.Pack(context.Background(), testOptsWithMerge(tmpDir, "yaml", false, false, "deep", "canonical"))
 	assertNoError(t, err)
 
 	resultStr := string(result)
@@ -1077,7 +1100,7 @@ func TestPack_DeepMerge_Preserve(t *testing.T) {
     c: 3`,
 	}, nil)
 
-	result, err := pack(testOptsWithMerge(tmpDir, "yaml", false, false, "deep", "preserve"), nil)
+	result, err := fyaml.Pack(context.Background(), testOptsWithMerge(tmpDir, "yaml", false, false, "deep", "preserve"))
 	assertNoError(t, err)
 
 	resultStr := string(result)
@@ -1120,7 +1143,7 @@ func TestPack_ShallowMerge_Default(t *testing.T) {
     c: 3`,
 	}, nil)
 
-	result, err := pack(testOpts(tmpDir, "yaml", false, false, "canonical"), nil)
+	result, err := fyaml.Pack(context.Background(), testOpts(tmpDir, "yaml", false, false, "canonical"))
 	assertNoError(t, err)
 
 	resultStr := string(result)
@@ -1156,7 +1179,7 @@ true: boolean key
 string_key: string value`,
 	}, nil)
 
-	result, err := pack(testOpts(tmpDir, "yaml", false, false, "canonical"), nil)
+	result, err := fyaml.Pack(context.Background(), testOpts(tmpDir, "yaml", false, false, "canonical"))
 	assertNoError(t, err)
 
 	resultStr := string(result)
@@ -1189,7 +1212,7 @@ true: boolean key
 string_key: string value`,
 	}, nil)
 
-	result, err := pack(testOpts(tmpDir, "json", false, false, "canonical"), nil)
+	result, err := fyaml.Pack(context.Background(), testOpts(tmpDir, "json", false, false, "canonical"))
 	assertNoError(t, err)
 
 	resultStr := string(result)

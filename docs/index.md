@@ -113,6 +113,7 @@ Those concerns are better handled by other tools.
 - **[Usage Guide](usage.md)** - Basic usage, common patterns, and limitations
 - **[Examples](examples.md)** - Detailed examples with outputs
 - **[Command Reference](reference.md)** - Complete command and flag reference
+- **[API Reference](api.md)** - Go library API documentation
 
 For quick installation without Go, see [Installation - Quick Install](installation.md#quick-install-linuxmacos) or [Installation - Docker](installation.md#docker).
 

@@ -54,6 +54,7 @@ nav:
   - Usage Guide: usage.md
   - Examples: examples.md
   - Command Reference: reference.md
+  - API Reference: api.md
 
 plugins:
   - search

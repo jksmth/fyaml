@@ -478,3 +478,187 @@ func TestMarshal_NonMapTypeError(t *testing.T) {
 		})
 	}
 }
+
+func TestNormalizeKeys(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    interface{}
+		expected interface{}
+	}{
+		{
+			name:     "primitive string",
+			input:    "hello",
+			expected: "hello",
+		},
+		{
+			name:     "primitive number",
+			input:    42,
+			expected: 42,
+		},
+		{
+			name:     "primitive boolean",
+			input:    true,
+			expected: true,
+		},
+		{
+			name: "map with interface{} keys (numbers)",
+			input: map[interface{}]interface{}{
+				123:  "value1",
+				456:  "value2",
+				true: "value3",
+			},
+			expected: map[string]interface{}{
+				"123":  "value1",
+				"456":  "value2",
+				"true": "value3",
+			},
+		},
+		{
+			name: "map with string keys",
+			input: map[string]interface{}{
+				"key1": "value1",
+				"key2": 42,
+			},
+			expected: map[string]interface{}{
+				"key1": "value1",
+				"key2": 42,
+			},
+		},
+		{
+			name: "array of primitives",
+			input: []interface{}{
+				"string",
+				123,
+				true,
+			},
+			expected: []interface{}{
+				"string",
+				123,
+				true,
+			},
+		},
+		{
+			name: "nested map with interface{} keys",
+			input: map[interface{}]interface{}{
+				"outer": map[interface{}]interface{}{
+					123: "inner",
+				},
+			},
+			expected: map[string]interface{}{
+				"outer": map[string]interface{}{
+					"123": "inner",
+				},
+			},
+		},
+		{
+			name: "nested array with maps",
+			input: []interface{}{
+				map[interface{}]interface{}{
+					1: "one",
+					2: "two",
+				},
+				map[string]interface{}{
+					"three": 3,
+				},
+			},
+			expected: []interface{}{
+				map[string]interface{}{
+					"1": "one",
+					"2": "two",
+				},
+				map[string]interface{}{
+					"three": 3,
+				},
+			},
+		},
+		{
+			name: "deeply nested structure",
+			input: map[interface{}]interface{}{
+				"level1": map[interface{}]interface{}{
+					"level2": []interface{}{
+						map[interface{}]interface{}{
+							999: "deep",
+						},
+					},
+				},
+			},
+			expected: map[string]interface{}{
+				"level1": map[string]interface{}{
+					"level2": []interface{}{
+						map[string]interface{}{
+							"999": "deep",
+						},
+					},
+				},
+			},
+		},
+		{
+			name:     "empty map",
+			input:    map[interface{}]interface{}{},
+			expected: map[string]interface{}{},
+		},
+		{
+			name:     "empty array",
+			input:    []interface{}{},
+			expected: []interface{}{},
+		},
+		{
+			name: "map with float keys",
+			input: map[interface{}]interface{}{
+				3.14: "pi",
+				2.71: "e",
+			},
+			expected: map[string]interface{}{
+				"3.14": "pi",
+				"2.71": "e",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := NormalizeKeys(tt.input)
+
+			// Use a helper to compare maps/slices deeply
+			if !deepEqual(result, tt.expected) {
+				t.Errorf("NormalizeKeys() = %+v, want %+v", result, tt.expected)
+			}
+		})
+	}
+}
+
+// deepEqual compares two values, handling maps and slices properly
+func deepEqual(a, b interface{}) bool {
+	switch aVal := a.(type) {
+	case map[string]interface{}:
+		bVal, ok := b.(map[string]interface{})
+		if !ok {
+			return false
+		}
+		if len(aVal) != len(bVal) {
+			return false
+		}
+		for k, v := range aVal {
+			if !deepEqual(v, bVal[k]) {
+				return false
+			}
+		}
+		return true
+	case []interface{}:
+		bVal, ok := b.([]interface{})
+		if !ok {
+			return false
+		}
+		if len(aVal) != len(bVal) {
+			return false
+		}
+		for i := range aVal {
+			if !deepEqual(aVal[i], bVal[i]) {
+				return false
+			}
+		}
+		return true
+	default:
+		return a == b
+	}
+}
