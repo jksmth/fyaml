@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.0](https://github.com/jksmth/fyaml/compare/v1.11.0...v1.12.0) (2026-01-10)
+
+
+### Features
+
+* add public API for programmatic usage ([#67](https://github.com/jksmth/fyaml/issues/67)) ([0b2d079](https://github.com/jksmth/fyaml/commit/0b2d079558e787b34fd367e64a6deb7c9dbebec6))
+
 ## [1.11.0](https://github.com/jksmth/fyaml/compare/v1.10.0...v1.11.0) (2026-01-09)
 
 
