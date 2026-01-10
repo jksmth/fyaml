@@ -68,6 +68,7 @@ fyaml [global flags] [DIR] [flags]
 - `-c, --check` - Compare generated output to `--output` file or stdin (if `--output` omitted or set to `-`), exit non-zero if different
 - `-f, --format string` - Output format: `yaml` or `json` (default: `yaml`)
 - `-m, --mode string` - Output mode: `canonical` (sorted keys, no comments) or `preserve` (authored order and comments) (default: `canonical`)
+- `--merge string` - Merge strategy: `shallow` (last wins) or `deep` (recursive) (default: `shallow`)
 - `--indent int` - Number of spaces for indentation (default: `2`)
 - `--enable-includes` - Process file includes (`!include`, `!include-text`, `<<include()>>`) (extension)
 - `--convert-booleans` - Convert unquoted YAML 1.1 booleans to `true`/`false`
@@ -232,7 +233,7 @@ fyaml config/ -o output.yml
 
 ### `-c, --check`
 
-Compare the generated output with an existing file specified by `--output`. Uses `os.Exit(2)` if they differ (terminates immediately).
+Compare the generated output with an existing file specified by `--output`. Exits with code 2 if they differ.
 
 **Usage:**
 
@@ -245,13 +246,13 @@ fyaml -o output.yml --check
 - Requires `--output` to be specified
 - Reads the existing file (if it exists)
 - Compares byte-by-byte with generated output
-- Uses `os.Exit(2)` if different (terminates immediately), returns normally with code 0 if same
+- Exits with code 2 if different, exits with code 0 if same
 - Useful in CI/CD to verify configuration hasn't changed
 
 **Exit Codes:**
 
 - `0` - Output matches the file
-- `2` - Output differs from the file (exits immediately via `os.Exit(2)`)
+- `2` - Output differs from the file
 - `1` - Error (file read error, etc.)
 
 **Examples:**

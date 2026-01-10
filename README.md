@@ -7,6 +7,7 @@
 [![Signed Releases](https://img.shields.io/badge/releases-signed-green)](https://github.com/jksmth/fyaml#verification)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Release](https://img.shields.io/github/v/release/jksmth/fyaml?include_prereleases&sort=semver)](https://github.com/jksmth/fyaml/releases)
+[![Go Reference](https://pkg.go.dev/badge/github.com/jksmth/fyaml.svg)](https://pkg.go.dev/github.com/jksmth/fyaml)
 
 📖 [Documentation](https://jksmth.github.io/fyaml/) • 🚀 [Installation](https://jksmth.github.io/fyaml/installation/) • 📚 [Usage Guide](https://jksmth.github.io/fyaml/usage/) • 🐛 [Issues](https://github.com/jksmth/fyaml/issues)
 
@@ -232,11 +233,78 @@ fyaml --version
   - [Commands](https://jksmth.github.io/fyaml/reference/#commands) - Main command, `pack` alias, `version`
   - [Flags reference](https://jksmth.github.io/fyaml/reference/#flags-reference) - All available flags and options including `--dir` for avoiding subcommand conflicts
 
+## Using as a Library
+
+fyaml can be used as a Go library in your own projects. Import the package:
+
+```go
+import "github.com/jksmth/fyaml"
+```
+
+### Basic Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "log"
+
+    "github.com/jksmth/fyaml"
+)
+
+func main() {
+    result, err := fyaml.Pack(context.Background(), fyaml.PackOptions{
+        Dir: "./config",
+    })
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Println(string(result))
+}
+```
+
+### With Options
+
+```go
+result, err := fyaml.Pack(context.Background(), fyaml.PackOptions{
+    Dir:             "./config",
+    Format:          fyaml.FormatJSON,
+    Mode:            fyaml.ModePreserve,
+    MergeStrategy:   fyaml.MergeDeep,
+    EnableIncludes:  true,
+    ConvertBooleans: true,
+    Indent:          4,
+})
+```
+
+### With Logging
+
+```go
+import (
+    "context"
+    "os"
+    "github.com/jksmth/fyaml"
+)
+
+logger := fyaml.NewLogger(os.Stderr, true)
+
+result, err := fyaml.Pack(context.Background(), fyaml.PackOptions{
+    Dir:    "./config",
+    Logger: logger,
+})
+```
+
+### API Reference
+
+See [pkg.go.dev](https://pkg.go.dev/github.com/jksmth/fyaml) for complete API documentation.
+
 ## Exit Codes
 
 - `0` - Success
 - `1` - Pack or IO error
-- `2` - `--check` mismatch (exits immediately via `os.Exit(2)`)
+- `2` - `--check` mismatch (output differs from expected)
 
 ## About
 
@@ -265,6 +333,13 @@ fyaml includes the following extensions beyond the FYAML specification. These fe
 - **@ Directory Support** - Directories starting with `@` merge into parent map, similar to `@` files. See [Usage Guide - @ Directories](https://jksmth.github.io/fyaml/usage/#-directories) for details.
 
 For complete documentation on all extensions, see the [Usage Guide](https://jksmth.github.io/fyaml/usage/) and [Command Reference](https://jksmth.github.io/fyaml/reference/).
+
+## Links
+
+- [Documentation](https://jksmth.github.io/fyaml/)
+- [Examples](https://jksmth.github.io/fyaml/examples/)
+- [API Reference](https://jksmth.github.io/fyaml/api/)
+- [GitHub Repository](https://github.com/jksmth/fyaml)
 
 ## License
 

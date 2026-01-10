@@ -1,11 +1,13 @@
-package cmd
+package cli
 
 import (
+	"context"
 	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
 
+	"github.com/jksmth/fyaml"
 	"github.com/jksmth/fyaml/internal/logger"
 	"github.com/jksmth/fyaml/internal/version"
 )
@@ -62,6 +64,26 @@ Examples:
 			return nil
 		}
 
+		// Validate flags early for better error messages
+		parsedFormat, err := fyaml.ParseFormat(format)
+		if err != nil {
+			return err
+		}
+
+		parsedMode, err := fyaml.ParseMode(mode)
+		if err != nil {
+			return err
+		}
+
+		parsedMergeStrategy, err := fyaml.ParseMergeStrategy(mergeStrategy)
+		if err != nil {
+			return err
+		}
+
+		if indent < 1 {
+			return fmt.Errorf("invalid indent: %d (must be at least 1)", indent)
+		}
+
 		// Determine directory: --dir flag takes precedence, then positional arg, then default
 		targetDir := dir
 		if targetDir == "" {
@@ -72,17 +94,20 @@ Examples:
 			}
 		}
 
-		opts := PackOptions{
+		// Build PackOptions from flags
+		opts := fyaml.PackOptions{
 			Dir:             targetDir,
-			Format:          format,
+			Format:          parsedFormat,
+			Mode:            parsedMode,
+			MergeStrategy:   parsedMergeStrategy,
 			EnableIncludes:  enableIncludes,
 			ConvertBooleans: convertBooleans,
 			Indent:          indent,
-			Mode:            mode,
-			MergeStrategy:   mergeStrategy,
+			Logger:          log,
 		}
 
-		result, err := pack(opts, log)
+		// Call the public API
+		result, err := fyaml.Pack(context.Background(), opts)
 		if err != nil {
 			return fmt.Errorf("pack error: %w", err)
 		}

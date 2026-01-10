@@ -18,7 +18,7 @@ help: ## display help message
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target> ...\033[0m\n\nTargets:\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 
 build: ## build fyaml binary
-	go build -o fyaml .
+	go build -o fyaml ./cmd/fyaml
 	@echo "Built fyaml"
 
 test: ## run all tests
@@ -43,7 +43,7 @@ clean-venv: ## delete the pre-commit venv
 	rm -rf $(venv)
 
 install: ## install fyaml via go install
-	go install .
+	go install ./cmd/fyaml
 
 verify-examples: build ## verify example directories
 	@echo "Verifying examples..."
