@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.13.0](https://github.com/jksmth/fyaml/compare/v1.12.0...v1.13.0) (2026-01-11)
+
+
+### Features
+
+* add multi-document YAML support and refactor filetree ([#69](https://github.com/jksmth/fyaml/issues/69)) ([0133dc3](https://github.com/jksmth/fyaml/commit/0133dc3862d4f69a1c0c4613fd9451a6b997c751))
+
 ## [1.12.0](https://github.com/jksmth/fyaml/compare/v1.11.0...v1.12.0) (2026-01-10)
 
 
