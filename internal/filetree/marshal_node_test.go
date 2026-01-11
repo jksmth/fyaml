@@ -9,84 +9,10 @@ import (
 	"go.yaml.in/yaml/v4"
 )
 
-// marshal_preserve_test.go contains tests for preserve mode marshaling.
+// marshal_node_test.go contains tests for preserve mode marshaling (works with yaml.Node)
+// and yaml.Node utility functions.
 
-func TestMarshalPreserve_PreservesComments(t *testing.T) {
-	tmpDir := createTestDir(t, map[string]string{
-		"entities/item1.yml": `# Header comment for item1
-key: value  # inline comment
-# Footer comment`,
-	}, nil)
-
-	tree, err := NewTree(tmpDir)
-	assertNoError(t, err)
-
-	opts := &Options{
-		PackRoot: tmpDir,
-		Mode:     ModePreserve,
-		Logger:   logger.Nop(),
-	}
-
-	result, err := tree.Marshal(opts)
-	assertNoError(t, err)
-
-	node, ok := result.(*yaml.Node)
-	if !ok {
-		t.Fatalf("Expected *yaml.Node, got %T", result)
-	}
-
-	out, err := yaml.Marshal(node)
-	assertNoError(t, err)
-
-	outStr := string(out)
-	if !strings.Contains(outStr, "Header comment") {
-		t.Error("Output should contain header comment")
-	}
-	if !strings.Contains(outStr, "inline comment") {
-		t.Error("Output should contain inline comment")
-	}
-}
-
-func TestMarshalPreserve_PreservesKeyOrder(t *testing.T) {
-	tmpDir := createTestDir(t, map[string]string{
-		"config.yml": `z: 1
-a: 2
-m: 3`,
-	}, nil)
-
-	tree, err := NewTree(tmpDir)
-	assertNoError(t, err)
-
-	opts := &Options{
-		PackRoot: tmpDir,
-		Mode:     ModePreserve,
-		Logger:   logger.Nop(),
-	}
-
-	result, err := tree.Marshal(opts)
-	assertNoError(t, err)
-
-	node, ok := result.(*yaml.Node)
-	if !ok {
-		t.Fatalf("Expected *yaml.Node, got %T", result)
-	}
-
-	out, err := yaml.Marshal(node)
-	assertNoError(t, err)
-	outStr := string(out)
-
-	zIdx := strings.Index(outStr, "z:")
-	aIdx := strings.Index(outStr, "a:")
-	mIdx := strings.Index(outStr, "m:")
-
-	if zIdx == -1 || aIdx == -1 || mIdx == -1 {
-		t.Fatalf("Could not find all keys in output:\n%s", outStr)
-	}
-
-	if zIdx >= aIdx || aIdx >= mIdx {
-		t.Errorf("Expected key order: z, a, m (authored order). Got:\n%s", outStr)
-	}
-}
+// --- yaml.Node utility function tests ---
 
 func TestMappingHelpers(t *testing.T) {
 	m := newMapping()
@@ -188,6 +114,85 @@ func TestMappingGet_EdgeCases(t *testing.T) {
 	}
 }
 
+// --- preserve mode marshaling tests ---
+
+func TestMarshalPreserve_PreservesComments(t *testing.T) {
+	tmpDir := createTestDir(t, map[string]string{
+		"entities/item1.yml": `# Header comment for item1
+key: value  # inline comment
+# Footer comment`,
+	}, nil)
+
+	tree, err := NewTree(tmpDir)
+	assertNoError(t, err)
+
+	opts := &Options{
+		PackRoot: tmpDir,
+		Mode:     ModePreserve,
+		Logger:   logger.Nop(),
+	}
+
+	result, err := tree.Marshal(opts)
+	assertNoError(t, err)
+
+	node, ok := result.(*yaml.Node)
+	if !ok {
+		t.Fatalf("Expected *yaml.Node, got %T", result)
+	}
+
+	out, err := yaml.Marshal(node)
+	assertNoError(t, err)
+
+	outStr := string(out)
+	if !strings.Contains(outStr, "Header comment") {
+		t.Error("Output should contain header comment")
+	}
+	if !strings.Contains(outStr, "inline comment") {
+		t.Error("Output should contain inline comment")
+	}
+}
+
+func TestMarshalPreserve_PreservesKeyOrder(t *testing.T) {
+	tmpDir := createTestDir(t, map[string]string{
+		"config.yml": `z: 1
+a: 2
+m: 3`,
+	}, nil)
+
+	tree, err := NewTree(tmpDir)
+	assertNoError(t, err)
+
+	opts := &Options{
+		PackRoot: tmpDir,
+		Mode:     ModePreserve,
+		Logger:   logger.Nop(),
+	}
+
+	result, err := tree.Marshal(opts)
+	assertNoError(t, err)
+
+	node, ok := result.(*yaml.Node)
+	if !ok {
+		t.Fatalf("Expected *yaml.Node, got %T", result)
+	}
+
+	out, err := yaml.Marshal(node)
+	assertNoError(t, err)
+	outStr := string(out)
+
+	zIdx := strings.Index(outStr, "z:")
+	aIdx := strings.Index(outStr, "a:")
+	mIdx := strings.Index(outStr, "m:")
+
+	if zIdx == -1 || aIdx == -1 || mIdx == -1 {
+		t.Fatalf("Could not find all keys in output:\n%s", outStr)
+	}
+
+	if zIdx >= aIdx || aIdx >= mIdx {
+		t.Errorf("Expected key order: z, a, m (authored order). Got:\n%s", outStr)
+	}
+}
+
 func TestMarshalPreserve_WithIncludes(t *testing.T) {
 	tmpDir := createTestDir(t, map[string]string{
 		"entities/scripts/test.sh": "#!/bin/bash\necho 'test'",
@@ -212,11 +217,11 @@ func TestMarshalPreserve_WithIncludes(t *testing.T) {
 		t.Fatal("Could not find item1.yml node")
 	}
 
-	result, err := testNode.marshalLeafPreserve(opts)
+	result, err := testNode.marshalLeafNode(opts)
 	assertNoError(t, err)
 
 	if result == nil {
-		t.Fatal("marshalLeafPreserve() returned nil")
+		t.Fatal("marshalLeafNode() returned nil")
 	}
 
 	out, err := yaml.Marshal(result)
@@ -224,16 +229,16 @@ func TestMarshalPreserve_WithIncludes(t *testing.T) {
 	outStr := string(out)
 
 	if !strings.Contains(outStr, "echo 'test'") {
-		t.Errorf("marshalLeafPreserve() should contain included content. Got: %q", outStr)
+		t.Errorf("marshalLeafNode() should contain included content. Got: %q", outStr)
 	}
 	if strings.Contains(outStr, "<<include") {
-		t.Error("marshalLeafPreserve() should not contain include directive after processing")
+		t.Error("marshalLeafNode() should not contain include directive after processing")
 	}
 	if !strings.Contains(outStr, "Comment before entity") {
-		t.Error("marshalLeafPreserve() should preserve comments")
+		t.Error("marshalLeafNode() should preserve comments")
 	}
 	if !strings.Contains(outStr, "inline comment") {
-		t.Error("marshalLeafPreserve() should preserve inline comments")
+		t.Error("marshalLeafNode() should preserve inline comments")
 	}
 }
 
