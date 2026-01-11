@@ -7,58 +7,8 @@ import (
 	"go.yaml.in/yaml/v4"
 )
 
-// marshal_preserve.go contains preserve mode marshaling (authored order, with comments).
-
-func (n *Node) marshalLeafPreserve(opts *Options) (*yaml.Node, error) {
-	return n.parseYAMLFile(opts)
-}
-
-func (n *Node) marshalParentPreserve(opts *Options) (*yaml.Node, error) {
-	subtree := newMapping()
-
-	// Get merge strategy from options (default to shallow)
-	strategy := MergeShallow
-	if opts != nil && opts.MergeStrategy == MergeDeep {
-		strategy = MergeDeep
-	}
-
-	for _, child := range n.Children {
-		var c *yaml.Node
-		var err error
-		if len(child.Children) == 0 {
-			c, err = child.marshalLeafPreserve(opts)
-		} else {
-			c, err = child.marshalParentPreserve(opts)
-		}
-		if err != nil {
-			return nil, err
-		}
-		if isEmptyNode(c) {
-			continue
-		}
-		if c.Kind != yaml.MappingNode {
-			return nil, fmt.Errorf("expected a map, got a `%v` which is not supported at this time for \"%s\"", c.Kind, child.FullPath)
-		}
-
-		if child.rootFile() || child.specialCaseDirectory() || child.specialCase() {
-			mergeMapping(subtree, c, strategy)
-		} else {
-			childName := child.name()
-			dv, ok := mappingGet(subtree, childName)
-			if !ok {
-				dv = newMapping()
-				mappingSet(subtree, newScalarKey(childName), dv)
-			}
-			mergeMapping(dv, c, strategy)
-		}
-	}
-
-	if len(subtree.Content) == 0 {
-		return nil, nil
-	}
-
-	return subtree, nil
-}
+// marshal_node.go contains preserve mode marshaling implementations (works with yaml.Node)
+// and yaml.Node utility functions.
 
 // isEmptyNode checks if a yaml.Node is nil or an empty mapping.
 func isEmptyNode(node *yaml.Node) bool {
@@ -140,4 +90,57 @@ func mergeMapping(dst, src *yaml.Node, strategy MergeStrategy) {
 		}
 		dst.Content[dstKeyPos+1] = srcVal
 	}
+}
+
+// marshalLeafNode marshals a leaf node in preserve mode (returns *yaml.Node).
+func (n *Node) marshalLeafNode(opts *Options) (*yaml.Node, error) {
+	return n.parseYAMLFile(opts)
+}
+
+// marshalParentNode marshals a parent node in preserve mode (returns *yaml.Node).
+func (n *Node) marshalParentNode(opts *Options) (*yaml.Node, error) {
+	subtree := newMapping()
+
+	// Get merge strategy from options (default to shallow)
+	strategy := MergeShallow
+	if opts != nil && opts.MergeStrategy == MergeDeep {
+		strategy = MergeDeep
+	}
+
+	for _, child := range n.Children {
+		var c *yaml.Node
+		var err error
+		if len(child.Children) == 0 {
+			c, err = child.marshalLeafNode(opts)
+		} else {
+			c, err = child.marshalParentNode(opts)
+		}
+		if err != nil {
+			return nil, err
+		}
+		if isEmptyNode(c) {
+			continue
+		}
+		if c.Kind != yaml.MappingNode {
+			return nil, fmt.Errorf("expected a map, got a `%v` which is not supported at this time for \"%s\"", c.Kind, child.FullPath)
+		}
+
+		if child.rootFile() || child.specialCaseDirectory() || child.specialCase() {
+			mergeMapping(subtree, c, strategy)
+		} else {
+			childName := child.name()
+			dv, ok := mappingGet(subtree, childName)
+			if !ok {
+				dv = newMapping()
+				mappingSet(subtree, newScalarKey(childName), dv)
+			}
+			mergeMapping(dv, c, strategy)
+		}
+	}
+
+	if len(subtree.Content) == 0 {
+		return nil, nil
+	}
+
+	return subtree, nil
 }

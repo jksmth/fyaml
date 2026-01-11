@@ -176,7 +176,7 @@ func marshalToFormat(data interface{}, format Format, indent int) ([]byte, error
 			}
 		}
 		// JSON only supports string keys, so normalize any non-string keys
-		normalizedData := filetree.NormalizeKeys(jsonData)
+		normalizedData := normalizeKeys(jsonData)
 		indentStr := strings.Repeat(" ", indent)
 		return json.MarshalIndent(normalizedData, "", indentStr)
 	case FormatYAML:
@@ -224,4 +224,35 @@ func Check(generated []byte, expected []byte, opts CheckOptions) error {
 		return ErrCheckMismatch
 	}
 	return nil
+}
+
+// normalizeKeys recursively converts all map keys to strings.
+// This is required for JSON output because JSON only supports string keys.
+// YAML allows non-string keys (numbers, booleans, etc.), so this function
+// converts them using fmt.Sprintf("%v", key).
+//
+// Example: map[interface{}]interface{}{123: "value"} becomes map[string]interface{}{"123": "value"}
+func normalizeKeys(v interface{}) interface{} {
+	switch val := v.(type) {
+	case map[interface{}]interface{}:
+		result := make(map[string]interface{})
+		for k, v := range val {
+			result[fmt.Sprintf("%v", k)] = normalizeKeys(v)
+		}
+		return result
+	case map[string]interface{}:
+		result := make(map[string]interface{})
+		for k, v := range val {
+			result[k] = normalizeKeys(v)
+		}
+		return result
+	case []interface{}:
+		result := make([]interface{}, len(val))
+		for i, elem := range val {
+			result[i] = normalizeKeys(elem)
+		}
+		return result
+	default:
+		return v
+	}
 }

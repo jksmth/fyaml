@@ -147,7 +147,7 @@ func TestPack_ScalarFile(t *testing.T) {
 			}, nil)
 
 			_, err := fyaml.Pack(context.Background(), testOpts(tmpDir, "yaml", false, false))
-			assertErrorContains(t, err, "expected a map")
+			assertErrorContains(t, err, "expected map")
 		})
 	}
 }
@@ -155,7 +155,7 @@ func TestPack_ScalarFile(t *testing.T) {
 func TestPack_ArrayFile(t *testing.T) {
 	// Test that files containing only an array (not a map) return an error using fixture
 	_, err := fyaml.Pack(context.Background(), testOpts("../../testdata/array-file/input", "yaml", false, false))
-	assertErrorContains(t, err, "expected a map")
+	assertErrorContains(t, err, "expected map")
 }
 
 func TestPack_Golden_Canonical(t *testing.T) {

@@ -9,7 +9,87 @@ import (
 	"go.yaml.in/yaml/v4"
 )
 
-// marshal_canonical_test.go contains tests for canonical mode marshaling.
+// marshal_map_test.go contains tests for canonical mode marshaling (works with interface{} maps)
+// and interface{} map utility functions.
+
+// --- interface{} map utility function tests ---
+
+func TestIsEmptyContent(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    interface{}
+		expected bool
+	}{
+		{"nil", nil, true},
+		{"empty map[string]interface{}", map[string]interface{}{}, true},
+		{"empty map[interface{}]interface{}", map[interface{}]interface{}{}, true},
+		{"non-empty map[string]interface{}", map[string]interface{}{"key": "value"}, false},
+		{"non-empty map[interface{}]interface{}", map[interface{}]interface{}{"key": "value"}, false},
+		{"string", "not empty", false},
+		{"int", 42, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isEmptyContent(tt.input)
+			if result != tt.expected {
+				t.Errorf("isEmptyContent(%v) = %v, want %v", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestMergeTree_InvalidInput(t *testing.T) {
+	tests := []struct {
+		name        string
+		input       interface{}
+		expectError bool
+		errorSubstr string
+		validate    func(t *testing.T, result map[interface{}]interface{})
+	}{
+		{
+			name:        "channel",
+			input:       make(chan int),
+			expectError: true,
+			errorSubstr: "expected map",
+		},
+		{
+			name:        "function",
+			input:       func() {},
+			expectError: true,
+			errorSubstr: "expected map",
+		},
+		{
+			name:        "nil",
+			input:       nil,
+			expectError: false,
+			validate: func(t *testing.T, result map[interface{}]interface{}) {
+				if result == nil {
+					t.Error("mergeTree() returned nil result for nil input")
+				}
+				if len(result) != 0 {
+					t.Errorf("mergeTree() result should be empty for nil input, got %v", result)
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := mergeTree(nil, tt.input, MergeShallow)
+			if tt.expectError {
+				assertErrorContains(t, err, tt.errorSubstr)
+			} else {
+				assertNoError(t, err)
+				if tt.validate != nil {
+					tt.validate(t, result)
+				}
+			}
+		})
+	}
+}
+
+// --- canonical mode marshaling tests ---
 
 // asMap converts interface{} to map[interface{}]interface{} for test assertions.
 // Handles both map[string]interface{} and map[interface{}]interface{}.
@@ -52,7 +132,7 @@ func TestMarshalCanonical_WithIncludes(t *testing.T) {
 		t.Fatal("Could not find item1.yml node")
 	}
 
-	result, err := testNode.marshalLeaf(opts)
+	result, err := testNode.marshalLeafMap(opts)
 	assertNoError(t, err)
 
 	resultMap := asMap(t, result)
@@ -61,14 +141,14 @@ func TestMarshalCanonical_WithIncludes(t *testing.T) {
 
 	commandVal, ok := attributesMap["command"].(string)
 	if !ok {
-		t.Fatalf("marshalLeaf() command value is %T, want string", attributesMap["command"])
+		t.Fatalf("marshalLeafMap() command value is %T, want string", attributesMap["command"])
 	}
 
 	if !strings.Contains(commandVal, "echo 'test'") {
-		t.Errorf("marshalLeaf() should contain included content. Got: %q", commandVal)
+		t.Errorf("marshalLeafMap() should contain included content. Got: %q", commandVal)
 	}
 	if strings.Contains(commandVal, "<<include") {
-		t.Error("marshalLeaf() should not contain include directive after processing")
+		t.Error("marshalLeafMap() should not contain include directive after processing")
 	}
 }
 
@@ -195,81 +275,6 @@ func TestMarshalCanonical_RootFile(t *testing.T) {
 	fileMap := asMap(t, subdirMap["file"])
 	if fileMap["key2"] != "value2" {
 		t.Errorf("Subdirectory file content key2 = %v, want 'value2'", fileMap["key2"])
-	}
-}
-
-func TestIsEmptyContent(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    interface{}
-		expected bool
-	}{
-		{"nil", nil, true},
-		{"empty map[string]interface{}", map[string]interface{}{}, true},
-		{"empty map[interface{}]interface{}", map[interface{}]interface{}{}, true},
-		{"non-empty map[string]interface{}", map[string]interface{}{"key": "value"}, false},
-		{"non-empty map[interface{}]interface{}", map[interface{}]interface{}{"key": "value"}, false},
-		{"string", "not empty", false},
-		{"int", 42, false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := isEmptyContent(tt.input)
-			if result != tt.expected {
-				t.Errorf("isEmptyContent(%v) = %v, want %v", tt.input, result, tt.expected)
-			}
-		})
-	}
-}
-
-func TestMergeTree_InvalidInput(t *testing.T) {
-	tests := []struct {
-		name        string
-		input       interface{}
-		expectError bool
-		errorSubstr string
-		validate    func(t *testing.T, result map[interface{}]interface{})
-	}{
-		{
-			name:        "channel",
-			input:       make(chan int),
-			expectError: true,
-			errorSubstr: "expected map",
-		},
-		{
-			name:        "function",
-			input:       func() {},
-			expectError: true,
-			errorSubstr: "expected map",
-		},
-		{
-			name:        "nil",
-			input:       nil,
-			expectError: false,
-			validate: func(t *testing.T, result map[interface{}]interface{}) {
-				if result == nil {
-					t.Error("mergeTree() returned nil result for nil input")
-				}
-				if len(result) != 0 {
-					t.Errorf("mergeTree() result should be empty for nil input, got %v", result)
-				}
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result, err := mergeTree(nil, tt.input, MergeShallow)
-			if tt.expectError {
-				assertErrorContains(t, err, tt.errorSubstr)
-			} else {
-				assertNoError(t, err)
-				if tt.validate != nil {
-					tt.validate(t, result)
-				}
-			}
-		})
 	}
 }
 

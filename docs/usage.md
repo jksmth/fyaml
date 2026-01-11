@@ -575,6 +575,38 @@ category1:
           tags: []
 ```
 
+### Multi-Document YAML Files
+
+YAML supports multiple documents in a single file, separated by `---`. **fyaml merges all documents in a file** using the same semantics as file merging (later values overwrite earlier values, respects `--merge-strategy`).
+
+**Example:**
+
+```yaml
+# config.yml
+timeout: 30
+retries: 3
+---
+timeout: 60 # Overwrites previous value
+debug: true # New key added
+```
+
+When processed, this produces:
+
+```yaml
+timeout: 60 # From second document (overwrites first)
+retries: 3 # From first document (preserved)
+debug: true # From second document (new key)
+```
+
+**Key behaviors:**
+
+- All documents must be maps (consistent with file requirement)
+- Documents merge in order (first to last, "later wins")
+- Respects `--merge-strategy` (shallow/deep)
+- Works identically for regular files, `@` files, and root files
+
+**Note:** While multi-document files are supported, fyaml's filesystem-based approach (organizing resources as separate files) is generally recommended for better organization and maintainability.
+
 ## File Naming
 
 ### Supported Extensions
@@ -650,6 +682,39 @@ JSON output is formatted with 2-space indentation by default. You can customize 
 # Use 4-space indent for JSON
 fyaml --format json --indent 4
 ```
+
+### Non-String Map Keys
+
+YAML allows map keys to be non-string types (numbers, booleans, etc.). **fyaml preserves these key types for YAML output** but normalizes them to strings for JSON output (JSON format requirement).
+
+- **YAML output** (both modes): Non-string keys are preserved. For example, `123: value` stays as `123: value`.
+- **JSON output** (both modes): Non-string keys are converted to strings. For example, `123: value` becomes `"123": value`.
+
+**Example:**
+
+```yaml
+# Input file
+123: "numeric key"
+true: "boolean key"
+```
+
+**YAML output (canonical or preserve mode):**
+
+```yaml
+123: numeric key
+true: boolean key
+```
+
+**JSON output (canonical or preserve mode):**
+
+```json
+{
+  "123": "numeric key",
+  "true": "boolean key"
+}
+```
+
+**Note:** When non-string keys are present, canonical mode sorts them in type order: booleans first, then numbers (sorted numerically), then strings (sorted alphabetically).
 
 ### Empty Output
 
@@ -941,135 +1006,7 @@ All includes are confined to the pack root directory:
 - Absolute paths are allowed but must be within the pack root
 - Attempts to escape the pack root (e.g., `../../etc/passwd`) are rejected
 
-## Best Practices
-
-1. **Keep files focused**: Each file should represent a single logical unit
-2. **Use descriptive names**: File and directory names should clearly indicate their purpose
-3. **Organize hierarchically**: Use directory structure to reflect configuration hierarchy
-4. **Version control**: Commit both source directory structure and generated output
-5. **Verify in CI**: Use `--check` flag in CI to catch unexpected changes
-6. **Document structure**: Add README files in directories to explain organization
-7. **Use includes sparingly**: Prefer filesystem structure for organization; use includes for reusable fragments and text content
-
-## Limitations
-
-### File Content Requirements
-
-Each YAML/JSON file must contain a map (object/dictionary) at the top level. The file itself must be a map, but nested values within that map can be any YAML type (scalars, arrays, nested maps, etc.).
-
-**Supported:**
-
-```yaml
-# ✅ Top-level is a map
-entity:
-  id: example1
-  attributes:
-    name: sample name
-    tags: [tag1, tag2] # Array nested in map
-    settings: # Nested map
-      timeout: 30
-```
-
-**Not supported:**
-
-```yaml
-# ❌ Top-level is a scalar
-hello
-
-# ❌ Top-level is an array
-- item1
-- item2
-```
-
-If you attempt to pack a file containing a top-level scalar or array, fyaml will return an error with the exact format:
-
-```
-expected a map, got a <type> which is not supported at this time for "<filepath>"
-```
-
-Where `<type>` is the Go type (e.g., `string`, `[]interface{}`) and `<filepath>` is the full path to the problematic file.
-
-### YAML Anchors and Aliases
-
-YAML anchors (`&anchor`) and aliases (`*alias`) are resolved **within each individual file** during parsing. Anchors and aliases **cannot** reference values across different files—they only work within a single YAML document.
-
-If you need shared values across files, use the `!include` feature (with `--enable-includes`) to include YAML content from other files at specific locations in your structure. This provides similar functionality to cross-file anchors:
-
-```yaml
-# shared/defaults.yml
-timeout: 30
-retries: 3
-
-# entities/item1.yml
-entity:
-  id: example1
-  config: !include ../shared/defaults.yml
-  attributes:
-    name: sample name
-```
-
-**Note:** `@` files can also be used to merge common configuration at the directory level, but `!include` is more flexible as it allows you to include content at any point in your YAML structure, not just at the directory level.
-
-### Multi-Document YAML Files
-
-YAML supports multiple documents in a single file, separated by `---`. However, **fyaml only processes the first document** in multi-document files. Subsequent documents are silently ignored.
-
-Instead of using multi-document files, organize your resources using separate files:
-
-```yaml
-# Instead of this (multi-document):
-config.yml:
-  ---
-  entity:
-    id: example1
-    attributes:
-      name: first item
-  ---
-  entity:
-    id: example2
-    attributes:
-      name: second item
-
-# Use this (fyaml's filesystem-based approach):
-config/
-  item1.yml    # Contains the first entity config
-  item2.yml    # Contains the second entity config
-```
-
-### Non-String Map Keys
-
-YAML allows map keys to be non-string types (numbers, booleans, etc.). **fyaml preserves these key types for YAML output** but normalizes them to strings for JSON output (JSON format requirement).
-
-- **YAML output** (both modes): Non-string keys are preserved. For example, `123: value` stays as `123: value`.
-- **JSON output** (both modes): Non-string keys are converted to strings. For example, `123: value` becomes `"123": value`.
-
-**Example:**
-
-```yaml
-# Input file
-123: "numeric key"
-true: "boolean key"
-```
-
-**YAML output (canonical or preserve mode):**
-
-```yaml
-123: numeric key
-true: boolean key
-```
-
-**JSON output (canonical or preserve mode):**
-
-```json
-{
-  "123": "numeric key",
-  "true": "boolean key"
-}
-```
-
-**Note:** When non-string keys are present, canonical mode sorts them in type order: booleans first, then numbers (sorted numerically), then strings (sorted alphabetically).
-
-### Converting `on`/`off` and `yes`/`no` to `true`/`false`
+### Converting YAML 1.1 Booleans
 
 If your YAML files use `on`/`off` or `yes`/`no` for boolean values, fyaml will treat them as strings by default. This can cause issues if your tools expect actual boolean values.
 
@@ -1148,6 +1085,65 @@ entity:
 ```
 
 **Technical Note:** fyaml outputs YAML 1.2 format, which only recognizes `true`/`false` as booleans. Values like `on`/`off` and `yes`/`no` were valid booleans in YAML 1.1 but are treated as strings in YAML 1.2. The `--convert-booleans` flag converts these legacy values to their YAML 1.2 equivalents.
+
+## Limitations
+
+### File Content Requirements
+
+Each YAML/JSON file must contain a map (object/dictionary) at the top level. The file itself must be a map, but nested values within that map can be any YAML type (scalars, arrays, nested maps, etc.).
+
+**Supported:**
+
+```yaml
+# ✅ Top-level is a map
+entity:
+  id: example1
+  attributes:
+    name: sample name
+    tags: [tag1, tag2] # Array nested in map
+    settings: # Nested map
+      timeout: 30
+```
+
+**Not supported:**
+
+```yaml
+# ❌ Top-level is a scalar
+hello
+
+# ❌ Top-level is an array
+- item1
+- item2
+```
+
+If you attempt to pack a file containing a top-level scalar or array, fyaml will return an error with the exact format:
+
+```
+expected a map, got a <type> which is not supported at this time for "<filepath>"
+```
+
+Where `<type>` is the Go type (e.g., `string`, `[]interface{}`) and `<filepath>` is the full path to the problematic file.
+
+### YAML Anchors and Aliases
+
+YAML anchors (`&anchor`) and aliases (`*alias`) are resolved **within each individual file** during parsing. Anchors and aliases **cannot** reference values across different files—they only work within a single YAML document.
+
+If you need shared values across files, use the `!include` feature (with `--enable-includes`) to include YAML content from other files at specific locations in your structure. This provides similar functionality to cross-file anchors:
+
+```yaml
+# shared/defaults.yml
+timeout: 30
+retries: 3
+
+# entities/item1.yml
+entity:
+  id: example1
+  config: !include ../shared/defaults.yml
+  attributes:
+    name: sample name
+```
+
+**Note:** `@` files can also be used to merge common configuration at the directory level, but `!include` is more flexible as it allows you to include content at any point in your YAML structure, not just at the directory level.
 
 ### Large Files
 
