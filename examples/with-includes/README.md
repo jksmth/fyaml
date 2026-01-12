@@ -123,7 +123,8 @@ Note: The `shared/defaults.yml` file appears in the output because it's part of 
 ## Notes
 
 - All three include mechanisms work together
-- `!include` merges YAML structures
-- `!include-text` and `<<include()>>` include raw text content
+- `!include` merges YAML structures and supports nested includes
+- `!include-text` and `<<include()>>` include raw text content (single-level only)
 - Paths are relative to the file containing the include
+  - For nested includes, paths in included files are resolved relative to the included file's location
 - All includes must be within the pack root directory

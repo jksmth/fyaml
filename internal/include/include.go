@@ -177,12 +177,45 @@ func ProcessIncludeTag(n *yaml.Node, baseDir string, packRoot string) error {
 			return fmt.Errorf("!include tag must be used on a scalar value, got %v", n.Kind)
 		}
 
-		fragment, err := LoadFileFragment(n.Value, baseDir, packRoot)
+		// Save the include path before we replace the node
+		includePath := n.Value
+
+		fragment, err := LoadFileFragment(includePath, baseDir, packRoot)
 		if err != nil {
 			return err
 		}
 
-		// Replace the node with the fragment content
+		// Calculate the new baseDir (directory of the included file) for processing
+		// includes within the fragment. This ensures that relative paths in the
+		// included file are resolved relative to that file's location, not the
+		// original file's location.
+		_, relPath, err := resolvePath(includePath, baseDir, packRoot)
+		if err != nil {
+			// If we can't resolve the path, fall back to original baseDir
+			// This shouldn't happen since LoadFileFragment already validated it
+			*n = *fragment
+			return ProcessIncludes(fragment, baseDir, packRoot)
+		}
+
+		// Get the directory of the included file relative to pack root
+		absPackRoot, err := filepath.Abs(packRoot)
+		if err != nil {
+			*n = *fragment
+			return ProcessIncludes(fragment, baseDir, packRoot)
+		}
+		absIncludePath := filepath.Join(absPackRoot, relPath)
+		// Clean the path to resolve any .. components
+		absIncludePath = filepath.Clean(absIncludePath)
+		newBaseDir := filepath.Dir(absIncludePath)
+
+		// Process includes in the fragment using the included file's directory as baseDir
+		// This must be done before replacing the node, so that ProcessIncludes can
+		// process all includes (!include, !include-text, <<include()>>) in the fragment
+		if err := ProcessIncludes(fragment, newBaseDir, packRoot); err != nil {
+			return err
+		}
+
+		// Replace the node with the (now fully processed) fragment content
 		*n = *fragment
 		return nil
 	}, baseDir, packRoot)

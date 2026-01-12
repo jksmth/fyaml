@@ -1048,3 +1048,79 @@ func TestProcessIncludeTag_JSONFileWithTag(t *testing.T) {
 		t.Errorf("ProcessIncludeTag() did not include JSON content. Got retries: %v", config["retries"])
 	}
 }
+
+func TestProcessIncludeTag_RelativePathInIncludedFile(t *testing.T) {
+	// Test that includes within an included file are resolved relative to
+	// the included file's directory, not the original file's directory.
+	// This matches the scenario: definitions/@steps.yml includes step-templates/security-scan.yml,
+	// and security-scan.yml includes ../../scripts/security-scan.sh
+	tmpDir := t.TempDir()
+
+	// Create scripts directory at root level
+	scriptsDir := filepath.Join(tmpDir, "scripts")
+	if err := os.MkdirAll(scriptsDir, 0755); err != nil {
+		t.Fatalf("Failed to create scripts directory: %v", err)
+	}
+	scriptFile := filepath.Join(scriptsDir, "test.sh")
+	scriptContent := "#!/bin/bash\necho 'test script'"
+	if err := os.WriteFile(scriptFile, []byte(scriptContent), 0600); err != nil {
+		t.Fatalf("Failed to write script file: %v", err)
+	}
+
+	// Create definitions/step-templates/ directory structure
+	definitionsDir := filepath.Join(tmpDir, "definitions")
+	stepTemplatesDir := filepath.Join(definitionsDir, "step-templates")
+	if err := os.MkdirAll(stepTemplatesDir, 0755); err != nil {
+		t.Fatalf("Failed to create step-templates directory: %v", err)
+	}
+	stepFile := filepath.Join(stepTemplatesDir, "test-step.yml")
+	// The step file includes a script using a relative path that should be resolved
+	// relative to definitions/step-templates/, not definitions/
+	// From definitions/step-templates/, going up two directories (../../) gets to tmpDir root,
+	// then scripts/test.sh is at tmpDir/scripts/test.sh
+	stepContent := `name: Test Step
+script:
+  - !include-text ../../scripts/test.sh`
+	if err := os.WriteFile(stepFile, []byte(stepContent), 0600); err != nil {
+		t.Fatalf("Failed to write step file: %v", err)
+	}
+
+	// Create a main file in definitions/ that includes the step file
+	mainFile := filepath.Join(definitionsDir, "main.yml")
+	mainContent := `steps:
+  - step: !include step-templates/test-step.yml`
+	if err := os.WriteFile(mainFile, []byte(mainContent), 0600); err != nil {
+		t.Fatalf("Failed to write main file: %v", err)
+	}
+
+	// Parse and process includes
+	var node yaml.Node
+	if err := yaml.Unmarshal([]byte(mainContent), &node); err != nil {
+		t.Fatalf("Failed to unmarshal YAML: %v", err)
+	}
+
+	absTmpDir, err := filepath.Abs(tmpDir)
+	if err != nil {
+		t.Fatalf("Failed to get absolute path: %v", err)
+	}
+
+	// Process includes starting from definitions/ directory
+	err = ProcessIncludes(&node, definitionsDir, absTmpDir)
+	if err != nil {
+		t.Errorf("ProcessIncludes() error = %v", err)
+	}
+
+	// Marshal and verify the script content was included
+	out, err := yaml.Marshal(&node)
+	if err != nil {
+		t.Fatalf("Failed to marshal YAML: %v", err)
+	}
+
+	outStr := string(out)
+	if !strings.Contains(outStr, "test script") {
+		t.Errorf("Script content not included. Output:\n%s", outStr)
+	}
+	if strings.Contains(outStr, "!include-text") {
+		t.Errorf("Include tag not processed. Output:\n%s", outStr)
+	}
+}
