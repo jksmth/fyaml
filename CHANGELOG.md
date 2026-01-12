@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.13.1](https://github.com/jksmth/fyaml/compare/v1.13.0...v1.13.1) (2026-01-12)
+
+
+### Bug Fixes
+
+* resolve nested include paths relative to included file location ([#71](https://github.com/jksmth/fyaml/issues/71)) ([1ee7c58](https://github.com/jksmth/fyaml/commit/1ee7c58b81e9b639daba52b825f179000fca8907))
+
 ## [1.13.0](https://github.com/jksmth/fyaml/compare/v1.12.0...v1.13.0) (2026-01-11)
 
 
