@@ -382,8 +382,11 @@ When enabled, fyaml processes three include mechanisms:
 
 - **Pack root boundary**: All includes must resolve to paths within the pack root directory
 - **Relative paths**: File paths are resolved relative to the file containing the include
+  - For nested includes, paths in included files are resolved relative to the included file's location, not the original file
 - **Absolute paths**: Allowed but must be within the pack root
-- **Nested includes**: Supported — included files can contain their own includes
+- **Nested includes**:
+  - `!include` supports nested includes — included YAML files can contain their own `!include`, `!include-text`, or `<<include()>>` directives
+  - `!include-text` and `<<include()>>` are single-level only — the included text content is not processed for further includes
 - **JSON file support**:
   - `<<include()>>` works in JSON files (standard JSON)
   - `!include` and `!include-text` tags work in JSON files (non-standard JSON, but supported by fyaml)

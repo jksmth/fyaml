@@ -927,7 +927,9 @@ entity:
 
 ### Nested Includes
 
-Included files can contain their own includes:
+Included files can contain their own includes. **Important:** Only `!include` supports nested includes. Text includes (`!include-text` and `<<include()>>`) are single-level only.
+
+**Basic Nested Include:**
 
 ```yaml
 # common/defaults.yml
@@ -940,6 +942,48 @@ custom:
 # common/base-defaults.yml
 retries: 3
 debug: false
+```
+
+**Nested Includes with Relative Paths:**
+
+When a file included via `!include` contains its own includes, paths in that included file are resolved relative to the included file's location, not the original file:
+
+```
+config/
+  definitions/
+    templates/
+      worker.yml          # Includes ../../scripts/worker.sh
+    services.yml          # Includes templates/worker.yml
+  scripts/
+    worker.sh
+```
+
+**`definitions/services.yml`:**
+
+```yaml
+services:
+  worker: !include templates/worker.yml
+```
+
+**`definitions/templates/worker.yml`:**
+
+```yaml
+name: Worker Service
+script: !include-text ../../scripts/worker.sh
+```
+
+When `services.yml` includes `templates/worker.yml`, the path `../../scripts/worker.sh` in `worker.yml` is resolved relative to `definitions/templates/` (the included file's location), correctly resolving to `config/scripts/worker.sh`.
+
+**Text Includes are Single-Level:**
+
+Text includes (`!include-text` and `<<include()>>`) load raw text content and do not process that text for further includes:
+
+```yaml
+# This works - YAML structure includes can nest
+config: !include shared.yml # shared.yml can contain !include, !include-text, or <<include()>>
+
+# This is single-level - the included text is not processed
+command: !include-text script.sh # script.sh content is loaded as-is, even if it contains <<include()>>
 ```
 
 ### JSON File Support
@@ -1003,6 +1047,7 @@ The included JSON file will be parsed and merged into the YAML structure.
 All includes are confined to the pack root directory:
 
 - Paths are resolved relative to the file containing the include
+  - For nested includes, paths in included files are resolved relative to the included file's location
 - Absolute paths are allowed but must be within the pack root
 - Attempts to escape the pack root (e.g., `../../etc/passwd`) are rejected
 
