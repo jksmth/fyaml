@@ -71,6 +71,7 @@ fyaml [global flags] [DIR] [flags]
 - `--merge string` - Merge strategy: `shallow` (last wins) or `deep` (recursive) (default: `shallow`)
 - `--indent int` - Number of spaces for indentation (default: `2`)
 - `--enable-includes` - Process file includes (`!include`, `!include-text`, `<<include()>>`) (extension)
+- `--enable-anchors` - Enable anchor references across different files (extension)
 - `--convert-booleans` - Convert unquoted YAML 1.1 booleans to `true`/`false`
 - `-V, --version` - Print version information and exit
 
@@ -488,6 +489,7 @@ fyaml --convert-booleans
 
 # Combine with other flags
 fyaml --convert-booleans --enable-includes
+fyaml --convert-booleans --enable-anchors
 fyaml --convert-booleans -o output.yml
 
 # Pack specific directory with conversion
@@ -633,7 +635,7 @@ fyaml --merge deep       # Recursively merge nested maps
 
 **Examples:**
 
-```bash
+````bash
 # Use shallow merge (default)
 fyaml config/
 
@@ -643,8 +645,101 @@ fyaml config/ --merge deep
 # Combine with other flags
 fyaml config/ --merge deep --mode preserve
 fyaml config/ --merge deep --format json
+
+### `--enable-anchors`
+
+Enable cross-file YAML anchor resolution. Allows anchors defined in one file to be referenced as aliases in another file.
+
+**Usage:**
+
+```bash
+fyaml config/ --enable-anchors
+fyaml config/ --enable-anchors --mode preserve
+fyaml config/ --enable-anchors -o output.yml
+````
+
+**Default:** `false` (disabled)
+
+**Behavior:**
+
+- Collects anchors from all files and makes them available for cross-file references
+- Resolves cross-file alias references during parsing
+- Works with both alias references (`*alias`) and merge keys (`<<: *alias`)
+- Files that fail to parse won't contribute anchors to other files
+
+**Mode Differences:**
+
+- **Canonical mode**: Aliases are expanded into their full content
+- **Preserve mode**: Alias references are preserved as `*alias_name` to maintain the original structure
+
+**Example:**
+
+```yaml
+# shared/templates/common.yml
+template: &common_template
+  timeout: 30
+  retries: 3
+  enabled: true
+
+# entities/item1.yml
+entity:
+  id: example1
+  config: *common_template
+  attributes:
+    name: sample name
 ```
 
+**Output (canonical mode):**
+
+```yaml
+entities:
+  item1:
+    entity:
+      id: example1
+      attributes:
+        name: sample name
+      config:
+        enabled: true
+        retries: 3
+        timeout: 30
+shared:
+  templates:
+    common:
+      template:
+        enabled: true
+        retries: 3
+        timeout: 30
+```
+
+**Output (preserve mode):**
+
+```yaml
+entities:
+  item1:
+    entity:
+      id: example1
+      config: *common_template
+      attributes:
+        name: sample name
+shared:
+  templates:
+    common:
+      template: &common_template
+        enabled: true
+        retries: 3
+        timeout: 30
+```
+
+**Limitations:**
+
+- Files that fail to parse (due to invalid YAML or unresolvable aliases) won't have their anchors available to other files
+- Circular anchor dependencies are supported but may require multiple processing passes
+- The common pattern (anchors in shared/definition files, aliases in entity/config files) works well
+- Requires `--enable-anchors` flag
+
+**See also:** [YAML Anchors and Aliases](usage.md#yaml-anchors-and-aliases) in the Usage Guide for detailed information.
+
+````
 **Example transformation:**
 
 Input files:
@@ -657,7 +752,7 @@ config:
   nested:
     a: 1
     b: 2
-```
+````
 
 **`@override.yml`:**
 

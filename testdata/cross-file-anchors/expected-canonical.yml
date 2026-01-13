@@ -1,0 +1,43 @@
+entities:
+  item1:
+    entity:
+      attributes:
+        name: sample name
+      config:
+        description: Override with custom values
+        enabled: true
+        name: Custom Config
+        retries: 3
+        timeout: 30
+      id: example1
+      template1:
+        enabled: true
+        name: Common Template
+        retries: 3
+        timeout: 30
+      template2:
+        description: Template for items
+        metadata:
+          category: standard
+          version: 1
+        name: Item Template
+shared:
+  defaults:
+    defaults:
+      enabled: true
+      retries: 3
+      timeout: 30
+  templates:
+    common:
+      template:
+        enabled: true
+        name: Common Template
+        retries: 3
+        timeout: 30
+    item-template:
+      template:
+        description: Template for items
+        metadata:
+          category: standard
+          version: 1
+        name: Item Template

@@ -1,0 +1,9 @@
+# Third definition of shared_anchor
+shared: &shared_anchor
+  value: third
+  source: file3
+
+# Also has another duplicate
+other: &other_anchor
+  value: first_other
+  source: file3

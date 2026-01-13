@@ -1,0 +1,9 @@
+# Fourth definition of shared_anchor
+shared: &shared_anchor
+  value: fourth
+  source: file4
+
+# Duplicate of other_anchor
+other: &other_anchor
+  value: second_other
+  source: file4

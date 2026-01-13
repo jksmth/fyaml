@@ -108,16 +108,19 @@ func (n *Node) marshalParentNode(opts *Options) (*yaml.Node, error) {
 	}
 
 	for _, child := range n.Children {
-		var c *yaml.Node
-		var err error
-		if len(child.Children) == 0 {
-			c, err = child.marshalLeafNode(opts)
-		} else {
-			c, err = child.marshalParentNode(opts)
-		}
+		// Use child.Marshal() to ensure anchor registry is available and processing is consistent
+		// This matches the approach in canonical mode (marshalParentMap)
+		marshaled, err := child.Marshal(opts)
 		if err != nil {
 			return nil, err
 		}
+
+		// In preserve mode, Marshal returns *yaml.Node
+		c, ok := marshaled.(*yaml.Node)
+		if !ok {
+			return nil, fmt.Errorf("expected *yaml.Node in preserve mode, got %T for \"%s\"", marshaled, child.FullPath)
+		}
+
 		if isEmptyNode(c) {
 			continue
 		}

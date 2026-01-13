@@ -1,0 +1,7 @@
+# Base anchor with common properties
+base_template: &base_template
+  timeout: 600
+  retries: 3
+  enabled: true
+  metadata:
+    version: 1.0

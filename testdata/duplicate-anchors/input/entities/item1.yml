@@ -1,0 +1,4 @@
+# Uses the shared anchor (should get file2's definition)
+entity:
+  id: example1
+  config: *shared_anchor

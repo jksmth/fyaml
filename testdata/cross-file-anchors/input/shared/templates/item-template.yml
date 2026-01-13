@@ -1,0 +1,6 @@
+template: &item_template
+  name: Item Template
+  description: Template for items
+  metadata:
+    version: 1.0
+    category: standard

@@ -1,0 +1,8 @@
+# Composed anchor that references the base anchor
+# This tests that alias expansion works correctly when anchors reference other anchors
+template: &item_template
+  <<: *base_template
+  name: Item Template
+  description: Template for items with base properties
+  attributes:
+    category: standard

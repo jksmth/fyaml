@@ -137,6 +137,19 @@ func sortChildren(node *Node) {
 	}
 }
 
+// collectFileNodes recursively collects all file nodes (non-directories) from the tree.
+// Since buildTree already filters out non-YAML files, this returns all YAML/JSON files.
+func collectFileNodes(node *Node) []*Node {
+	var files []*Node
+	if !node.Info.IsDir() {
+		files = append(files, node)
+	}
+	for _, child := range node.Children {
+		files = append(files, collectFileNodes(child)...)
+	}
+	return files
+}
+
 // --- Node helper methods ---
 
 func (n *Node) basename() string {

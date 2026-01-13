@@ -1,0 +1,10 @@
+entity:
+  id: example1
+  config:
+    <<: *common_defaults
+    name: Custom Config
+    description: Override with custom values
+  template1: *common_template
+  template2: *item_template
+  attributes:
+    name: sample name

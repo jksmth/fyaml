@@ -52,6 +52,10 @@ type PackOptions struct {
 	// ConvertBooleans converts unquoted YAML 1.1 booleans (on/off, yes/no) to YAML 1.2 (true/false).
 	ConvertBooleans bool
 
+	// EnableAnchors enables anchor references across different files.
+	// When enabled, anchors defined in one file can be referenced as aliases in another file.
+	EnableAnchors bool
+
 	// Indent is the number of spaces for indentation. Defaults to 2 if zero.
 	Indent int
 

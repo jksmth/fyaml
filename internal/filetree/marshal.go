@@ -2,6 +2,8 @@
 package filetree
 
 import (
+	"fmt"
+
 	"github.com/jksmth/fyaml/internal/logger"
 )
 
@@ -32,9 +34,11 @@ type Options struct {
 	PackRoot       string // Absolute path to pack root (confinement boundary)
 
 	// YAML processing
-	ConvertBooleans bool          // Convert unquoted YAML 1.1 booleans to true/false
-	Mode            Mode          // Marshaling mode: canonical (default) or preserve
-	MergeStrategy   MergeStrategy // Merge strategy: shallow (default) or deep
+	ConvertBooleans bool            // Convert unquoted YAML 1.1 booleans to true/false
+	Mode            Mode            // Marshaling mode: canonical (default) or preserve
+	MergeStrategy   MergeStrategy   // Merge strategy: shallow (default) or deep
+	EnableAnchors   bool            // Enable cross-file anchor resolution
+	anchorRegistry  *anchorRegistry // Internal: populated during processing when cross-file anchors enabled
 
 	// Logging
 	Logger logger.Logger // Logger for verbose output (nil-safe: defaults to Nop())
@@ -48,6 +52,15 @@ func (o *Options) log() logger.Logger {
 	return o.Logger
 }
 
+// hasAnchors returns true if anchors are enabled and the registry has anchors.
+// This ensures we only prepend/skip documents when there are actually anchors to process.
+func (o *Options) hasAnchors() bool {
+	if o == nil || !o.EnableAnchors {
+		return false
+	}
+	return o.anchorRegistry != nil && len(o.anchorRegistry.anchors) > 0
+}
+
 // MarshalYAML serializes the tree into YAML.
 // Implements yaml.Marshaler interface (called by yaml.Marshal).
 func (n *Node) MarshalYAML() (interface{}, error) {
@@ -58,6 +71,15 @@ func (n *Node) MarshalYAML() (interface{}, error) {
 // If opts is nil, processing features are disabled and canonical mode is used.
 // Returns *yaml.Node for preserve mode, interface{} for canonical mode.
 func (n *Node) Marshal(opts *Options) (interface{}, error) {
+	// Phase 1: Collect anchors from all files if cross-file anchors are enabled
+	if opts != nil && opts.EnableAnchors && opts.anchorRegistry == nil {
+		registry, err := collectAnchorsFromTree(n.root(), opts)
+		if err != nil {
+			return nil, fmt.Errorf("failed to collect anchors: %w", err)
+		}
+		opts.anchorRegistry = registry
+	}
+
 	mode := ModeCanonical
 	if opts != nil && opts.Mode == ModePreserve {
 		mode = ModePreserve

@@ -24,7 +24,7 @@ func (n *Node) parseYAMLFile(opts *Options) (*yaml.Node, error) {
 
 	opts.log().Debugf("Processing: %s", n.FullPath)
 
-	documents, err := n.decodeYAMLDocuments()
+	documents, err := n.decodeYAMLDocuments(opts)
 	if err != nil {
 		return nil, err
 	}
@@ -56,12 +56,37 @@ func (n *Node) parseYAMLFile(opts *Options) (*yaml.Node, error) {
 	return root, nil
 }
 
-// decodeYAMLDocuments reads and decodes all YAML documents from the file.
-// Returns a slice of document content nodes (one per document).
-func (n *Node) decodeYAMLDocuments() ([]*yaml.Node, error) {
+// prepareYAMLBuffer reads the file and optionally prepends anchor definitions.
+// Returns the YAML buffer and whether anchor definitions were prepended.
+func (n *Node) prepareYAMLBuffer(opts *Options) ([]byte, bool, error) {
 	buf, err := os.ReadFile(n.FullPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read file %s: %w", n.FullPath, err)
+		return nil, false, fmt.Errorf("failed to read file %s: %w", n.FullPath, err)
+	}
+
+	if !opts.hasAnchors() {
+		return buf, false, nil
+	}
+
+	prepended, prependErr := prependAnchorsToYAML(buf, opts.anchorRegistry)
+	if prependErr != nil {
+		// If prepending fails, try parsing without it (might work if no cross-file aliases)
+		opts.log().Debugf("Failed to prepend anchors to %s, trying without: %v", n.FullPath, prependErr)
+		return buf, false, nil
+	}
+
+	// Only mark as prepended if the buffer actually changed
+	// (prependAnchorsToYAML returns original buffer if no anchors)
+	hasPrependedAnchors := !bytes.Equal(prepended, buf)
+	return prepended, hasPrependedAnchors, nil
+}
+
+// decodeYAMLDocuments reads and decodes all YAML documents from the file.
+// Returns a slice of document content nodes (one per document).
+func (n *Node) decodeYAMLDocuments(opts *Options) ([]*yaml.Node, error) {
+	buf, hasPrependedAnchors, err := n.prepareYAMLBuffer(opts)
+	if err != nil {
+		return nil, err
 	}
 
 	decoder := yaml.NewDecoder(bytes.NewReader(buf))
@@ -70,18 +95,28 @@ func (n *Node) decodeYAMLDocuments() ([]*yaml.Node, error) {
 	for {
 		var doc yaml.Node
 		if err := decoder.Decode(&doc); err != nil {
-			// EOF means we've read all documents
 			if err == io.EOF {
 				break
 			}
 			return nil, formatYAMLError(err, n.FullPath)
 		}
+
+		// Always skip empty documents
 		if len(doc.Content) == 0 {
-			// Empty document, skip it
 			continue
 		}
-		// Extract the actual content from the document node
-		documents = append(documents, doc.Content[0])
+
+		contentNode := doc.Content[0]
+
+		// Skip the first document when anchors were prepended (anchor definitions)
+		if hasPrependedAnchors {
+			hasPrependedAnchors = false
+			continue
+		}
+
+		// Keep all user documents (supports multi-document files)
+		// Note: mergeDocuments will validate that all documents are mappings
+		documents = append(documents, contentNode)
 	}
 
 	return documents, nil

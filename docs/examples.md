@@ -558,6 +558,129 @@ entities:
 - This is useful for organizing large numbers of files without creating deep nesting
 - Files are organized in source but produce a flat structure in output
 
+## Cross-File Anchors Example
+
+This example demonstrates using cross-file YAML anchors to share common configuration across files:
+
+### Directory Structure
+
+```
+config/
+  entities/
+    item1.yml
+  shared/
+    templates/
+      common.yml
+    defaults.yml
+```
+
+### Input Files
+
+**`shared/templates/common.yml`:**
+
+```yaml
+template: &common_template
+  timeout: 30
+  retries: 3
+  enabled: true
+```
+
+**`shared/defaults.yml`:**
+
+```yaml
+defaults: &common_defaults
+  timeout: 30
+  retries: 3
+  enabled: true
+```
+
+**`entities/item1.yml`:**
+
+```yaml
+entity:
+  id: example1
+  config:
+    <<: *common_defaults
+    name: Custom Config
+  template: *common_template
+  attributes:
+    name: sample name
+```
+
+### Usage
+
+Pack this directory with anchors enabled:
+
+```bash
+fyaml examples/with-anchors --enable-anchors
+```
+
+### Expected Output (Canonical Mode)
+
+```yaml
+entities:
+  item1:
+    entity:
+      attributes:
+        name: sample name
+      config:
+        enabled: true
+        name: Custom Config
+        retries: 3
+        timeout: 30
+      id: example1
+      template:
+        enabled: true
+        retries: 3
+        timeout: 30
+shared:
+  defaults:
+    defaults:
+      enabled: true
+      retries: 3
+      timeout: 30
+  templates:
+    common:
+      template:
+        enabled: true
+        retries: 3
+        timeout: 30
+```
+
+### Expected Output (Preserve Mode)
+
+```yaml
+entities:
+  item1:
+    entity:
+      id: example1
+      config:
+        !!merge <<: *common_defaults
+        name: Custom Config
+      template: *common_template
+      attributes:
+        name: sample name
+shared:
+  defaults:
+    defaults: &common_defaults
+      timeout: 30
+      retries: 3
+      enabled: true
+  templates:
+    common:
+      template: &common_template
+        timeout: 30
+        retries: 3
+        enabled: true
+```
+
+### Notes
+
+- Anchors defined in `shared/` files can be referenced from `entities/` files
+- Merge keys (`<<:`) work with cross-file anchors
+- In canonical mode, aliases are expanded into their full content
+- In preserve mode, alias references are preserved as `*alias_name`
+
 ## Output Modes Comparison
 
 This example demonstrates the difference between canonical and preserve modes using the same input files:
@@ -734,6 +857,9 @@ fyaml examples/basic
 
 # Try the @ files example
 fyaml examples/with-at-files
+
+# Try the cross-file anchors example
+fyaml examples/with-anchors --enable-anchors
 ```
 
 See the [examples directory](https://github.com/jksmth/fyaml/tree/main/examples) for more runnable examples.

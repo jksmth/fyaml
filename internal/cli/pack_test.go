@@ -204,13 +204,27 @@ func TestPack_Golden_Canonical(t *testing.T) {
 			dir:      "../../testdata/at-directories/input",
 			expected: "../../testdata/at-directories/expected-canonical.yml",
 		},
+		{
+			name:     "cross-file-anchors",
+			dir:      "../../testdata/cross-file-anchors/input",
+			expected: "../../testdata/cross-file-anchors/expected-canonical.yml",
+		},
+		{
+			name:     "composed-anchors",
+			dir:      "../../testdata/composed-anchors/input",
+			expected: "../../testdata/composed-anchors/expected-canonical.yml",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Includes test requires --enable-includes flag
 			enableIncludes := tt.name == "includes"
-			result, err := fyaml.Pack(context.Background(), testOpts(tt.dir, "yaml", enableIncludes, false, "canonical"))
+			// Cross-file anchors and composed-anchors tests require --enable-anchors flag
+			enableAnchors := tt.name == "cross-file-anchors" || tt.name == "composed-anchors"
+			opts := testOpts(tt.dir, "yaml", enableIncludes, false, "canonical")
+			opts.EnableAnchors = enableAnchors
+			result, err := fyaml.Pack(context.Background(), opts)
 			assertNoError(t, err)
 
 			expected, err := os.ReadFile(tt.expected)
@@ -269,13 +283,27 @@ func TestPack_Golden_Preserve(t *testing.T) {
 			dir:      "../../testdata/at-directories/input",
 			expected: "../../testdata/at-directories/expected-preserve.yml",
 		},
+		{
+			name:     "cross-file-anchors",
+			dir:      "../../testdata/cross-file-anchors/input",
+			expected: "../../testdata/cross-file-anchors/expected-preserve.yml",
+		},
+		{
+			name:     "composed-anchors",
+			dir:      "../../testdata/composed-anchors/input",
+			expected: "../../testdata/composed-anchors/expected-preserve.yml",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Includes test requires --enable-includes flag
 			enableIncludes := tt.name == "includes"
-			result, err := fyaml.Pack(context.Background(), testOpts(tt.dir, "yaml", enableIncludes, false, "preserve"))
+			// Cross-file anchors and composed-anchors tests require --enable-anchors flag
+			enableAnchors := tt.name == "cross-file-anchors" || tt.name == "composed-anchors"
+			opts := testOpts(tt.dir, "yaml", enableIncludes, false, "preserve")
+			opts.EnableAnchors = enableAnchors
+			result, err := fyaml.Pack(context.Background(), opts)
 			assertNoError(t, err)
 
 			expected, err := os.ReadFile(tt.expected)
@@ -1230,5 +1258,54 @@ string_key: string value`,
 	// String key should be quoted
 	if !strings.Contains(resultStr, `"string_key":`) {
 		t.Errorf("String key should be quoted in JSON. Got:\n%s", resultStr)
+	}
+}
+
+func TestPack_CrossFileAnchors(t *testing.T) {
+	// Test cross-file anchor resolution
+	tmpDir := createTestDir(t, map[string]string{
+		"definitions/steps/lint.yml": `step: &lint_step
+  name: Lint
+  script:
+    - echo "linting"`,
+		"definitions/steps/build.yml": `step: &build_step
+  name: Build
+  script:
+    - echo "building"`,
+		"pipelines/branches/main.yml": `main:
+  - step: *lint_step
+  - step: *build_step`,
+	}, nil)
+
+	opts := testOpts(tmpDir, "yaml", false, false, "canonical")
+	opts.EnableAnchors = true
+
+	result, err := fyaml.Pack(context.Background(), opts)
+	assertNoError(t, err)
+
+	resultStr := string(result)
+
+	// Verify that aliases were resolved (should contain the actual step content)
+	if !strings.Contains(resultStr, "name: Lint") {
+		t.Errorf("Expected resolved lint step content. Got:\n%s", resultStr)
+	}
+	if !strings.Contains(resultStr, "name: Build") {
+		t.Errorf("Expected resolved build step content. Got:\n%s", resultStr)
+	}
+
+	// Verify that anchor definitions are not in the output (should be filtered)
+	if strings.Contains(resultStr, "_xfa_") {
+		t.Errorf("Anchor definition keys should be filtered out. Got:\n%s", resultStr)
+	}
+
+	// Verify pipelines.branches.main exists and has steps
+	if !strings.Contains(resultStr, "pipelines:") {
+		t.Errorf("Expected pipelines key. Got:\n%s", resultStr)
+	}
+	if !strings.Contains(resultStr, "branches:") {
+		t.Errorf("Expected branches key. Got:\n%s", resultStr)
+	}
+	if !strings.Contains(resultStr, "main:") {
+		t.Errorf("Expected main key. Got:\n%s", resultStr)
 	}
 }

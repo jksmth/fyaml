@@ -94,6 +94,9 @@ func (n *Node) marshalLeafMap(opts *Options) (interface{}, error) {
 	if err := node.Decode(&content); err != nil {
 		return nil, formatYAMLError(err, n.FullPath)
 	}
+
+	// No need to filter anchor keys - they're in a separate document that we skip
+
 	return content, nil
 }
 

@@ -123,6 +123,7 @@ func Pack(ctx context.Context, opts PackOptions) ([]byte, error) {
 		ConvertBooleans: opts.ConvertBooleans,
 		Mode:            mode,
 		MergeStrategy:   mergeStrategy,
+		EnableAnchors:   opts.EnableAnchors,
 		Logger:          log,
 	}
 
