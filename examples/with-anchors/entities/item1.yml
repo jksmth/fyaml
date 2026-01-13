@@ -1,0 +1,8 @@
+entity:
+  id: example1
+  config:
+    <<: *common_defaults
+    name: Custom Config
+  template: *common_template
+  attributes:
+    name: sample name

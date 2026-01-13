@@ -1,0 +1,7 @@
+# Entity that uses the composed anchor
+# This will test that the composed anchor is correctly expanded with the base anchor's content
+entity:
+  id: example1
+  config: *item_template
+  attributes:
+    name: sample name

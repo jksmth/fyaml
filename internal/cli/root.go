@@ -20,15 +20,16 @@ var (
 	log logger.Logger
 
 	// Pack flags (shared between root and pack subcommand)
-	dir             string
-	output          string
-	check           bool
-	format          string
-	enableIncludes  bool
-	convertBooleans bool
-	indent          int
-	mode            string
-	mergeStrategy   string
+	dir                    string
+	output                 string
+	check                  bool
+	format                 string
+	enableIncludes         bool
+	convertBooleans        bool
+	enableAnchors bool
+	indent                 int
+	mode                   string
+	mergeStrategy          string
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -96,14 +97,15 @@ Examples:
 
 		// Build PackOptions from flags
 		opts := fyaml.PackOptions{
-			Dir:             targetDir,
-			Format:          parsedFormat,
-			Mode:            parsedMode,
-			MergeStrategy:   parsedMergeStrategy,
-			EnableIncludes:  enableIncludes,
-			ConvertBooleans: convertBooleans,
-			Indent:          indent,
-			Logger:          log,
+			Dir:                    targetDir,
+			Format:                 parsedFormat,
+			Mode:                   parsedMode,
+			MergeStrategy:          parsedMergeStrategy,
+			EnableIncludes:         enableIncludes,
+			ConvertBooleans:        convertBooleans,
+			EnableAnchors: enableAnchors,
+			Indent:                 indent,
+			Logger:                 log,
 		}
 
 		// Call the public API
@@ -144,6 +146,8 @@ func init() {
 		"Process <<include(file)>> directives (extension)")
 	rootCmd.PersistentFlags().BoolVar(&convertBooleans, "convert-booleans", false,
 		"Convert unquoted YAML 1.1 boolean values (on/off, yes/no) to true/false")
+	rootCmd.PersistentFlags().BoolVar(&enableAnchors, "enable-anchors", false,
+		"Enable anchor references across different files")
 	rootCmd.PersistentFlags().IntVar(&indent, "indent", 2,
 		"Number of spaces for indentation")
 	rootCmd.PersistentFlags().StringVarP(&mode, "mode", "m", "canonical",

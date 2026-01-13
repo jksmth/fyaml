@@ -91,25 +91,6 @@ func TestMergeTree_InvalidInput(t *testing.T) {
 
 // --- canonical mode marshaling tests ---
 
-// asMap converts interface{} to map[interface{}]interface{} for test assertions.
-// Handles both map[string]interface{} and map[interface{}]interface{}.
-func asMap(t *testing.T, v interface{}) map[interface{}]interface{} {
-	t.Helper()
-	switch m := v.(type) {
-	case map[interface{}]interface{}:
-		return m
-	case map[string]interface{}:
-		result := make(map[interface{}]interface{}, len(m))
-		for k, val := range m {
-			result[k] = val
-		}
-		return result
-	default:
-		t.Fatalf("Expected map, got %T", v)
-		return nil
-	}
-}
-
 func TestMarshalCanonical_WithIncludes(t *testing.T) {
 	tmpDir := createTestDir(t, map[string]string{
 		"entities/scripts/test.sh": "#!/bin/bash\necho 'test'",
@@ -135,9 +116,9 @@ func TestMarshalCanonical_WithIncludes(t *testing.T) {
 	result, err := testNode.marshalLeafMap(opts)
 	assertNoError(t, err)
 
-	resultMap := asMap(t, result)
-	entityMap := asMap(t, resultMap["entity"])
-	attributesMap := asMap(t, entityMap["attributes"])
+	resultMap := asMapShared(t, result)
+	entityMap := asMapShared(t, resultMap["entity"])
+	attributesMap := asMapShared(t, entityMap["attributes"])
 
 	commandVal, ok := attributesMap["command"].(string)
 	if !ok {
@@ -174,9 +155,9 @@ name: on_call_service`,
 	result, err := tree.Marshal(opts)
 	assertNoError(t, err)
 
-	resultMap := asMap(t, result)
-	configMap := asMap(t, resultMap["config"])
-	testMap := asMap(t, configMap["test"])
+	resultMap := asMapShared(t, result)
+	configMap := asMapShared(t, resultMap["config"])
+	testMap := asMapShared(t, configMap["test"])
 
 	if enabled, ok := testMap["enabled"].(bool); !ok || !enabled {
 		t.Errorf("enabled should be bool true, got %T: %v", testMap["enabled"], testMap["enabled"])
@@ -210,9 +191,9 @@ disabled: off`,
 	result, err := tree.Marshal(opts)
 	assertNoError(t, err)
 
-	resultMap := asMap(t, result)
-	configMap := asMap(t, resultMap["config"])
-	testMap := asMap(t, configMap["test"])
+	resultMap := asMapShared(t, result)
+	configMap := asMapShared(t, resultMap["config"])
+	testMap := asMapShared(t, configMap["test"])
 
 	if enabled, ok := testMap["enabled"].(string); !ok || enabled != "on" {
 		t.Errorf("enabled should be string 'on' without normalization, got %T: %v", testMap["enabled"], testMap["enabled"])
@@ -271,8 +252,8 @@ func TestMarshalCanonical_RootFile(t *testing.T) {
 	if resultMap["key1"] != "value1" {
 		t.Errorf("Root file content key1 = %v, want 'value1'", resultMap["key1"])
 	}
-	subdirMap := asMap(t, resultMap["subdir"])
-	fileMap := asMap(t, subdirMap["file"])
+	subdirMap := asMapShared(t, resultMap["subdir"])
+	fileMap := asMapShared(t, subdirMap["file"])
 	if fileMap["key2"] != "value2" {
 		t.Errorf("Subdirectory file content key2 = %v, want 'value2'", fileMap["key2"])
 	}
@@ -349,7 +330,7 @@ func TestMarshal_AtDirectory(t *testing.T) {
 	}, nil)
 
 	resultMap := createTreeAndMarshal(t, tmpDir)
-	entitiesMap := asMap(t, resultMap["entities"])
+	entitiesMap := asMapShared(t, resultMap["entities"])
 
 	if entitiesMap["item1"] == nil {
 		t.Error("MarshalYAML() item1.yml from @group1 not found in entities map")
@@ -383,7 +364,7 @@ func TestMarshal_EmptyAtDirectory(t *testing.T) {
 	}, []string{"entities/@group1"})
 
 	resultMap := createTreeAndMarshal(t, tmpDir)
-	entitiesMap := asMap(t, resultMap["entities"])
+	entitiesMap := asMapShared(t, resultMap["entities"])
 
 	if entitiesMap["@group1"] != nil {
 		t.Error("MarshalYAML() empty @group1 directory should not create a key")
@@ -404,7 +385,7 @@ func TestMarshal_NestedAtDirectories(t *testing.T) {
 	}, nil)
 
 	resultMap := createTreeAndMarshal(t, tmpDir)
-	entitiesMap := asMap(t, resultMap["entities"])
+	entitiesMap := asMapShared(t, resultMap["entities"])
 
 	if entitiesMap["item1"] == nil {
 		t.Error("MarshalYAML() item1.yml from @group1/@group2 not found in entities map")
@@ -441,14 +422,14 @@ func TestMarshalCanonical_Nested(t *testing.T) {
 	resultMap := createTreeAndMarshal(t, tmpDir)
 
 	// Verify nested structure is preserved
-	level1Map := asMap(t, resultMap["level1"])
-	level2Map := asMap(t, level1Map["level2"])
-	level3Map := asMap(t, level2Map["level3"])
-	deepMap := asMap(t, level3Map["deep"])
+	level1Map := asMapShared(t, resultMap["level1"])
+	level2Map := asMapShared(t, level1Map["level2"])
+	level3Map := asMapShared(t, level2Map["level3"])
+	deepMap := asMapShared(t, level3Map["deep"])
 	// Verify file content is nested correctly
-	outerMap := asMap(t, deepMap["outer"])
-	middleMap := asMap(t, outerMap["middle"])
-	innerMap := asMap(t, middleMap["inner"])
+	outerMap := asMapShared(t, deepMap["outer"])
+	middleMap := asMapShared(t, outerMap["middle"])
+	innerMap := asMapShared(t, middleMap["inner"])
 	if innerMap["key"] != "value" {
 		t.Error("Deep nested values should be preserved")
 	}
@@ -464,7 +445,7 @@ func TestMarshalCanonical_AtFiles(t *testing.T) {
 	}, nil)
 
 	resultMap := createTreeAndMarshal(t, tmpDir)
-	entitiesMap := asMap(t, resultMap["entities"])
+	entitiesMap := asMapShared(t, resultMap["entities"])
 
 	// Verify @common.yml content is merged
 	if entitiesMap["timeout"] == nil {
@@ -492,16 +473,16 @@ func TestMarshalCanonical_JSONFiles(t *testing.T) {
 	result, err := tree.Marshal(opts)
 	assertNoError(t, err)
 
-	resultMap := asMap(t, result)
+	resultMap := asMapShared(t, result)
 
 	// Verify JSON content is parsed correctly
-	entitiesMap := asMap(t, resultMap["entities"])
-	item1Map := asMap(t, entitiesMap["item1"])
-	entityMap := asMap(t, item1Map["entity"])
+	entitiesMap := asMapShared(t, resultMap["entities"])
+	item1Map := asMapShared(t, entitiesMap["item1"])
+	entityMap := asMapShared(t, item1Map["entity"])
 	if entityMap["id"] != "example1" {
 		t.Error("MarshalCanonical() JSON content id not parsed correctly")
 	}
-	attributesMap := asMap(t, entityMap["attributes"])
+	attributesMap := asMapShared(t, entityMap["attributes"])
 	if attributesMap["name"] != "sample name" {
 		t.Error("MarshalCanonical() JSON content name not parsed correctly")
 	}
@@ -537,8 +518,8 @@ func TestMarshalCanonical_ShallowMerge(t *testing.T) {
 	result, err := tree.Marshal(opts)
 	assertNoError(t, err)
 
-	resultMap := asMap(t, result)
-	configMap := asMap(t, resultMap["config"])
+	resultMap := asMapShared(t, result)
+	configMap := asMapShared(t, resultMap["config"])
 
 	// In shallow merge, later file completely replaces earlier one
 	// So setting1 and setting2 should be gone, setting3 should exist
@@ -553,7 +534,7 @@ func TestMarshalCanonical_ShallowMerge(t *testing.T) {
 	}
 
 	// Nested map should also be completely replaced
-	nestedMap := asMap(t, configMap["nested"])
+	nestedMap := asMapShared(t, configMap["nested"])
 	if nestedMap["a"] != nil {
 		t.Error("Shallow merge should replace nested map - 'a' should not exist")
 	}
@@ -595,8 +576,8 @@ func TestMarshalCanonical_DeepMerge(t *testing.T) {
 	result, err := tree.Marshal(opts)
 	assertNoError(t, err)
 
-	resultMap := asMap(t, result)
-	configMap := asMap(t, resultMap["config"])
+	resultMap := asMapShared(t, result)
+	configMap := asMapShared(t, resultMap["config"])
 
 	// In deep merge, values from both files should exist
 	if configMap["setting1"] != "value1" {
@@ -610,7 +591,7 @@ func TestMarshalCanonical_DeepMerge(t *testing.T) {
 	}
 
 	// Nested map should be merged recursively
-	nestedMap := asMap(t, configMap["nested"])
+	nestedMap := asMapShared(t, configMap["nested"])
 	if nestedMap["a"] != 1 {
 		t.Error("Deep merge should preserve 'a' from base file")
 	}

@@ -1,0 +1,4 @@
+# First definition of shared_anchor
+shared: &shared_anchor
+  value: first
+  source: file1

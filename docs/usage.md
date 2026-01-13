@@ -1131,6 +1131,82 @@ entity:
 
 **Technical Note:** fyaml outputs YAML 1.2 format, which only recognizes `true`/`false` as booleans. Values like `on`/`off` and `yes`/`no` were valid booleans in YAML 1.1 but are treated as strings in YAML 1.2. The `--convert-booleans` flag converts these legacy values to their YAML 1.2 equivalents.
 
+## YAML Anchors and Aliases
+
+With the `--enable-anchors` flag, anchors defined in one file can be referenced as aliases in another file. This enables patterns like:
+
+```yaml
+# shared/templates/common.yml
+template: &common_template
+  timeout: 30
+  retries: 3
+  enabled: true
+
+# entities/item1.yml
+entity:
+  id: example1
+  config: *common_template # Cross-file reference
+  attributes:
+    name: sample name
+```
+
+**Preserve Mode vs Canonical Mode:**
+
+The behavior differs between modes:
+
+- **Canonical Mode** (`--mode canonical`): Aliases are **expanded** into their full content. The output contains the actual values, not alias references:
+  ```yaml
+  entities:
+    item1:
+      entity:
+        id: example1
+        config:
+          enabled: true
+          retries: 3
+          timeout: 30
+        attributes:
+          name: sample name
+  ```
+
+- **Preserve Mode** (`--mode preserve`): Aliases remain as **references** (`*alias_name`) to preserve the original YAML structure. This is consistent with preserve mode's goal of maintaining the authored structure, including alias references:
+  ```yaml
+  entities:
+    item1:
+      entity:
+        id: example1
+        config: *common_template # Alias reference preserved
+        attributes:
+          name: sample name
+  ```
+
+**Merge Keys (`<<:`):**
+
+Cross-file anchors work with merge keys in both modes. The merged content is applied correctly:
+
+```yaml
+# shared/defaults.yml
+defaults: &common_defaults
+  timeout: 30
+  retries: 3
+  enabled: true
+
+# entities/item1.yml
+entity:
+  id: example1
+  config:
+    <<: *common_defaults # Merge from cross-file anchor
+    name: Custom Config
+    description: Override with custom values
+```
+
+**Limitations:**
+
+- Files that fail to parse (due to invalid YAML or unresolvable aliases) won't have their anchors available to other files
+- Circular anchor dependencies are supported but may require multiple processing passes
+- The common pattern (anchors in shared/definition files, aliases in entity/config files) works well
+- Requires `--enable-anchors` flag
+- In preserve mode, alias references are preserved rather than expanded (by design)
+
 ## Limitations
 
 ### File Content Requirements
@@ -1171,24 +1247,7 @@ Where `<type>` is the Go type (e.g., `string`, `[]interface{}`) and `<filepath>`
 
 ### YAML Anchors and Aliases
 
-YAML anchors (`&anchor`) and aliases (`*alias`) are resolved **within each individual file** during parsing. Anchors and aliases **cannot** reference values across different files—they only work within a single YAML document.
-
-If you need shared values across files, use the `!include` feature (with `--enable-includes`) to include YAML content from other files at specific locations in your structure. This provides similar functionality to cross-file anchors:
-
-```yaml
-# shared/defaults.yml
-timeout: 30
-retries: 3
-
-# entities/item1.yml
-entity:
-  id: example1
-  config: !include ../shared/defaults.yml
-  attributes:
-    name: sample name
-```
-
-**Note:** `@` files can also be used to merge common configuration at the directory level, but `!include` is more flexible as it allows you to include content at any point in your YAML structure, not just at the directory level.
+YAML anchors (`&anchor`) and aliases (`*alias`) are resolved **within each individual file** during parsing by default. For cross-file anchor support, see the [YAML Anchors and Aliases](#yaml-anchors-and-aliases) section above.
 
 ### Large Files
 

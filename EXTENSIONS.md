@@ -8,8 +8,9 @@ This document describes extensions to the [FYAML specification](SPECIFICATION.md
 
 1. [JSON Support](#json-support)
 2. [File Includes](#file-includes)
-3. [Boolean Conversion](#boolean-conversion)
-4. [@ Directory Support](#-directory-support)
+3. [Cross-File Anchors](#cross-file-anchors)
+4. [Boolean Conversion](#boolean-conversion)
+5. [@ Directory Support](#-directory-support)
 
 ---
 
@@ -36,6 +37,19 @@ Process include directives to include content from other files. Supports three m
 **Note:** This extension is not part of the FYAML specification. Without the flag, include directives are passed through unchanged, preserving spec-compliant behavior.
 
 See [docs/usage.md#file-includes](docs/usage.md#file-includes) for complete usage documentation.
+
+---
+
+## Cross-File Anchors
+
+**Status:** Extension
+**Opt-in:** Via `--enable-anchors` flag
+
+Enable anchor references across different files. When enabled, anchors defined in one file can be referenced as aliases in another file. This enables patterns like defining shared step configurations in one file and referencing them from pipeline files.
+
+**Note:** This extension is not part of the FYAML specification. Standard YAML anchors work within a single file. This extension extends that capability across files.
+
+See [docs/usage.md#yaml-anchors-and-aliases](docs/usage.md#yaml-anchors-and-aliases) for complete usage documentation.
 
 ---
 

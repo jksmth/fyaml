@@ -1,0 +1,5 @@
+# This file references a missing anchor
+entity:
+  id: example1
+  config1: *defined_anchor  # This exists
+  config2: *missing_anchor   # This doesn't exist!

@@ -1,0 +1,32 @@
+entities:
+  item1:
+    entity:
+      id: example1
+      config:
+        !!merge <<: *common_defaults
+        name: Custom Config
+        description: Override with custom values
+      template1: *common_template
+      template2: *item_template
+      attributes:
+        name: sample name
+shared:
+  defaults:
+    defaults: &common_defaults
+      timeout: 30
+      retries: 3
+      enabled: true
+  templates:
+    common:
+      template: &common_template
+        name: Common Template
+        timeout: 30
+        retries: 3
+        enabled: true
+    item-template:
+      template: &item_template
+        name: Item Template
+        description: Template for items
+        metadata:
+          version: 1.0
+          category: standard

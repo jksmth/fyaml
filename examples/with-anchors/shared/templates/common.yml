@@ -1,0 +1,4 @@
+template: &common_template
+  timeout: 30
+  retries: 3
+  enabled: true

@@ -248,6 +248,7 @@ type PackOptions struct {
     Mode            Mode          // Output mode (default: ModeCanonical)
     MergeStrategy   MergeStrategy // Merge strategy (default: MergeShallow)
     EnableIncludes  bool          // Process include directives
+    EnableAnchors   bool          // Enable anchor references across files
     ConvertBooleans bool          // Convert YAML 1.1 booleans
     Indent          int           // Indentation spaces (default: 2)
     Logger          Logger        // Optional logger (default: no-op)
@@ -261,6 +262,7 @@ type PackOptions struct {
 - **Mode** - Output mode. Defaults to `ModeCanonical` if empty.
 - **MergeStrategy** - Merge strategy. Defaults to `MergeShallow` if empty.
 - **EnableIncludes** - If true, processes `!include`, `!include-text`, and `<<include()>>` directives.
+- **EnableAnchors** - If true, enables anchor references across different files. When enabled, anchors defined in one file can be referenced as aliases in another file.
 - **ConvertBooleans** - If true, converts unquoted YAML 1.1 booleans (`on`/`off`, `yes`/`no`) to YAML 1.2 (`true`/`false`).
 - **Indent** - Number of spaces for indentation. Defaults to 2 if zero. Must be at least 1.
 - **Logger** - Optional logger for verbose output. If nil, no logging is performed.
@@ -274,6 +276,7 @@ opts := fyaml.PackOptions{
     Mode:            fyaml.ModePreserve,
     MergeStrategy:   fyaml.MergeDeep,
     EnableIncludes:  true,
+    EnableAnchors:   true,
     ConvertBooleans: true,
     Indent:          4,
     Logger:          fyaml.NewLogger(os.Stderr, true),
@@ -499,6 +502,7 @@ result, err := fyaml.Pack(context.Background(), fyaml.PackOptions{
     Mode:            fyaml.ModePreserve,
     MergeStrategy:   fyaml.MergeDeep,
     EnableIncludes:  true,
+    EnableAnchors:   true,
     ConvertBooleans: true,
     Indent:          4,
     Logger:          fyaml.NewLogger(os.Stderr, true),

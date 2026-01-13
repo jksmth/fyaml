@@ -31,6 +31,7 @@ fyaml -o output.yml
 - **Directory structure → YAML structure**: Maps directory structure directly to YAML structure
 - **Split large configs**: Break down thousands of lines into small, focused files
 - **Deterministic output**: Choose between canonical mode (sorted keys, no comments) or preserve mode (authored order and comments). See [Output Modes](usage.md#output-modes) for details.
+- **Cross-file YAML anchors**: Reference anchors across files with `--enable-anchors` (see [YAML Anchors and Aliases](usage.md#yaml-anchors-and-aliases))
 - **No logic or templating**: Pure structure compilation, no execution model
 - **JSON support**: Accepts JSON input and can output JSON
 
