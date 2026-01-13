@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.14.0](https://github.com/jksmth/fyaml/compare/v1.13.1...v1.14.0) (2026-01-13)
+
+
+### Features
+
+* add cross-file YAML anchor support ([#73](https://github.com/jksmth/fyaml/issues/73)) ([a63d40e](https://github.com/jksmth/fyaml/commit/a63d40e1be0895465fda9efdf5453bddd5c33f55))
+
 ## [1.13.1](https://github.com/jksmth/fyaml/compare/v1.13.0...v1.13.1) (2026-01-12)
 
 
