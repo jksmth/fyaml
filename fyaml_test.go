@@ -771,6 +771,9 @@ func TestPack_ValidateYAML_PreserveMode_InvalidAnchors(t *testing.T) {
 	if !strings.Contains(errMsg, "output YAML is invalid") {
 		t.Errorf("Error message should mention invalid YAML, got: %q", errMsg)
 	}
+	if !strings.Contains(errMsg, "Enable --verbose flag to see the invalid YAML content") {
+		t.Errorf("Error message should mention --verbose flag, got: %q", errMsg)
+	}
 	if !strings.Contains(errMsg, "anchor definitions must appear before their aliases") {
 		t.Errorf("Error message should mention anchor definitions must appear before their aliases, got: %q", errMsg)
 	}
