@@ -1,3 +1,12 @@
+common_defaults:
+  enabled: true
+  retries: 3
+  timeout: 30
+common_template:
+  enabled: true
+  name: Common Template
+  retries: 3
+  timeout: 30
 entities:
   item1:
     entity:
@@ -21,6 +30,12 @@ entities:
           category: standard
           version: 1
         name: Item Template
+item_template:
+  description: Template for items
+  metadata:
+    category: standard
+    version: 1
+  name: Item Template
 shared:
   defaults:
     defaults:

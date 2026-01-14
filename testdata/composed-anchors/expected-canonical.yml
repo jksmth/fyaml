@@ -1,3 +1,9 @@
+base_template:
+  enabled: true
+  metadata:
+    version: 1
+  retries: 3
+  timeout: 600
 entities:
   item1:
     entity:
@@ -14,6 +20,16 @@ entities:
         retries: 3
         timeout: 600
       id: example1
+item_template:
+  attributes:
+    category: standard
+  description: Template for items with base properties
+  enabled: true
+  metadata:
+    version: 1
+  name: Item Template
+  retries: 3
+  timeout: 600
 shared:
   templates:
     base:

@@ -741,3 +741,124 @@ func deepEqual(a, b interface{}) bool {
 		return a == b
 	}
 }
+
+func TestPack_ValidateYAML_PreserveMode_InvalidAnchors(t *testing.T) {
+	// Create a scenario where aliases appear before anchor definitions
+	// This will produce invalid YAML in preserve mode
+	dir := createTestDir(t, map[string]string{
+		"entities/item1.yml": `entity:
+  id: example1
+  config: *common_defaults
+  template: *common_template`,
+		"shared/defaults.yml": `defaults: &common_defaults
+  timeout: 30
+  retries: 3`,
+		"shared/templates.yml": `template: &common_template
+  name: Common Template
+  timeout: 30`,
+	})
+
+	opts := testOpts(dir, FormatYAML, false, false, ModePreserve, MergeShallow)
+	opts.EnableAnchors = true
+
+	_, err := Pack(context.Background(), opts)
+	if err == nil {
+		t.Fatal("Pack() should return error for invalid YAML (aliases before anchors)")
+	}
+
+	// Verify error message contains helpful context
+	errMsg := err.Error()
+	if !strings.Contains(errMsg, "output YAML is invalid") {
+		t.Errorf("Error message should mention invalid YAML, got: %q", errMsg)
+	}
+	if !strings.Contains(errMsg, "anchor definitions must appear before their aliases") {
+		t.Errorf("Error message should mention anchor definitions must appear before their aliases, got: %q", errMsg)
+	}
+}
+
+func TestPack_ValidateYAML_PreserveMode_ValidYAML(t *testing.T) {
+	// Create a scenario where anchors appear before aliases (valid)
+	dir := createTestDir(t, map[string]string{
+		"@anchors.yml": `common_defaults: &common_defaults
+  timeout: 30
+  retries: 3
+common_template: &common_template
+  name: Common Template
+  timeout: 30`,
+		"entities/item1.yml": `entity:
+  id: example1
+  config: *common_defaults
+  template: *common_template`,
+	})
+
+	opts := testOpts(dir, FormatYAML, false, false, ModePreserve, MergeShallow)
+	opts.EnableAnchors = true
+
+	result, err := Pack(context.Background(), opts)
+	if err != nil {
+		t.Fatalf("Pack() should succeed with valid YAML, got error: %v", err)
+	}
+
+	if len(result) == 0 {
+		t.Error("Pack() should return non-empty result")
+	}
+}
+
+func TestPack_ValidateYAML_CanonicalMode_NoValidation(t *testing.T) {
+	// Canonical mode should not trigger validation (always produces valid YAML)
+	// Even with invalid anchor ordering, canonical mode expands aliases
+	dir := createTestDir(t, map[string]string{
+		"entities/item1.yml": `entity:
+  id: example1
+  config: *common_defaults
+  template: *common_template`,
+		"shared/defaults.yml": `defaults: &common_defaults
+  timeout: 30
+  retries: 3`,
+		"shared/templates.yml": `template: &common_template
+  name: Common Template
+  timeout: 30`,
+	})
+
+	opts := testOpts(dir, FormatYAML, false, false, ModeCanonical, MergeShallow)
+	opts.EnableAnchors = true
+
+	// Should succeed - canonical mode expands aliases, so no ordering issues
+	result, err := Pack(context.Background(), opts)
+	if err != nil {
+		t.Fatalf("Pack() in canonical mode should succeed, got error: %v", err)
+	}
+
+	if len(result) == 0 {
+		t.Error("Pack() should return non-empty result")
+	}
+}
+
+func TestPack_ValidateYAML_JSONFormat_NoValidation(t *testing.T) {
+	// JSON format should not trigger validation (always produces valid JSON)
+	dir := createTestDir(t, map[string]string{
+		"entities/item1.yml": `entity:
+  id: example1
+  config: *common_defaults
+  template: *common_template`,
+		"shared/defaults.yml": `defaults: &common_defaults
+  timeout: 30
+  retries: 3`,
+		"shared/templates.yml": `template: &common_template
+  name: Common Template
+  timeout: 30`,
+	})
+
+	opts := testOpts(dir, FormatJSON, false, false, ModePreserve, MergeShallow)
+	opts.EnableAnchors = true
+
+	// Should succeed - JSON format expands aliases, so no ordering issues
+	result, err := Pack(context.Background(), opts)
+	if err != nil {
+		t.Fatalf("Pack() with JSON format should succeed, got error: %v", err)
+	}
+
+	if len(result) == 0 {
+		t.Error("Pack() should return non-empty result")
+	}
+}

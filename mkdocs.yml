@@ -51,7 +51,18 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Installation: installation.md
-  - Usage Guide: usage.md
+  - Usage Guide:
+      - usage/index.md
+      - usage/basic-usage.md
+      - usage/common-patterns.md
+      - usage/output-modes.md
+      - usage/directory-structure.md
+      - usage/file-naming.md
+      - usage/output-format.md
+      - usage/anchors-aliases.md
+      - usage/file-includes.md
+      - usage/limitations.md
+      - usage/troubleshooting.md
   - Examples: examples.md
   - Command Reference: reference.md
   - API Reference: api.md

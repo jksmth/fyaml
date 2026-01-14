@@ -63,16 +63,16 @@ fyaml [global flags] [DIR] [flags]
 
 **Flags:**
 
-- `--dir string` - Explicitly specify directory to pack (avoids subcommand conflicts)
-- `-o, --output string` - Write output to file, or `-` for stdin when used with `--check` (default: stdout)
 - `-c, --check` - Compare generated output to `--output` file or stdin (if `--output` omitted or set to `-`), exit non-zero if different
-- `-f, --format string` - Output format: `yaml` or `json` (default: `yaml`)
-- `-m, --mode string` - Output mode: `canonical` (sorted keys, no comments) or `preserve` (authored order and comments) (default: `canonical`)
-- `--merge string` - Merge strategy: `shallow` (last wins) or `deep` (recursive) (default: `shallow`)
-- `--indent int` - Number of spaces for indentation (default: `2`)
-- `--enable-includes` - Process file includes (`!include`, `!include-text`, `<<include()>>`) (extension)
-- `--enable-anchors` - Enable anchor references across different files (extension)
 - `--convert-booleans` - Convert unquoted YAML 1.1 booleans to `true`/`false`
+- `--dir string` - Explicitly specify directory to pack (avoids subcommand conflicts)
+- `--enable-anchors` - Enable anchor references across different files (extension)
+- `--enable-includes` - Process file includes (`!include`, `!include-text`, `<<include()>>`) (extension)
+- `-f, --format string` - Output format: `yaml` or `json` (default: `yaml`)
+- `--indent int` - Number of spaces for indentation (default: `2`)
+- `--merge string` - Merge strategy: `shallow` (last wins) or `deep` (recursive) (default: `shallow`)
+- `-m, --mode string` - Output mode: `canonical` (sorted keys, no comments) or `preserve` (authored order and comments) (default: `canonical`)
+- `-o, --output string` - Write output to file, or `-` for stdin when used with `--check` (default: stdout)
 - `-V, --version` - Print version information and exit
 
 **Examples:**
@@ -166,72 +166,6 @@ fyaml --version
 
 ## Flags Reference
 
-### `--dir`
-
-Explicitly specify the directory to pack. This flag takes precedence over positional arguments and is useful for avoiding conflicts when a directory has the same name as a subcommand (e.g., `pack` or `version`).
-
-**Usage:**
-
-```bash
-fyaml --dir config/
-fyaml --dir pack
-```
-
-**Behavior:**
-
-- Takes precedence over positional arguments
-- If both `--dir` and a positional argument are provided, `--dir` is used
-- Useful for packing directories named `pack` or `version` without ambiguity
-
-**Examples:**
-
-```bash
-# Pack directory named "pack" (avoids subcommand conflict)
-fyaml --dir pack
-
-# Pack directory named "version"
-fyaml --dir version
-
-# --dir takes precedence over positional argument
-fyaml --dir config/ other/  # Uses config/, ignores other/
-```
-
-**See also:** [Usage Guide - Subcommand and Directory Name Conflicts](usage.md#subcommand-and-directory-name-conflicts) for more details.
-
-### `--output`, `-o`
-
-Specify the output file path. If not provided, output is written to stdout.
-
-**Usage:**
-
-```bash
-fyaml -o output.yml
-fyaml --output /path/to/output.yml
-```
-
-**Behavior:**
-
-- File is written atomically (creates temp file, then renames)
-- File permissions are set to `0644`
-- If the file exists, it's overwritten
-- Parent directories are not created automatically (must exist)
-
-**Examples:**
-
-```bash
-# Write to current directory
-fyaml -o config.yml
-
-# Write to specific path
-fyaml -o /tmp/output.yml
-
-# Write to subdirectory (must exist)
-fyaml -o build/config.yml
-
-# Pack specific directory to file
-fyaml config/ -o output.yml
-```
-
 ### `-c, --check`
 
 Compare the generated output with an existing file specified by `--output`. Exits with code 2 if they differ.
@@ -262,94 +196,225 @@ fyaml -o output.yml --check
 # Verify in CI
 fyaml -o config.yml --check
 
-# This will fail if config.yml is out of date
-if ! fyaml -o config.yml --check; then
+# Check exit code to distinguish between errors and mismatches
+fyaml -o config.yml --check
+exit_code=$?
+if [ $exit_code -eq 2 ]; then
     echo "Configuration is out of date!"
     exit 1
+elif [ $exit_code -ne 0 ]; then
+    echo "Error occurred during packing"
+    exit $exit_code
 fi
 ```
 
-### `--format`, `-f`
+### `--convert-booleans`
 
-Specify the output format. Valid values: `yaml` or `json`.
-
-**Usage:**
-
-```bash
-fyaml config/ --format json
-fyaml config/ -f yaml
-```
-
-**Default:** `yaml`
-
-**Behavior:**
-
-- `yaml` - Outputs YAML format (default)
-- `json` - Outputs JSON format with 2-space indentation
-- Empty output behavior differs by format (see below)
-
-**Examples:**
-
-```bash
-# YAML output (default)
-fyaml
-
-# JSON output
-fyaml --format json
-
-# JSON to file
-fyaml -f json -o config.json
-
-# Pack specific directory as JSON
-fyaml config/ --format json
-```
-
-**Empty Output:**
-
-- YAML format: Returns empty output (0 bytes) when no files found
-- JSON format: Returns `null` when no files found
-
-**See also:** [Usage Guide - Output Format](usage.md#output-format) for more details on YAML and JSON output behavior.
-
-### `--indent`
-
-Specify the number of spaces used for indentation in both YAML and JSON output.
+Convert `on`/`off` and `yes`/`no` values to `true`/`false` booleans.
 
 **Usage:**
 
 ```bash
-fyaml config/ --indent 2
-fyaml config/ --indent 4
+fyaml --convert-booleans
 ```
 
-**Default:** `2`
+**Default:** `false` (disabled)
+
+**When to use:**
+
+If your YAML files use `on`/`off` or `yes`/`no` for boolean values, they'll be treated as strings by default. Use this flag to convert them to actual boolean values.
 
 **Behavior:**
 
-- Applies to both YAML and JSON output formats
-- Must be a positive integer (error message: "must be positive")
-- YAML output uses the specified indent spacing
-- JSON output uses the specified indent spacing
+- Unquoted values (`on`, `off`, `yes`, `no`, `y`, `n`, etc.) are converted to `true`/`false`
+- Quoted strings (`"on"`, `'yes'`) are preserved as strings
+- Non-boolean strings are unchanged
+
+**Conversions:**
+
+| Input               | Output  |
+| ------------------- | ------- |
+| `on`, `On`, `ON`    | `true`  |
+| `off`, `Off`, `OFF` | `false` |
+| `yes`, `Yes`, `YES` | `true`  |
+| `no`, `No`, `NO`    | `false` |
+| `y`, `Y`            | `true`  |
+| `n`, `N`            | `false` |
 
 **Examples:**
 
 ```bash
-# Default 2-space indent (YAML)
-fyaml
+# Convert on/off to true/false
+fyaml --convert-booleans
 
-# 4-space indent (YAML)
-fyaml --indent 4
+# Combine with other flags
+fyaml --convert-booleans --enable-includes
+fyaml --convert-booleans --enable-anchors
+fyaml --convert-booleans -o output.yml
 
-# 2-space indent (JSON)
-fyaml --format json --indent 2
-
-# 4-space indent (JSON)
-fyaml --format json --indent 4
+# Pack specific directory with conversion
+fyaml config/ --convert-booleans
 ```
 
-**Note:** The default indent of 2 spaces is the widely accepted convention for YAML and JSON. You can override this if your project uses a different indentation style.
+**Example transformation:**
 
-**See also:** [Usage Guide - Output Format](usage.md#output-format) for more details on YAML and JSON formatting.
+Input (`config/settings.yml`):
+
+```yaml
+enabled: on
+debug: off
+entity:
+  id: example1
+  attributes:
+    name: "sample_item"
+```
+
+Output with `--convert-booleans`:
+
+```yaml
+debug: false
+enabled: true
+entity:
+  attributes:
+    name: sample_item
+  id: example1
+```
+
+**Note:** fyaml always outputs YAML 1.2 format where only `true` and `false` are booleans.
+
+**See also:** [Usage Guide - Converting YAML 1.1 Booleans](usage/output-format.md#converting-yaml-11-booleans) for more details and examples.
+
+### `--dir`
+
+Explicitly specify the directory to pack. This flag takes precedence over positional arguments and is useful for avoiding conflicts when a directory has the same name as a subcommand (e.g., `pack` or `version`).
+
+**Usage:**
+
+```bash
+fyaml --dir config/
+fyaml --dir pack
+```
+
+**Behavior:**
+
+- Takes precedence over positional arguments
+- If both `--dir` and a positional argument are provided, `--dir` is used
+- Useful for packing directories named `pack` or `version` without ambiguity
+
+**Examples:**
+
+```bash
+# Pack directory named "pack" (avoids subcommand conflict)
+fyaml --dir pack
+
+# Pack directory named "version"
+fyaml --dir version
+
+# --dir takes precedence over positional argument
+fyaml --dir config/ other/  # Uses config/, ignores other/
+```
+
+**See also:** [Usage Guide - Subcommand and Directory Name Conflicts](usage/troubleshooting.md#subcommand-and-directory-name-conflicts) for more details.
+
+### `--enable-anchors`
+
+Enable cross-file YAML anchor resolution. Allows anchors defined in one file to be referenced as aliases in another file.
+
+**Usage:**
+
+```bash
+fyaml config/ --enable-anchors
+fyaml config/ --enable-anchors --mode preserve
+fyaml config/ --enable-anchors -o output.yml
+```
+
+**Default:** `false` (disabled)
+
+**Behavior:**
+
+- Collects anchors from all files and makes them available for cross-file references
+- Resolves cross-file alias references during parsing
+- Works with both alias references (`*alias`) and merge keys (`<<: *alias`)
+- Files that fail to parse won't contribute anchors to other files
+
+**Mode Differences:**
+
+- **Canonical mode**: Aliases are expanded into their full content
+- **Preserve mode**: Alias references are preserved as `*alias_name` to maintain the original structure
+
+**Example:**
+
+Using `@` files to ensure anchors appear before aliases:
+
+```yaml
+# @anchors.yml (processed first alphabetically)
+common_template: &common_template
+  timeout: 30
+  retries: 3
+  enabled: true
+
+# entities/item1.yml
+entity:
+  id: example1
+  config: *common_template
+  attributes:
+    name: sample name
+```
+
+**Output (canonical mode):**
+
+```yaml
+common_template:
+  enabled: true
+  retries: 3
+  timeout: 30
+entities:
+  item1:
+    entity:
+      attributes:
+        name: sample name
+      config:
+        enabled: true
+        retries: 3
+        timeout: 30
+      id: example1
+```
+
+**Output (preserve mode):**
+
+```yaml
+common_template: &common_template
+  timeout: 30
+  retries: 3
+  enabled: true
+entities:
+  item1:
+    entity:
+      id: example1
+      config: *common_template
+      attributes:
+        name: sample name
+```
+
+**Preserve Mode Validation:**
+
+When using `--mode preserve` with `--enable-anchors` and `--format yaml`, fyaml validates that the output YAML is valid. If the output contains aliases that appear before their anchor definitions, fyaml will return an error.
+
+**To ensure valid YAML in preserve mode:**
+
+- Use `@` files for anchor definitions (processed first alphabetically)
+- Organize files so anchor definitions come before files that use them
+- Use `--mode canonical` to expand aliases and avoid ordering issues
+
+**Limitations:**
+
+- Files that fail to parse (due to invalid YAML or unresolvable aliases) won't have their anchors available to other files
+- Circular anchor dependencies are supported but may require multiple processing passes
+- The common pattern (anchors in shared/definition files, aliases in entity/config files) works well, but in preserve mode you may need to reorganize files or use `@` files to ensure valid YAML
+- Requires `--enable-anchors` flag
+- In preserve mode with YAML output, invalid YAML (aliases before anchors) will cause an error
+
+**See also:** [YAML Anchors and Aliases](usage/anchors-aliases.md) in the Usage Guide for detailed information.
 
 ### `--enable-includes`
 
@@ -446,158 +511,89 @@ command: <<include(scripts/hello.sh)>>
 
 **Note:** Without this flag, include directives and tags are passed through unchanged. This preserves backward compatibility and keeps the default behavior spec-compliant.
 
-**See also:** [Usage Guide - File Includes](usage.md#file-includes) for complete usage documentation and examples.
+**See also:** [Usage Guide - File Includes](usage/file-includes.md) for complete usage documentation and examples.
 
-### `--convert-booleans`
+### `-f, --format`
 
-Convert `on`/`off` and `yes`/`no` values to `true`/`false` booleans.
-
-**Usage:**
-
-```bash
-fyaml --convert-booleans
-```
-
-**Default:** `false` (disabled)
-
-**When to use:**
-
-If your YAML files use `on`/`off` or `yes`/`no` for boolean values, they'll be treated as strings by default. Use this flag to convert them to actual boolean values.
-
-**Behavior:**
-
-- Unquoted values (`on`, `off`, `yes`, `no`, `y`, `n`, etc.) are converted to `true`/`false`
-- Quoted strings (`"on"`, `'yes'`) are preserved as strings
-- Non-boolean strings are unchanged
-
-**Conversions:**
-
-| Input               | Output  |
-| ------------------- | ------- |
-| `on`, `On`, `ON`    | `true`  |
-| `off`, `Off`, `OFF` | `false` |
-| `yes`, `Yes`, `YES` | `true`  |
-| `no`, `No`, `NO`    | `false` |
-| `y`, `Y`            | `true`  |
-| `n`, `N`            | `false` |
-
-**Examples:**
-
-```bash
-# Convert on/off to true/false
-fyaml --convert-booleans
-
-# Combine with other flags
-fyaml --convert-booleans --enable-includes
-fyaml --convert-booleans --enable-anchors
-fyaml --convert-booleans -o output.yml
-
-# Pack specific directory with conversion
-fyaml config/ --convert-booleans
-```
-
-**Example transformation:**
-
-Input (`config/settings.yml`):
-
-```yaml
-enabled: on
-debug: off
-entity:
-  id: example1
-  attributes:
-    name: "sample_item"
-```
-
-Output with `--convert-booleans`:
-
-```yaml
-debug: false
-enabled: true
-entity:
-  attributes:
-    name: sample_item
-  id: example1
-```
-
-**Note:** fyaml always outputs YAML 1.2 format where only `true` and `false` are booleans.
-
-**See also:** [Usage Guide - Converting on/off and yes/no to true/false](usage.md#converting-onoff-and-yesno-to-truefalse) for more details and examples.
-
-### `-m, --mode`
-
-Select the output mode that controls key ordering and comment preservation.
+Specify the output format. Valid values: `yaml` or `json`.
 
 **Usage:**
 
 ```bash
-fyaml --mode canonical    # Default: sorted keys, no comments
-fyaml -m preserve         # Preserve order and comments
+fyaml config/ --format json
+fyaml config/ -f yaml
 ```
 
-**Default:** `canonical`
-
-**Valid Values:**
-
-- `canonical` (default) - Keys are sorted alphabetically, comments are removed
-- `preserve` - Maintains authored key order and preserves comments
+**Default:** `yaml`
 
 **Behavior:**
 
-**Canonical Mode (Default):**
-
-- All map keys are sorted alphabetically
-- Comments are removed from output
-- Deterministic output
-- Ideal for tools that don't care about key ordering or comments, and when sorted keys make diffs more readable
-
-**Preserve Mode:**
-
-- Keys maintain the order they appear in source files
-- Comments are preserved in YAML output
-- Deterministic output
-- Ideal for maintaining documentation in comments and preserving the authored structure from source files
-
-**Interaction with JSON Output:**
-
-- **Key order**: In preserve mode, key order is maintained in JSON output (JSON preserves object key order)
-- **Comments**: JSON doesn't support comments, so comments are lost regardless of mode
-- Both modes produce deterministic JSON output
+- `yaml` - Outputs YAML format (default)
+- `json` - Outputs JSON format with 2-space indentation
+- Empty output behavior differs by format (see below)
 
 **Examples:**
 
 ```bash
-# Canonical mode (default)
+# YAML output (default)
 fyaml
-fyaml --mode canonical
 
-# Preserve mode
-fyaml --mode preserve
-fyaml -m preserve
+# JSON output
+fyaml --format json
 
-# Preserve mode with JSON output (key order preserved, comments lost)
-fyaml --mode preserve --format json -o output.json
+# JSON to file
+fyaml -f json -o config.json
 
-# Combine with other flags
-fyaml config/ --mode preserve --enable-includes -o output.yml
-fyaml -m preserve --convert-booleans
+# Pack specific directory as JSON
+fyaml config/ --format json
 ```
 
-**When to Use Each Mode:**
+**Empty Output:**
 
-- **Use canonical mode when:**
-  - You need sorted keys (makes diffs more readable)
-  - The target tool doesn't care about key ordering or comments
-  - You prefer a consistent, predictable key order
+- YAML format: Returns empty output (0 bytes) when no files found
+- JSON format: Returns `null` when no files found
 
-- **Use preserve mode when:**
-  - You want to maintain documentation in comments
-  - You want to preserve the authored key order from source files
-  - The target tool or your workflow benefits from maintaining source structure
+**See also:** [Usage Guide - Output Format](usage/output-format.md) for more details on YAML and JSON output behavior.
 
-**Note:** Both modes are deterministic and suitable for version control and CI/CD. The difference is in key ordering (sorted vs. authored) and comment preservation.
+### `--indent`
 
-**See also:** [Usage Guide - Output Modes](usage.md#output-modes) for detailed documentation and examples.
+Specify the number of spaces used for indentation in both YAML and JSON output.
+
+**Usage:**
+
+```bash
+fyaml config/ --indent 2
+fyaml config/ --indent 4
+```
+
+**Default:** `2`
+
+**Behavior:**
+
+- Applies to both YAML and JSON output formats
+- Must be a positive integer (error message: "must be positive")
+- YAML output uses the specified indent spacing
+- JSON output uses the specified indent spacing
+
+**Examples:**
+
+```bash
+# Default 2-space indent (YAML)
+fyaml
+
+# 4-space indent (YAML)
+fyaml --indent 4
+
+# 2-space indent (JSON)
+fyaml --format json --indent 2
+
+# 4-space indent (JSON)
+fyaml --format json --indent 4
+```
+
+**Note:** The default indent of 2 spaces is the widely accepted convention for YAML and JSON. You can override this if your project uses a different indentation style.
+
+**See also:** [Usage Guide - Output Format](usage/output-format.md) for more details on YAML and JSON formatting.
 
 ### `--merge`
 
@@ -635,7 +631,7 @@ fyaml --merge deep       # Recursively merge nested maps
 
 **Examples:**
 
-````bash
+```bash
 # Use shallow merge (default)
 fyaml config/
 
@@ -645,101 +641,8 @@ fyaml config/ --merge deep
 # Combine with other flags
 fyaml config/ --merge deep --mode preserve
 fyaml config/ --merge deep --format json
-
-### `--enable-anchors`
-
-Enable cross-file YAML anchor resolution. Allows anchors defined in one file to be referenced as aliases in another file.
-
-**Usage:**
-
-```bash
-fyaml config/ --enable-anchors
-fyaml config/ --enable-anchors --mode preserve
-fyaml config/ --enable-anchors -o output.yml
-````
-
-**Default:** `false` (disabled)
-
-**Behavior:**
-
-- Collects anchors from all files and makes them available for cross-file references
-- Resolves cross-file alias references during parsing
-- Works with both alias references (`*alias`) and merge keys (`<<: *alias`)
-- Files that fail to parse won't contribute anchors to other files
-
-**Mode Differences:**
-
-- **Canonical mode**: Aliases are expanded into their full content
-- **Preserve mode**: Alias references are preserved as `*alias_name` to maintain the original structure
-
-**Example:**
-
-```yaml
-# shared/templates/common.yml
-template: &common_template
-  timeout: 30
-  retries: 3
-  enabled: true
-
-# entities/item1.yml
-entity:
-  id: example1
-  config: *common_template
-  attributes:
-    name: sample name
 ```
 
-**Output (canonical mode):**
-
-```yaml
-entities:
-  item1:
-    entity:
-      id: example1
-      attributes:
-        name: sample name
-      config:
-        enabled: true
-        retries: 3
-        timeout: 30
-shared:
-  templates:
-    common:
-      template:
-        enabled: true
-        retries: 3
-        timeout: 30
-```
-
-**Output (preserve mode):**
-
-```yaml
-entities:
-  item1:
-    entity:
-      id: example1
-      config: *common_template
-      attributes:
-        name: sample name
-shared:
-  templates:
-    common:
-      template: &common_template
-        enabled: true
-        retries: 3
-        timeout: 30
-```
-
-**Limitations:**
-
-- Files that fail to parse (due to invalid YAML or unresolvable aliases) won't have their anchors available to other files
-- Circular anchor dependencies are supported but may require multiple processing passes
-- The common pattern (anchors in shared/definition files, aliases in entity/config files) works well
-- Requires `--enable-anchors` flag
-
-**See also:** [YAML Anchors and Aliases](usage.md#yaml-anchors-and-aliases) in the Usage Guide for detailed information.
-
-````
 **Example transformation:**
 
 Input files:
@@ -752,7 +655,7 @@ config:
   nested:
     a: 1
     b: 2
-````
+```
 
 **`@override.yml`:**
 
@@ -784,7 +687,116 @@ config:
     c: 3
 ```
 
-**See also:** [Usage Guide - Merge Behavior](usage.md#merge-behavior) for more details and examples.
+**See also:** [Usage Guide - Merge Behavior](usage/directory-structure.md#merge-behavior) for more details and examples.
+
+### `-m, --mode`
+
+Select the output mode that controls key ordering and comment preservation.
+
+**Usage:**
+
+```bash
+fyaml --mode canonical    # Default: sorted keys, no comments
+fyaml -m preserve         # Preserve order and comments
+```
+
+**Default:** `canonical`
+
+**Valid Values:**
+
+- `canonical` (default) - Keys are sorted alphabetically, comments are removed
+- `preserve` - Maintains authored key order and preserves comments
+
+**Behavior:**
+
+**Canonical Mode (Default):**
+
+- All map keys are sorted alphabetically
+- Comments are removed from output
+- Deterministic output
+- Ideal for tools that don't care about key ordering or comments, and when sorted keys make diffs more readable
+
+**Preserve Mode:**
+
+- Keys maintain the order they appear in source files
+- Comments are preserved in YAML output
+- Deterministic output
+- Ideal for maintaining documentation in comments and preserving the authored structure from source files
+
+**Interaction with JSON Output:**
+
+- **Key order**: JSON output always sorts keys alphabetically regardless of mode (Go's JSON encoder behavior)
+- **Comments**: JSON doesn't support comments, so comments are lost regardless of mode
+- Both modes produce deterministic JSON output
+
+**Examples:**
+
+```bash
+# Canonical mode (default)
+fyaml
+fyaml --mode canonical
+
+# Preserve mode
+fyaml --mode preserve
+fyaml -m preserve
+
+# Preserve mode with JSON output (key order preserved, comments lost)
+fyaml --mode preserve --format json -o output.json
+
+# Combine with other flags
+fyaml config/ --mode preserve --enable-includes -o output.yml
+fyaml -m preserve --convert-booleans
+```
+
+**When to Use Each Mode:**
+
+- **Use canonical mode when:**
+  - You need sorted keys (makes diffs more readable)
+  - The target tool doesn't care about key ordering or comments
+  - You prefer a consistent, predictable key order
+
+- **Use preserve mode when:**
+  - You want to maintain documentation in comments
+  - You want to preserve the authored key order from source files
+  - The target tool or your workflow benefits from maintaining source structure
+
+**Note:** Both modes are deterministic and suitable for version control and CI/CD. The difference is in key ordering (sorted vs. authored) and comment preservation.
+
+**See also:** [Usage Guide - Output Modes](usage/output-modes.md) for detailed documentation and examples.
+
+### `-o, --output`
+
+Specify the output file path. If not provided, output is written to stdout.
+
+**Usage:**
+
+```bash
+fyaml -o output.yml
+fyaml --output /path/to/output.yml
+```
+
+**Behavior:**
+
+- File is written atomically (creates temp file, then renames)
+- File permissions are set to `0644`
+- If the file exists, it's overwritten
+- Parent directories are not created automatically (must exist)
+
+**Examples:**
+
+```bash
+# Write to current directory
+fyaml -o config.yml
+
+# Write to specific path
+fyaml -o /tmp/output.yml
+
+# Write to subdirectory (must exist)
+fyaml -o build/config.yml
+
+# Pack specific directory to file
+fyaml config/ -o output.yml
+```
 
 ## Exit Codes
 
@@ -873,7 +885,7 @@ fyaml config/ --format json
 - File has top-level scalar or array instead of map
 - `<type>` is the Go type (e.g., `string`, `[]interface{}`)
 - `<filepath>` is the full path to the problematic file
-- See [Usage Guide - File Content Requirements](usage.md#file-content-requirements) for details
+- See [Usage Guide - File Content Requirements](usage/limitations.md#file-content-requirements) for details
 
 **"invalid format: <format> (must be 'yaml' or 'json')"**
 
@@ -916,9 +928,9 @@ fyaml --dir pack
 fyaml --dir version
 ```
 
-The `--dir` flag takes precedence over positional arguments and avoids any ambiguity. See [Usage Guide - Subcommand and Directory Name Conflicts](usage.md#subcommand-and-directory-name-conflicts) for more details.
+The `--dir` flag takes precedence over positional arguments and avoids any ambiguity. See [Usage Guide - Subcommand and Directory Name Conflicts](usage/troubleshooting.md#subcommand-and-directory-name-conflicts) for more details.
 
 ## See Also
 
-- [Usage Guide](usage.md) - Common usage patterns and limitations
+- [Usage Guide](usage/index.md) - Common usage patterns and limitations
 - [Examples](examples.md) - Detailed examples

@@ -683,6 +683,6 @@ opts2 := fyaml.PackOptions{
 ## See Also
 
 - [pkg.go.dev](https://pkg.go.dev/github.com/jksmth/fyaml) - Complete godoc documentation
-- [Usage Guide](usage.md) - How fyaml works and common patterns
+- [Usage Guide](usage/index.md) - How fyaml works and common patterns
 - [Examples](examples.md) - Detailed examples with outputs
 - [Command Reference](reference.md) - CLI command and flag reference

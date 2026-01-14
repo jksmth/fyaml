@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"path/filepath"
 	"strings"
 
@@ -149,6 +150,20 @@ func Pack(ctx context.Context, opts PackOptions) ([]byte, error) {
 		return handleEmptyOutput(opts.Dir, opts.Format, log)
 	}
 
+	// Validate output in preserve mode with YAML format
+	// This catches issues like invalid anchor/alias ordering
+	if opts.Mode == ModePreserve && opts.Format == FormatYAML {
+		if err := validateYAML(result); err != nil {
+			baseErr := fmt.Errorf("output YAML is invalid: %w", err)
+			if opts.EnableAnchors {
+				return nil, fmt.Errorf("%w\n"+
+					"In preserve mode with --enable-anchors, anchor definitions must appear before their aliases.\n"+
+					"Consider reorganizing files or using --mode canonical", baseErr)
+			}
+			return nil, baseErr
+		}
+	}
+
 	return result, nil
 }
 
@@ -196,6 +211,25 @@ func marshalToFormat(data interface{}, format Format, indent int) ([]byte, error
 		// Should never happen due to early validation, but be safe
 		return nil, fmt.Errorf("%w: %s", ErrInvalidFormat, format)
 	}
+}
+
+// validateYAML attempts to decode the YAML to check if it's valid.
+// Returns an error if the YAML is invalid, nil if valid.
+func validateYAML(yamlBytes []byte) error {
+	if len(yamlBytes) == 0 {
+		return nil // Empty YAML is valid
+	}
+	decoder := yaml.NewDecoder(bytes.NewReader(yamlBytes))
+	var v interface{}
+	for {
+		if err := decoder.Decode(&v); err != nil {
+			if err == io.EOF {
+				break
+			}
+			return err
+		}
+	}
+	return nil
 }
 
 // Check compares generated output with expected content using exact byte comparison.

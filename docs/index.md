@@ -30,8 +30,8 @@ fyaml -o output.yml
 
 - **Directory structure → YAML structure**: Maps directory structure directly to YAML structure
 - **Split large configs**: Break down thousands of lines into small, focused files
-- **Deterministic output**: Choose between canonical mode (sorted keys, no comments) or preserve mode (authored order and comments). See [Output Modes](usage.md#output-modes) for details.
-- **Cross-file YAML anchors**: Reference anchors across files with `--enable-anchors` (see [YAML Anchors and Aliases](usage.md#yaml-anchors-and-aliases))
+- **Deterministic output**: Choose between canonical mode (sorted keys, no comments) or preserve mode (authored order and comments). See [Output Modes](usage/output-modes.md) for details.
+- **Cross-file YAML anchors**: Reference anchors across files with `--enable-anchors` (see [YAML Anchors and Aliases](usage/anchors-aliases.md))
 - **No logic or templating**: Pure structure compilation, no execution model
 - **JSON support**: Accepts JSON input and can output JSON
 
@@ -41,7 +41,7 @@ fyaml -o output.yml
 - File names (without extension) become nested keys
 - Files starting with `@` merge into the parent directory
 - Root-level files merge directly into the output
-- Output is deterministic. See [Output Modes](usage.md#output-modes) for details on canonical vs preserve modes
+- Output is deterministic. See [Output Modes](usage/output-modes.md) for details on canonical vs preserve modes
 
 ## Example
 
@@ -88,7 +88,7 @@ entities:
         name: another name
 ```
 
-For more examples, see the [Usage Guide](usage.md#basic-usage) or [Examples](examples.md).
+For more examples, see the [Usage Guide](usage/basic-usage.md) or [Examples](examples.md).
 
 ## When to Use fyaml
 
@@ -111,7 +111,7 @@ Those concerns are better handled by other tools.
 ## Documentation
 
 - **[Installation](installation.md)** - How to install fyaml
-- **[Usage Guide](usage.md)** - Basic usage, common patterns, and limitations
+- **[Usage Guide](usage/index.md)** - Basic usage, common patterns, and limitations
 - **[Examples](examples.md)** - Detailed examples with outputs
 - **[Command Reference](reference.md)** - Complete command and flag reference
 - **[API Reference](api.md)** - Go library API documentation

@@ -103,7 +103,7 @@ fyaml examples/with-json --mode preserve --format json
 
 In preserve mode with JSON output:
 
-- Key order is maintained (JSON preserves object key order)
+- Keys are sorted alphabetically (same as canonical mode - Go's JSON encoder behavior)
 - Comments are lost (JSON doesn't support comments)
 
 ## Files

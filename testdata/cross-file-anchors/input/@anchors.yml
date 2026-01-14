@@ -1,0 +1,16 @@
+# Anchor definitions - processed first to ensure anchors appear before aliases
+common_defaults: &common_defaults
+  timeout: 30
+  retries: 3
+  enabled: true
+common_template: &common_template
+  name: Common Template
+  timeout: 30
+  retries: 3
+  enabled: true
+item_template: &item_template
+  name: Item Template
+  description: Template for items
+  metadata:
+    version: 1.0
+    category: standard
