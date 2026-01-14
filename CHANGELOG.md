@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.14.1](https://github.com/jksmth/fyaml/compare/v1.14.0...v1.14.1) (2026-01-14)
+
+
+### Bug Fixes
+
+* validate YAML output in preserve mode with anchors ([#76](https://github.com/jksmth/fyaml/issues/76)) ([918adbf](https://github.com/jksmth/fyaml/commit/918adbfe296bb946f591faa89a88c0a7551170dd))
+
 ## [1.14.0](https://github.com/jksmth/fyaml/compare/v1.13.1...v1.14.0) (2026-01-13)
 
 
