@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.14.2](https://github.com/jksmth/fyaml/compare/v1.14.1...v1.14.2) (2026-01-14)
+
+
+### Bug Fixes
+
+* Add verbose debug logging for invalid YAML validation errors ([#78](https://github.com/jksmth/fyaml/issues/78)) ([6f65d8a](https://github.com/jksmth/fyaml/commit/6f65d8ac4367b969877c7f855da319a73aafde6b))
+
 ## [1.14.1](https://github.com/jksmth/fyaml/compare/v1.14.0...v1.14.1) (2026-01-14)
 
 
