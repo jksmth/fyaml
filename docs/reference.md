@@ -398,7 +398,7 @@ entities:
 
 **Preserve Mode Validation:**
 
-When using `--mode preserve` with `--enable-anchors` and `--format yaml`, fyaml validates that the output YAML is valid. If the output contains aliases that appear before their anchor definitions, fyaml will return an error.
+When using `--mode preserve` with `--enable-anchors` and `--format yaml`, fyaml validates that the output YAML is valid. If the output contains aliases that appear before their anchor definitions, fyaml will return an error. Use the `--verbose` flag to see the invalid YAML content in the error output.
 
 **To ensure valid YAML in preserve mode:**
 

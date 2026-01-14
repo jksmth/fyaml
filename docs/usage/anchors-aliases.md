@@ -164,6 +164,7 @@ When using `--mode preserve` with `--enable-anchors` and `--format yaml`, fyaml 
 ```bash
 $ fyaml config/ --mode preserve --enable-anchors
 Error: output YAML is invalid: yaml: unknown anchor 'common_defaults' referenced
+Enable --verbose flag to see the invalid YAML content
 In preserve mode with --enable-anchors, anchor definitions must appear before their aliases.
 Consider reorganizing files or using --mode canonical
 ```

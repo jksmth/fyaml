@@ -153,8 +153,9 @@ func Pack(ctx context.Context, opts PackOptions) ([]byte, error) {
 	// Validate output in preserve mode with YAML format
 	// This catches issues like invalid anchor/alias ordering
 	if opts.Mode == ModePreserve && opts.Format == FormatYAML {
-		if err := validateYAML(result); err != nil {
-			baseErr := fmt.Errorf("output YAML is invalid: %w", err)
+		if err := validateYAML(result, log); err != nil {
+			baseErr := fmt.Errorf("output YAML is invalid: %w\n"+
+				"Enable --verbose flag to see the invalid YAML content", err)
 			if opts.EnableAnchors {
 				return nil, fmt.Errorf("%w\n"+
 					"In preserve mode with --enable-anchors, anchor definitions must appear before their aliases.\n"+
@@ -215,7 +216,8 @@ func marshalToFormat(data interface{}, format Format, indent int) ([]byte, error
 
 // validateYAML attempts to decode the YAML to check if it's valid.
 // Returns an error if the YAML is invalid, nil if valid.
-func validateYAML(yamlBytes []byte) error {
+// If validation fails and the logger is verbose, logs the invalid YAML to stderr.
+func validateYAML(yamlBytes []byte, log Logger) error {
 	if len(yamlBytes) == 0 {
 		return nil // Empty YAML is valid
 	}
@@ -225,6 +227,10 @@ func validateYAML(yamlBytes []byte) error {
 		if err := decoder.Decode(&v); err != nil {
 			if err == io.EOF {
 				break
+			}
+			// Log invalid YAML to stderr if verbose logging is enabled
+			if log != nil {
+				log.Debugf("Invalid YAML content:\n%s", string(yamlBytes))
 			}
 			return err
 		}

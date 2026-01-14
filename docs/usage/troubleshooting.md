@@ -80,6 +80,10 @@ fyaml /path/to/pack
 - An alias reference (`*alias_name`) appears in the output before its anchor definition (`&anchor_name`)
 - YAML requires anchors to be defined before they can be referenced
 
+**Debugging:**
+- Use `--verbose` flag to see the invalid YAML content in the error output
+- This helps identify exactly where the anchor ordering issue occurs
+
 **Solutions:**
 
 1. **Use `@` files for anchor definitions** - Files starting with `@` are processed first alphabetically:
