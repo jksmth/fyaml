@@ -782,7 +782,8 @@ fyaml -m preserve         # Preserve order and comments
 
 - Keys maintain the order they appear in source files
 - Comments are preserved in YAML output
-- Deterministic output
+- Deterministic output (same input always produces same output)
+- YAML syntax may be normalized (e.g., merge keys may be emitted with explicit `!!merge` tags)
 - Ideal for maintaining documentation in comments and preserving the authored structure from source files
 
 **Interaction with JSON Output:**

@@ -235,7 +235,8 @@ func ProcessIncludeTextTag(n *yaml.Node, baseDir string, chroot string) error {
 		}
 
 		// Replace node with text content
-		n.Tag = "!!str"
+		// Clear Tag to remove the custom !include-text tag from output
+		n.Tag = ""
 		n.Value = text
 		return nil
 	}, baseDir, chroot)

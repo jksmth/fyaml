@@ -82,6 +82,8 @@ entities:
 
 Use `!include-text` to include raw file content as a string value. This is ideal for scripts and commands:
 
+**Note:** The file content is preserved exactly as-is. When emitting a literal block scalar, yaml.v4 typically chooses `|` or `|-` based on whether the scalar value ends with a newline. This is an emitter heuristic, not a YAML specification guarantee.
+
 ```
 config/
   entities/
