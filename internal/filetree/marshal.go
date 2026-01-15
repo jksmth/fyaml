@@ -31,7 +31,7 @@ const (
 type Options struct {
 	// Include processing
 	EnableIncludes bool   // Process <<include(file)>> directives
-	PackRoot       string // Absolute path to pack root (confinement boundary)
+	Chroot         string // Absolute path to chroot boundary (confinement boundary)
 
 	// YAML processing
 	ConvertBooleans bool            // Convert unquoted YAML 1.1 booleans to true/false

@@ -102,7 +102,7 @@ func TestMarshalCanonical_WithIncludes(t *testing.T) {
 
 	opts := &Options{
 		EnableIncludes: true,
-		PackRoot:       absDir,
+		Chroot:       absDir,
 	}
 
 	tree, err := NewTree(tmpDir)
@@ -145,7 +145,7 @@ name: on_call_service`,
 
 	opts := &Options{
 		EnableIncludes:  false,
-		PackRoot:        absDir,
+		Chroot:        absDir,
 		ConvertBooleans: true,
 	}
 
@@ -181,7 +181,7 @@ disabled: off`,
 
 	opts := &Options{
 		EnableIncludes:  false,
-		PackRoot:        absDir,
+		Chroot:        absDir,
 		ConvertBooleans: false,
 	}
 
@@ -270,7 +270,7 @@ m: 3`,
 	assertNoError(t, err)
 
 	opts := &Options{
-		PackRoot: tmpDir,
+		Chroot: tmpDir,
 		Mode:     ModeCanonical,
 		Logger:   logger.Nop(),
 	}
@@ -465,7 +465,7 @@ func TestMarshalCanonical_JSONFiles(t *testing.T) {
 	assertNoError(t, err)
 
 	opts := &Options{
-		PackRoot: tmpDir,
+		Chroot: tmpDir,
 		Mode:     ModeCanonical,
 		Logger:   logger.Nop(),
 	}
@@ -507,7 +507,7 @@ func TestMarshalCanonical_ShallowMerge(t *testing.T) {
 	assertNoError(t, err)
 
 	opts := &Options{
-		PackRoot:      absDir,
+		Chroot:      absDir,
 		MergeStrategy: MergeShallow,
 		Logger:        logger.Nop(),
 	}
@@ -565,7 +565,7 @@ func TestMarshalCanonical_DeepMerge(t *testing.T) {
 	assertNoError(t, err)
 
 	opts := &Options{
-		PackRoot:      absDir,
+		Chroot:      absDir,
 		MergeStrategy: MergeDeep,
 		Logger:        logger.Nop(),
 	}

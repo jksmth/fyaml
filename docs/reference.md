@@ -64,6 +64,7 @@ fyaml [global flags] [DIR] [flags]
 **Flags:**
 
 - `-c, --check` - Compare generated output to `--output` file or stdin (if `--output` omitted or set to `-`), exit non-zero if different
+- `--chroot string` - Security/confinement boundary for includes (default: same as DIR)
 - `--convert-booleans` - Convert unquoted YAML 1.1 booleans to `true`/`false`
 - `--dir string` - Explicitly specify directory to pack (avoids subcommand conflicts)
 - `--enable-anchors` - Enable anchor references across different files (extension)
@@ -446,10 +447,10 @@ When enabled, fyaml processes three include mechanisms:
 
 **Behavior:**
 
-- **Pack root boundary**: All includes must resolve to paths within the pack root directory
+- **Chroot boundary**: All includes must resolve to paths within the chroot boundary (defaults to pack directory)
 - **Relative paths**: File paths are resolved relative to the file containing the include
   - For nested includes, paths in included files are resolved relative to the included file's location, not the original file
-- **Absolute paths**: Allowed but must be within the pack root
+- **Absolute paths**: Allowed but must be within the chroot boundary
 - **Nested includes**:
   - `!include` supports nested includes — included YAML files can contain their own `!include`, `!include-text`, or `<<include()>>` directives
   - `!include-text` and `<<include()>>` are single-level only — the included text content is not processed for further includes
@@ -506,12 +507,73 @@ command: <<include(scripts/hello.sh)>>
 - `echo <<include(f)>>` — "entire string must be include statement"
 - `<<include(a)>> <<include(b)>>` — "multiple include statements"
 - Missing file — "could not open path/to/file for inclusion"
-- Path escapes pack root — "include path escapes pack root"
+- Path escapes chroot boundary — "include path escapes chroot boundary"
 - Invalid YAML/JSON in included file — "failed to parse YAML/JSON in path"
 
 **Note:** Without this flag, include directives and tags are passed through unchanged. This preserves backward compatibility and keeps the default behavior spec-compliant.
 
 **See also:** [Usage Guide - File Includes](usage/file-includes.md) for complete usage documentation and examples.
+
+### `--chroot`
+
+Set the security/confinement boundary for includes. This allows includes from outside the pack directory but within the specified chroot boundary.
+
+**Usage:**
+
+```bash
+fyaml config1 --chroot . --enable-includes
+fyaml config1 --chroot /path/to/project-root --enable-includes
+```
+
+**Default:** Same as DIR (pack directory)
+
+**Behavior:**
+
+- If not set: Includes must be within the pack directory (DIR) - default behavior
+- If set: Includes can come from outside DIR but must be within the chroot boundary
+- Does NOT affect what gets packed - DIR still controls which files appear in output
+- Does NOT affect path resolution - relative paths in `!include` tags remain relative to the file containing the tag
+
+**Use Case: Shared Includes**
+
+The primary use case for `--chroot` is sharing include files across multiple configuration directories:
+
+```
+project-root/
+  shared-includes/
+    common.yaml
+  config1/
+    app.yaml  # !include ../shared-includes/common.yaml
+  config2/
+    app.yaml  # !include ../shared-includes/common.yaml
+```
+
+```bash
+# From project-root/
+fyaml config1 --chroot . --enable-includes
+fyaml config2 --chroot . --enable-includes
+```
+
+Both configs can reference the same `shared-includes/` directory.
+
+**Security:**
+
+- The chroot boundary is a security/confinement boundary (like Unix `chroot`)
+- It prevents includes from accessing files outside the specified boundary
+- Only affects where includes can come from, not what gets packed
+
+**Examples:**
+
+```bash
+# Default behavior (chroot = DIR)
+fyaml config/ --enable-includes
+
+# Allow includes from project root
+fyaml config/ --chroot . --enable-includes
+
+# Allow includes from specific directory
+fyaml config/ --chroot /path/to/project --enable-includes
+```
 
 ### `-f, --format`
 

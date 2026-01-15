@@ -127,7 +127,7 @@ key: value  # inline comment
 	assertNoError(t, err)
 
 	opts := &Options{
-		PackRoot: tmpDir,
+		Chroot: tmpDir,
 		Mode:     ModePreserve,
 		Logger:   logger.Nop(),
 	}
@@ -163,7 +163,7 @@ m: 3`,
 	assertNoError(t, err)
 
 	opts := &Options{
-		PackRoot: tmpDir,
+		Chroot: tmpDir,
 		Mode:     ModePreserve,
 		Logger:   logger.Nop(),
 	}
@@ -204,7 +204,7 @@ func TestMarshalPreserve_WithIncludes(t *testing.T) {
 
 	opts := &Options{
 		EnableIncludes: true,
-		PackRoot:       absDir,
+		Chroot:       absDir,
 		Mode:           ModePreserve,
 		Logger:         logger.Nop(),
 	}
@@ -255,7 +255,7 @@ name: on_call_service  # not a boolean`,
 
 	opts := &Options{
 		EnableIncludes:  false,
-		PackRoot:        absDir,
+		Chroot:        absDir,
 		ConvertBooleans: true,
 		Mode:            ModePreserve,
 		Logger:          logger.Nop(),
@@ -306,7 +306,7 @@ disabled: off  # should stay as string`,
 
 	opts := &Options{
 		EnableIncludes:  false,
-		PackRoot:        absDir,
+		Chroot:        absDir,
 		ConvertBooleans: false,
 		Mode:            ModePreserve,
 		Logger:          logger.Nop(),
@@ -350,7 +350,7 @@ func TestMarshalPreserve_AtFiles(t *testing.T) {
 	assertNoError(t, err)
 
 	opts := &Options{
-		PackRoot: tmpDir,
+		Chroot: tmpDir,
 		Mode:     ModePreserve,
 		Logger:   logger.Nop(),
 	}
@@ -395,7 +395,7 @@ func TestMarshalPreserve_AtDirectories(t *testing.T) {
 	assertNoError(t, err)
 
 	opts := &Options{
-		PackRoot: tmpDir,
+		Chroot: tmpDir,
 		Mode:     ModePreserve,
 		Logger:   logger.Nop(),
 	}
@@ -454,7 +454,7 @@ func TestMarshalPreserve_RootFile(t *testing.T) {
 	}
 
 	opts := &Options{
-		PackRoot: tmpDir,
+		Chroot: tmpDir,
 		Mode:     ModePreserve,
 		Logger:   logger.Nop(),
 	}
@@ -503,7 +503,7 @@ outer:
 	assertNoError(t, err)
 
 	opts := &Options{
-		PackRoot: tmpDir,
+		Chroot: tmpDir,
 		Mode:     ModePreserve,
 		Logger:   logger.Nop(),
 	}
@@ -545,7 +545,7 @@ func TestMarshalPreserve_JSONFiles(t *testing.T) {
 	assertNoError(t, err)
 
 	opts := &Options{
-		PackRoot: tmpDir,
+		Chroot: tmpDir,
 		Mode:     ModePreserve,
 		Logger:   logger.Nop(),
 	}
@@ -589,7 +589,7 @@ key: value2  # second inline`,
 	assertNoError(t, err)
 
 	opts := &Options{
-		PackRoot: tmpDir,
+		Chroot: tmpDir,
 		Mode:     ModePreserve,
 		Logger:   logger.Nop(),
 	}
@@ -626,7 +626,7 @@ func TestMarshalPreserve_EmptyMaps(t *testing.T) {
 	assertNoError(t, err)
 
 	opts := &Options{
-		PackRoot: tmpDir,
+		Chroot: tmpDir,
 		Mode:     ModePreserve,
 		Logger:   logger.Nop(),
 	}
@@ -666,7 +666,7 @@ func TestMarshalPreserve_RendersToYAML(t *testing.T) {
 	assertNoError(t, err)
 
 	opts := &Options{
-		PackRoot: tmpDir,
+		Chroot: tmpDir,
 		Mode:     ModePreserve,
 		Logger:   logger.Nop(),
 	}
@@ -707,7 +707,7 @@ func TestMarshalPreserve_EmptyAtDirectory(t *testing.T) {
 	assertNoError(t, err)
 
 	opts := &Options{
-		PackRoot: tmpDir,
+		Chroot: tmpDir,
 		Mode:     ModePreserve,
 		Logger:   logger.Nop(),
 	}
@@ -757,7 +757,7 @@ func TestMarshalPreserve_NestedAtDirectories(t *testing.T) {
 	assertNoError(t, err)
 
 	opts := &Options{
-		PackRoot: tmpDir,
+		Chroot: tmpDir,
 		Mode:     ModePreserve,
 		Logger:   logger.Nop(),
 	}
@@ -816,7 +816,7 @@ func TestMarshalPreserve_ShallowMerge(t *testing.T) {
 	assertNoError(t, err)
 
 	opts := &Options{
-		PackRoot:      absDir,
+		Chroot:      absDir,
 		Mode:          ModePreserve,
 		MergeStrategy: MergeShallow,
 		Logger:        logger.Nop(),
@@ -880,7 +880,7 @@ func TestMarshalPreserve_DeepMerge(t *testing.T) {
 	assertNoError(t, err)
 
 	opts := &Options{
-		PackRoot:      absDir,
+		Chroot:      absDir,
 		Mode:          ModePreserve,
 		MergeStrategy: MergeDeep,
 		Logger:        logger.Nop(),

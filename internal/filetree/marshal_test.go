@@ -25,7 +25,7 @@ func TestOptions_Log(t *testing.T) {
 	t.Run("nil logger", func(t *testing.T) {
 		opts := &Options{
 			EnableIncludes:  false,
-			PackRoot:        "/tmp",
+			Chroot:        "/tmp",
 			ConvertBooleans: false,
 			Logger:          nil,
 		}
@@ -42,7 +42,7 @@ func TestOptions_Log(t *testing.T) {
 		testLogger := logger.New(&buf, true)
 		opts := &Options{
 			EnableIncludes:  false,
-			PackRoot:        "/tmp",
+			Chroot:        "/tmp",
 			ConvertBooleans: false,
 			Logger:          testLogger,
 		}
@@ -66,7 +66,7 @@ func TestMarshal_DefaultsToCanonical(t *testing.T) {
 	assertNoError(t, err)
 
 	opts := &Options{
-		PackRoot: tmpDir,
+		Chroot: tmpDir,
 		Logger:   logger.Nop(),
 	}
 
@@ -117,7 +117,7 @@ func TestMarshal_InvalidYAML(t *testing.T) {
 			assertNoError(t, err)
 
 			opts := &Options{
-				PackRoot: tmpDir,
+				Chroot: tmpDir,
 				Mode:     tt.mode,
 				Logger:   logger.Nop(),
 			}
@@ -153,7 +153,7 @@ func TestMarshal_FormatYAMLError_ParserError(t *testing.T) {
 			assertNoError(t, err)
 
 			opts := &Options{
-				PackRoot: tmpDir,
+				Chroot: tmpDir,
 				Mode:     tt.mode,
 				Logger:   logger.Nop(),
 			}
@@ -191,7 +191,7 @@ func TestMarshal_WithIncludes_ErrorCases(t *testing.T) {
 
 			opts := &Options{
 				EnableIncludes: true,
-				PackRoot:       absDir,
+				Chroot:       absDir,
 				Mode:           tt.mode,
 				Logger:         logger.Nop(),
 			}
@@ -248,7 +248,7 @@ func TestMarshal_FileReadError(t *testing.T) {
 			})
 
 			opts := &Options{
-				PackRoot: tmpDir,
+				Chroot: tmpDir,
 				Mode:     tt.mode,
 				Logger:   logger.Nop(),
 			}
@@ -290,7 +290,7 @@ func TestMarshal_NonMapTypeError(t *testing.T) {
 			}
 
 			opts := &Options{
-				PackRoot: tmpDir,
+				Chroot: tmpDir,
 				Mode:     tt.mode,
 				Logger:   logger.Nop(),
 			}

@@ -74,7 +74,7 @@ func TestRootCmd_PackFlags(t *testing.T) {
 	// Test that all pack flags exist as persistent flags on rootCmd
 	// Note: Cobra handles inheritance of persistent flags to subcommands automatically.
 	// We verify the flags exist on rootCmd, and functional tests verify they work on packCmd.
-	flags := []string{"dir", "output", "check", "format", "enable-includes", "enable-anchors", "convert-booleans", "indent"}
+	flags := []string{"dir", "output", "check", "format", "enable-includes", "enable-anchors", "convert-booleans", "indent", "chroot"}
 	for _, flagName := range flags {
 		// Check flag exists on rootCmd as persistent flag
 		flag := rootCmd.PersistentFlags().Lookup(flagName)

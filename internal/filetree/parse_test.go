@@ -203,7 +203,7 @@ debug: true`,
 	assertNoError(t, err)
 
 	opts := &Options{
-		PackRoot: absDir,
+		Chroot: absDir,
 		Mode:     ModeCanonical,
 	}
 
@@ -250,7 +250,7 @@ debug: true`,
 	assertNoError(t, err)
 
 	opts := &Options{
-		PackRoot: absDir,
+		Chroot: absDir,
 		Mode:     ModePreserve,
 	}
 
@@ -306,7 +306,7 @@ debug: true`,
 	assertNoError(t, err)
 
 	opts := &Options{
-		PackRoot: absDir,
+		Chroot: absDir,
 		Mode:     ModeCanonical,
 	}
 
@@ -350,7 +350,7 @@ debug: true`,
 	assertNoError(t, err)
 
 	opts := &Options{
-		PackRoot: absDir,
+		Chroot: absDir,
 		Mode:     ModeCanonical,
 	}
 
@@ -397,7 +397,7 @@ settings:
 	assertNoError(t, err)
 
 	opts := &Options{
-		PackRoot:      absDir,
+		Chroot:      absDir,
 		Mode:          ModeCanonical,
 		MergeStrategy: MergeDeep,
 	}
@@ -448,7 +448,7 @@ func TestParseYAMLFile_MultiDocument_NonMapError(t *testing.T) {
 	assertNoError(t, err)
 
 	opts := &Options{
-		PackRoot: absDir,
+		Chroot: absDir,
 	}
 
 	tree, err := NewTree(tmpDir)
@@ -479,7 +479,7 @@ retries: 3`,
 	assertNoError(t, err)
 
 	opts := &Options{
-		PackRoot: absDir,
+		Chroot: absDir,
 		Mode:     ModeCanonical,
 	}
 

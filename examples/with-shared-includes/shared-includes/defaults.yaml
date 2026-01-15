@@ -1,0 +1,3 @@
+environment: production
+debug: false
+log_level: info

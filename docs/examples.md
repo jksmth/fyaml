@@ -179,6 +179,13 @@ The following examples demonstrate individual concepts. Each has a corresponding
   ```
   See [File Includes](usage/file-includes.md) for details.
 
+- **[Shared Includes Example](https://github.com/jksmth/fyaml/tree/main/examples/with-shared-includes)** - Sharing includes across multiple config directories using `--chroot`
+  ```bash
+  fyaml examples/with-shared-includes/config1 --chroot examples/with-shared-includes --enable-includes
+  fyaml examples/with-shared-includes/config2 --chroot examples/with-shared-includes --enable-includes
+  ```
+  See [File Includes - Shared Includes Pattern](usage/file-includes.md#shared-includes-pattern) for details.
+
 - **[Cross-File Anchors Example](https://github.com/jksmth/fyaml/tree/main/examples/with-anchors)** - Using YAML anchors across files
   ```bash
   fyaml examples/with-anchors --enable-anchors

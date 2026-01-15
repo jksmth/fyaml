@@ -59,6 +59,14 @@ type PackOptions struct {
 	// Indent is the number of spaces for indentation. Defaults to 2 if zero.
 	Indent int
 
+	// Chroot is the security/confinement boundary (like chroot).
+	// If empty, defaults to Dir (current behavior).
+	// If set, allows includes and other operations from outside Dir but within Chroot.
+	// Does NOT affect what gets packed - that's still controlled by Dir.
+	// Does NOT affect path resolution - relative paths in !include tags remain
+	// relative to the file containing the tag (for portability).
+	Chroot string
+
 	// Logger is an optional logger for verbose output. If nil, no logging is performed.
 	Logger Logger
 }

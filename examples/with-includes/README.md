@@ -127,4 +127,5 @@ Note: The `shared/defaults.yml` file appears in the output because it's part of 
 - `!include-text` and `<<include()>>` include raw text content (single-level only)
 - Paths are relative to the file containing the include
   - For nested includes, paths in included files are resolved relative to the included file's location
-- All includes must be within the pack root directory
+- All includes must be within the chroot boundary (defaults to the pack directory)
+  - Use `--chroot` flag to allow includes from outside the pack directory but within the chroot boundary

@@ -71,6 +71,7 @@ fyaml --enable-anchors --mode canonical --format json
 ```
 
 **JSON output example:**
+
 ```json
 {
   "entities": {
@@ -103,6 +104,7 @@ fyaml --enable-anchors --mode canonical --format json
 ```
 
 Note that:
+
 - Anchor markers (`&anchor_name`) are removed
 - Alias references (`*alias_name`) are expanded to their values
 - Keys are sorted alphabetically (same in both preserve and canonical modes)
