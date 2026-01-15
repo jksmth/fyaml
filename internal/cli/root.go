@@ -30,6 +30,7 @@ var (
 	indent                 int
 	mode                   string
 	mergeStrategy          string
+	chroot                 string
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -105,6 +106,7 @@ Examples:
 			ConvertBooleans:        convertBooleans,
 			EnableAnchors: enableAnchors,
 			Indent:                 indent,
+			Chroot:                 chroot,
 			Logger:                 log,
 		}
 
@@ -154,6 +156,8 @@ func init() {
 		"Output mode: 'canonical' (sorted keys, no comments) or 'preserve' (authored order and comments)")
 	rootCmd.PersistentFlags().StringVar(&mergeStrategy, "merge", "shallow",
 		"Merge strategy: 'shallow' (last wins) or 'deep' (recursive)")
+	rootCmd.PersistentFlags().StringVar(&chroot, "chroot", "",
+		"Security/confinement boundary for includes (default: same as DIR)")
 
 	// Version flag
 	rootCmd.Flags().BoolP("version", "V", false,

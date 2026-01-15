@@ -250,6 +250,7 @@ type PackOptions struct {
     EnableIncludes  bool          // Process include directives
     EnableAnchors   bool          // Enable anchor references across files
     ConvertBooleans bool          // Convert YAML 1.1 booleans
+    Chroot          string        // Security boundary for includes (default: Dir)
     Indent          int           // Indentation spaces (default: 2)
     Logger          Logger        // Optional logger (default: no-op)
 }
@@ -264,6 +265,7 @@ type PackOptions struct {
 - **EnableIncludes** - If true, processes `!include`, `!include-text`, and `<<include()>>` directives.
 - **EnableAnchors** - If true, enables anchor references across different files. When enabled, anchors defined in one file can be referenced as aliases in another file.
 - **ConvertBooleans** - If true, converts unquoted YAML 1.1 booleans (`on`/`off`, `yes`/`no`) to YAML 1.2 (`true`/`false`).
+- **Chroot** - Security/confinement boundary for includes. If empty, defaults to Dir (current behavior). If set, allows includes from outside Dir but within Chroot. Does NOT affect what gets packed - that's still controlled by Dir. Does NOT affect path resolution - relative paths in `!include` tags remain relative to the file containing the tag.
 - **Indent** - Number of spaces for indentation. Defaults to 2 if zero. Must be at least 1.
 - **Logger** - Optional logger for verbose output. If nil, no logging is performed.
 
@@ -278,6 +280,7 @@ opts := fyaml.PackOptions{
     EnableIncludes:  true,
     EnableAnchors:   true,
     ConvertBooleans: true,
+    Chroot:          ".", // Allow includes from project root
     Indent:          4,
     Logger:          fyaml.NewLogger(os.Stderr, true),
 }

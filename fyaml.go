@@ -89,10 +89,20 @@ func Pack(ctx context.Context, opts PackOptions) ([]byte, error) {
 		return nil, fmt.Errorf("context canceled: %w", err)
 	}
 
-	// Resolve dir to absolute path to use as pack root
+	// Resolve dir to absolute path
 	absDir, err := filepath.Abs(opts.Dir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve directory path: %w", err)
+	}
+
+	// Determine chroot boundary (defaults to Dir if not set)
+	chroot := absDir // Default to Dir (backward compatible)
+	if opts.Chroot != "" {
+		absChroot, err := filepath.Abs(opts.Chroot)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve chroot path: %w", err)
+		}
+		chroot = absChroot
 	}
 
 	// Build the filetree
@@ -120,7 +130,7 @@ func Pack(ctx context.Context, opts PackOptions) ([]byte, error) {
 	// Create processing options
 	procOpts := &filetree.Options{
 		EnableIncludes:  opts.EnableIncludes,
-		PackRoot:        absDir,
+		Chroot:          chroot,
 		ConvertBooleans: opts.ConvertBooleans,
 		Mode:            mode,
 		MergeStrategy:   mergeStrategy,

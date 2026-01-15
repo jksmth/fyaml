@@ -138,7 +138,7 @@ func (n *Node) processIncludesForDocuments(documents []*yaml.Node, opts *Options
 			Kind:    yaml.DocumentNode,
 			Content: []*yaml.Node{docNode},
 		}
-		if err := include.ProcessIncludes(doc, baseDir, opts.PackRoot); err != nil {
+		if err := include.ProcessIncludes(doc, baseDir, opts.Chroot); err != nil {
 			return nil, fmt.Errorf("failed to process includes in document %d of %s: %w", i+1, n.FullPath, err)
 		}
 		if len(doc.Content) == 0 {

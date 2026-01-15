@@ -1,0 +1,5 @@
+app:
+  id: app1
+  name: My First App
+  config: !include ../shared-includes/common.yaml
+  settings: !include ../shared-includes/defaults.yaml

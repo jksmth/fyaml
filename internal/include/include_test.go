@@ -21,9 +21,9 @@ func TestMaybeIncludeFile_NoInclude(t *testing.T) {
 		"include(file.txt)",
 	}
 
-	packRoot := "/tmp"
+	chroot := "/tmp"
 	for _, s := range tests {
-		result, err := MaybeIncludeFile(s, "/tmp", packRoot)
+		result, err := MaybeIncludeFile(s, "/tmp", chroot)
 		if err != nil {
 			t.Errorf("MaybeIncludeFile(%q) error = %v", s, err)
 		}
@@ -321,8 +321,8 @@ func TestInlineIncludes_PreservesNonIncludeValues(t *testing.T) {
 	}
 }
 
-func TestMaybeIncludeFile_AbsolutePathWithinPackRoot(t *testing.T) {
-	// Test that absolute paths within pack root are allowed
+func TestMaybeIncludeFile_AbsolutePathWithinChroot(t *testing.T) {
+	// Test that absolute paths within chroot are allowed
 	tmpDir := t.TempDir()
 	absTmpDir, err := filepath.Abs(tmpDir)
 	if err != nil {
@@ -340,28 +340,28 @@ func TestMaybeIncludeFile_AbsolutePathWithinPackRoot(t *testing.T) {
 		t.Fatalf("Failed to get absolute script path: %v", err)
 	}
 
-	// Use absolute path in include - should work since it's within pack root
+	// Use absolute path in include - should work since it's within chroot
 	result, err := MaybeIncludeFile(fmt.Sprintf("<<include(%s)>>", absScriptFile), tmpDir, absTmpDir)
 	if err != nil {
-		t.Errorf("MaybeIncludeFile() with absolute path within root error = %v", err)
+		t.Errorf("MaybeIncludeFile() with absolute path within chroot error = %v", err)
 	}
 	if result != scriptContent {
 		t.Errorf("MaybeIncludeFile() = %q, want %q", result, scriptContent)
 	}
 }
 
-func TestMaybeIncludeFile_AbsolutePathOutsidePackRoot(t *testing.T) {
-	// Test that absolute paths outside pack root are rejected
+func TestMaybeIncludeFile_AbsolutePathOutsideChroot(t *testing.T) {
+	// Test that absolute paths outside chroot are rejected
 	tmpDir := t.TempDir()
 	absTmpDir, err := filepath.Abs(tmpDir)
 	if err != nil {
 		t.Fatalf("Failed to get absolute path: %v", err)
 	}
 
-	// Create a file outside the pack root
+	// Create a file outside the chroot
 	outsideDir := t.TempDir()
 	scriptFile := filepath.Join(outsideDir, "script.sh")
-	scriptContent := "echo 'outside root'"
+	scriptContent := "echo 'outside chroot'"
 	if err := os.WriteFile(scriptFile, []byte(scriptContent), 0600); err != nil {
 		t.Fatalf("Failed to create script: %v", err)
 	}
@@ -371,33 +371,33 @@ func TestMaybeIncludeFile_AbsolutePathOutsidePackRoot(t *testing.T) {
 		t.Fatalf("Failed to get absolute script path: %v", err)
 	}
 
-	// Use absolute path outside pack root - should fail
+	// Use absolute path outside chroot - should fail
 	_, err = MaybeIncludeFile(fmt.Sprintf("<<include(%s)>>", absScriptFile), tmpDir, absTmpDir)
 	if err == nil {
-		t.Error("MaybeIncludeFile() expected error for absolute path outside pack root")
+		t.Error("MaybeIncludeFile() expected error for absolute path outside chroot")
 	}
-	if !strings.Contains(err.Error(), "escapes pack root") {
-		t.Errorf("MaybeIncludeFile() error = %v, want 'escapes pack root'", err)
+	if !strings.Contains(err.Error(), "escapes chroot boundary") {
+		t.Errorf("MaybeIncludeFile() error = %v, want 'escapes chroot boundary'", err)
 	}
 }
 
-func TestMaybeIncludeFile_RelativePathEscapesPackRoot(t *testing.T) {
-	// Test that relative paths that escape pack root are rejected
+func TestMaybeIncludeFile_RelativePathEscapesChroot(t *testing.T) {
+	// Test that relative paths that escape chroot are rejected
 	tmpDir := t.TempDir()
 	absTmpDir, err := filepath.Abs(tmpDir)
 	if err != nil {
 		t.Fatalf("Failed to get absolute path: %v", err)
 	}
 
-	// Create a file outside the pack root
+	// Create a file outside the chroot
 	outsideDir := t.TempDir()
 	scriptFile := filepath.Join(outsideDir, "script.sh")
-	scriptContent := "echo 'outside root'"
+	scriptContent := "echo 'outside chroot'"
 	if err := os.WriteFile(scriptFile, []byte(scriptContent), 0600); err != nil {
 		t.Fatalf("Failed to create script: %v", err)
 	}
 
-	// Create a subdirectory in pack root
+	// Create a subdirectory in chroot
 	subDir := filepath.Join(tmpDir, "subdir")
 	if err := os.MkdirAll(subDir, 0700); err != nil {
 		t.Fatalf("Failed to create subdir: %v", err)
@@ -412,27 +412,27 @@ func TestMaybeIncludeFile_RelativePathEscapesPackRoot(t *testing.T) {
 
 	_, err = MaybeIncludeFile(fmt.Sprintf("<<include(%s)>>", relPath), subDir, absTmpDir)
 	if err == nil {
-		t.Error("MaybeIncludeFile() expected error for path escaping pack root")
+		t.Error("MaybeIncludeFile() expected error for path escaping chroot")
 	}
-	if !strings.Contains(err.Error(), "escapes pack root") {
-		t.Errorf("MaybeIncludeFile() error = %v, want 'escapes pack root'", err)
+	if !strings.Contains(err.Error(), "escapes chroot boundary") {
+		t.Errorf("MaybeIncludeFile() error = %v, want 'escapes chroot boundary'", err)
 	}
 }
 
 func TestMaybeIncludeFile_OpenRootError(t *testing.T) {
-	// Test error when pack root doesn't exist
-	// The path validation catches this before os.OpenRoot, resulting in "escapes pack root" error
+	// Test error when chroot doesn't exist
+	// The path validation catches this before os.OpenRoot, resulting in "escapes chroot boundary" error
 	tmpDir := t.TempDir()
 	nonexistentRoot := filepath.Join(tmpDir, "nonexistent")
 
 	_, err := MaybeIncludeFile("<<include(test.sh)>>", tmpDir, nonexistentRoot)
 	if err == nil {
-		t.Error("MaybeIncludeFile() expected error for non-existent pack root")
+		t.Error("MaybeIncludeFile() expected error for non-existent chroot")
 	}
-	// When pack root doesn't exist, the relative path calculation results in ".." prefix
-	// which triggers the "escapes pack root" validation error
-	if !strings.Contains(err.Error(), "escapes pack root") {
-		t.Errorf("MaybeIncludeFile() error = %v, want 'escapes pack root'", err)
+	// When chroot doesn't exist, the relative path calculation results in ".." prefix
+	// which triggers the "escapes chroot boundary" validation error
+	if !strings.Contains(err.Error(), "escapes chroot boundary") {
+		t.Errorf("MaybeIncludeFile() error = %v, want 'escapes chroot boundary'", err)
 	}
 }
 
@@ -451,9 +451,9 @@ func TestInlineIncludes_ErrorPropagation(t *testing.T) {
 		t.Error("InlineIncludes() expected error for invalid include")
 	}
 	// Error should be propagated from MaybeIncludeFile
-	// When pack root doesn't exist, this results in "escapes pack root" error
-	if !strings.Contains(err.Error(), "escapes pack root") {
-		t.Errorf("InlineIncludes() error = %v, want 'escapes pack root'", err)
+	// When chroot doesn't exist, this results in "escapes chroot boundary" error
+	if !strings.Contains(err.Error(), "escapes chroot boundary") {
+		t.Errorf("InlineIncludes() error = %v, want 'escapes chroot boundary'", err)
 	}
 }
 
@@ -770,14 +770,14 @@ func TestProcessIncludeTag_PathEscaping(t *testing.T) {
 		t.Fatalf("Failed to get absolute path: %v", err)
 	}
 
-	// Create a file outside pack root
+	// Create a file outside chroot
 	outsideDir := t.TempDir()
 	outsideFile := filepath.Join(outsideDir, "secret.yml")
 	if err := os.WriteFile(outsideFile, []byte("secret: data"), 0600); err != nil {
 		t.Fatalf("Failed to write file: %v", err)
 	}
 
-	// Try to include file outside pack root
+	// Try to include file outside chroot
 	relPath, _ := filepath.Rel(tmpDir, outsideFile)
 	yamlContent := fmt.Sprintf(`config: !include %s`, relPath)
 
@@ -790,8 +790,8 @@ func TestProcessIncludeTag_PathEscaping(t *testing.T) {
 	if err == nil {
 		t.Error("ProcessIncludeTag() expected error for path escaping")
 	}
-	if !strings.Contains(err.Error(), "escapes pack root") {
-		t.Errorf("ProcessIncludeTag() error = %v, want 'escapes pack root'", err)
+	if !strings.Contains(err.Error(), "escapes chroot boundary") {
+		t.Errorf("ProcessIncludeTag() error = %v, want 'escapes chroot boundary'", err)
 	}
 }
 

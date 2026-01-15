@@ -15,17 +15,21 @@ fyaml supports three include mechanisms:
 | Syntax          | Purpose                        | Use Case                          |
 | --------------- | ------------------------------ | --------------------------------- |
 | `!include`      | Include parsed YAML structures | Shared config, reusable fragments |
-| `!include-text` | Include raw text content       | Scripts, SQL queries, commands   |
+| `!include-text` | Include raw text content       | Scripts, SQL queries, commands    |
 | `<<include()>>` | Alias for `!include-text`      | CircleCI style syntax             |
 
 ## Security
 
-All includes are confined to the pack root directory:
+All includes are confined to the chroot boundary (security boundary):
 
+- **Default behavior**: Includes must be within the pack directory (DIR)
+- **With `--chroot` flag**: Includes can come from outside DIR but must be within the chroot boundary
 - Paths are resolved relative to the file containing the include
   - For nested includes, paths in included files are resolved relative to the included file's location
-- Absolute paths are allowed but must be within the pack root
-- Attempts to escape the pack root (e.g., `../../etc/passwd`) are rejected
+- Absolute paths are allowed but must be within the chroot boundary
+- Attempts to escape the chroot boundary (e.g., `../../etc/passwd`) are rejected
+
+**Note:** The chroot boundary is a security/confinement boundary (like Unix `chroot`). It controls where includes can come from, but does NOT affect what gets packed - that's still controlled by DIR.
 
 ## Including YAML Structures (`!include`)
 
@@ -271,3 +275,86 @@ entity:
 ```
 
 The included JSON file will be parsed and merged into the YAML structure.
+
+## Shared Includes Pattern
+
+A common use case for the `--chroot` flag is sharing include files across multiple configuration directories within a project.
+
+### Problem
+
+Without `--chroot`, includes must be within the pack directory. This means:
+
+- Shared includes must be duplicated in each config directory
+- Or shared includes must use dot-prefix (`.shared/`) to exclude them from output
+
+### Solution: Using `--chroot`
+
+With the `--chroot` flag, you can place shared includes outside the pack directory but within a project root:
+
+```
+project-root/
+  shared-includes/
+    common.yaml
+    defaults.yaml
+  config1/
+    app.yaml  # !include ../shared-includes/common.yaml
+  config2/
+    app.yaml  # !include ../shared-includes/common.yaml
+```
+
+**Usage:**
+
+```bash
+# From project-root/
+fyaml config1 --chroot . --enable-includes
+fyaml config2 --chroot . --enable-includes
+```
+
+**Key Points:**
+
+- Relative paths in `!include` tags remain relative to the file containing the tag (portable)
+- `DIR` (config1 or config2) still controls what gets packed - only files in that directory appear in output
+- `--chroot` sets the security boundary, allowing includes from `shared-includes/` directory
+- You can run `fyaml` from anywhere - relative paths work the same regardless of CWD
+
+**Example:**
+
+**`shared-includes/common.yaml`:**
+
+```yaml
+timeout: 30
+retries: 3
+enabled: true
+```
+
+**`config1/app.yaml`:**
+
+```yaml
+app:
+  id: app1
+  config: !include ../shared-includes/common.yaml
+  name: My App
+```
+
+**`config2/app.yaml`:**
+
+```yaml
+app:
+  id: app2
+  config: !include ../shared-includes/common.yaml
+  name: Another App
+```
+
+Running `fyaml config1 --chroot . --enable-includes` produces:
+
+```yaml
+app:
+  id: app1
+  config:
+    timeout: 30
+    retries: 3
+    enabled: true
+  name: My App
+```
+
+The shared `common.yaml` is included, but only files from `config1/` appear in the output structure.

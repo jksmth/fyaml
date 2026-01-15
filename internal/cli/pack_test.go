@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -1307,5 +1308,112 @@ func TestPack_CrossFileAnchors(t *testing.T) {
 	}
 	if !strings.Contains(resultStr, "main:") {
 		t.Errorf("Expected main key. Got:\n%s", resultStr)
+	}
+}
+
+func TestPack_Chroot_IncludeFromOutsideDir(t *testing.T) {
+	// Test that includes from outside DIR but within Chroot work
+	projectRoot := t.TempDir()
+
+	// Create shared includes directory outside the pack directory
+	sharedDir := filepath.Join(projectRoot, "shared-includes")
+	if err := os.MkdirAll(sharedDir, 0700); err != nil {
+		t.Fatalf("Failed to create shared directory: %v", err)
+	}
+	sharedFile := filepath.Join(sharedDir, "common.yaml")
+	if err := os.WriteFile(sharedFile, []byte("shared: value\ncommon: data"), 0600); err != nil {
+		t.Fatalf("Failed to create shared file: %v", err)
+	}
+
+	// Create config directory to pack
+	configDir := filepath.Join(projectRoot, "config1")
+	if err := os.MkdirAll(configDir, 0700); err != nil {
+		t.Fatalf("Failed to create config directory: %v", err)
+	}
+	configFile := filepath.Join(configDir, "app.yaml")
+	// Include file from outside configDir but within projectRoot
+	if err := os.WriteFile(configFile, []byte("app: !include ../shared-includes/common.yaml\nlocal: data"), 0600); err != nil {
+		t.Fatalf("Failed to create config file: %v", err)
+	}
+
+	// Pack with chroot set to project root
+	opts := testOpts(configDir, "yaml", true, false)
+	opts.Chroot = projectRoot
+	result, err := fyaml.Pack(context.Background(), opts)
+	assertNoError(t, err)
+
+	resultStr := string(result)
+	// Should include the shared content
+	if !strings.Contains(resultStr, "shared: value") {
+		t.Errorf("Expected shared content. Got:\n%s", resultStr)
+	}
+	if !strings.Contains(resultStr, "common: data") {
+		t.Errorf("Expected common content. Got:\n%s", resultStr)
+	}
+	// Should also include local content
+	if !strings.Contains(resultStr, "local: data") {
+		t.Errorf("Expected local content. Got:\n%s", resultStr)
+	}
+}
+
+func TestPack_Chroot_IncludeFromOutsideChrootFails(t *testing.T) {
+	// Test that includes from outside Chroot fail
+	projectRoot := t.TempDir()
+
+	// Create a directory outside the chroot
+	outsideDir := t.TempDir()
+	outsideFile := filepath.Join(outsideDir, "secret.yaml")
+	if err := os.WriteFile(outsideFile, []byte("secret: data"), 0600); err != nil {
+		t.Fatalf("Failed to create outside file: %v", err)
+	}
+
+	// Create config directory to pack
+	configDir := filepath.Join(projectRoot, "config1")
+	if err := os.MkdirAll(configDir, 0700); err != nil {
+		t.Fatalf("Failed to create config directory: %v", err)
+	}
+	configFile := filepath.Join(configDir, "app.yaml")
+	// Try to include file from outside chroot
+	relPath, err := filepath.Rel(configDir, outsideFile)
+	if err != nil {
+		t.Fatalf("Failed to calculate relative path: %v", err)
+	}
+	if err := os.WriteFile(configFile, []byte(fmt.Sprintf("app: !include %s", relPath)), 0600); err != nil {
+		t.Fatalf("Failed to create config file: %v", err)
+	}
+
+	// Pack with chroot set to project root (not including outsideDir)
+	opts := testOpts(configDir, "yaml", true, false)
+	opts.Chroot = projectRoot
+	_, err = fyaml.Pack(context.Background(), opts)
+	if err == nil {
+		t.Fatal("Expected error for include outside chroot")
+	}
+	if !strings.Contains(err.Error(), "escapes chroot boundary") {
+		t.Errorf("Expected 'escapes chroot boundary' error, got: %v", err)
+	}
+}
+
+func TestPack_Chroot_DefaultsToDir(t *testing.T) {
+	// Test that Chroot defaults to Dir when not set (backward compatibility)
+	tmpDir := createTestDir(t, map[string]string{
+		"app.yaml": "app: !include includes/common.yaml\nlocal: data",
+		"includes/common.yaml": "shared: value",
+	}, nil)
+
+	// Pack without setting Chroot
+	opts := testOpts(tmpDir, "yaml", true, false)
+	// Chroot should default to Dir (tmpDir)
+	result, err := fyaml.Pack(context.Background(), opts)
+	assertNoError(t, err)
+
+	resultStr := string(result)
+	// Should include the shared content
+	if !strings.Contains(resultStr, "shared: value") {
+		t.Errorf("Expected shared content. Got:\n%s", resultStr)
+	}
+	// Should also include local content
+	if !strings.Contains(resultStr, "local: data") {
+		t.Errorf("Expected local content. Got:\n%s", resultStr)
 	}
 }

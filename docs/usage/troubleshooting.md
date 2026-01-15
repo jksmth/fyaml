@@ -76,11 +76,13 @@ fyaml /path/to/pack
 **Error:** `"output YAML is invalid: yaml: unknown anchor '<anchor_name>' referenced"`
 
 **When it occurs:**
+
 - Using `--mode preserve` with `--enable-anchors` and `--format yaml`
 - An alias reference (`*alias_name`) appears in the output before its anchor definition (`&anchor_name`)
 - YAML requires anchors to be defined before they can be referenced
 
 **Debugging:**
+
 - Use `--verbose` flag to see the invalid YAML content in the error output
 - This helps identify exactly where the anchor ordering issue occurs
 
@@ -154,8 +156,9 @@ yq eval . config/entities/item1.yml
 If using `--enable-includes`, check:
 
 - Include paths are relative to the file containing the include
-- Included files exist and are within the pack root
+- Included files exist and are within the chroot boundary (defaults to pack directory, or set via `--chroot`)
 - Include syntax is correct (`!include`, `!include-text`, or `<<include()>>`)
+- If including from outside the pack directory, use `--chroot` to set the security boundary
 
 **Check for file name collisions:**
 

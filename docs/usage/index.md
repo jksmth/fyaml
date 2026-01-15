@@ -25,6 +25,7 @@ config/
 ```
 
 **`entities/item1.yml`:**
+
 ```yaml
 entity:
   id: example1
@@ -32,6 +33,7 @@ entity:
 ```
 
 **`entities/item2.yml`:**
+
 ```yaml
 entity:
   id: example2

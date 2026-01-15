@@ -276,6 +276,7 @@ result, err := fyaml.Pack(context.Background(), fyaml.PackOptions{
     EnableIncludes:  true,
     EnableAnchors:   true,
     ConvertBooleans: true,
+    Chroot:          ".", // Optional: allow includes from project root
     Indent:          4,
 })
 ```
@@ -329,7 +330,7 @@ It's a small, focused tool that:
 fyaml includes the following extensions beyond the FYAML specification. These features are opt-in and do not affect spec-compliant behavior.
 
 - **JSON Support** - Accept `.json` files and output JSON format. See [Usage Guide - Output Format](https://jksmth.github.io/fyaml/usage/#output-format) and [Command Reference - --format/-f](https://jksmth.github.io/fyaml/reference/#format--f) for details.
-- **File Includes** - Use `!include`, `!include-text`, and `<<include()>>` directives to include content from other files. See [Usage Guide - File Includes](https://jksmth.github.io/fyaml/usage/#file-includes) for complete documentation.
+- **File Includes** - Use `!include`, `!include-text`, and `<<include()>>` directives to include content from other files. Use `--chroot` to share includes across multiple configuration directories. See [Usage Guide - File Includes](https://jksmth.github.io/fyaml/usage/#file-includes) for complete documentation.
 - **Cross-File Anchors** - Reference anchors defined in one file from another file. See [Usage Guide - YAML Anchors and Aliases](https://jksmth.github.io/fyaml/usage/#yaml-anchors-and-aliases) for complete documentation.
 - **Boolean Conversion** - Convert YAML 1.1 booleans (`on`/`off`, `yes`/`no`) to YAML 1.2 (`true`/`false`). See [Usage Guide - Converting on/off and yes/no to true/false](https://jksmth.github.io/fyaml/usage/#converting-onoff-and-yesno-to-truefalse) for details.
 - **@ Directory Support** - Directories starting with `@` merge into parent map, similar to `@` files. See [Usage Guide - @ Directories](https://jksmth.github.io/fyaml/usage/#-directories) for details.
