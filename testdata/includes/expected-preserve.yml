@@ -11,7 +11,7 @@ entities:
       steps:
         - run: # First step
             name: Hello Greeting # Step name
-            command: !!str | # Include script content
+            command: | # Include script content
               #!/bin/bash
               echo "Hello World"
         - run: # Second step
