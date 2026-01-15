@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.15.0](https://github.com/jksmth/fyaml/compare/v1.14.2...v1.15.0) (2026-01-15)
+
+
+### Features
+
+* add --chroot flag for shared includes ([#80](https://github.com/jksmth/fyaml/issues/80)) ([31c6ebd](https://github.com/jksmth/fyaml/commit/31c6ebdf6b7cac732f061d5ee60fddaf44292a73))
+
 ## [1.14.2](https://github.com/jksmth/fyaml/compare/v1.14.1...v1.14.2) (2026-01-14)
 
 
