@@ -62,9 +62,12 @@ func collectAnchorsFromTree(root *Node, opts *Options) (*anchorRegistry, error) 
 
 	// Create parse options with cross-file anchors enabled
 	// The registry starts empty and grows as anchors are collected
+	// Also enable includes if they're enabled, so anchors in included files are collected
 	parseOpts := &Options{
 		Logger:         opts.Logger,
 		EnableAnchors:  true,
+		EnableIncludes: opts.EnableIncludes,
+		Chroot:         opts.Chroot,
 		anchorRegistry: registry,
 	}
 
@@ -84,6 +87,14 @@ func collectAnchorsFromTree(root *Node, opts *Options) (*anchorRegistry, error) 
 			documents, err := fileNode.decodeYAMLDocuments(parseOpts)
 			if err != nil {
 				continue // Will retry in next pass
+			}
+
+			// Process includes if enabled, so anchors in included files are collected
+			if parseOpts.EnableIncludes {
+				documents, err = fileNode.processIncludesForDocuments(documents, parseOpts)
+				if err != nil {
+					continue // Will retry in next pass
+				}
 			}
 
 			ctx := &collectContext{
