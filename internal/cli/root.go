@@ -20,17 +20,17 @@ var (
 	log logger.Logger
 
 	// Pack flags (shared between root and pack subcommand)
-	dir                    string
-	output                 string
-	check                  bool
-	format                 string
-	enableIncludes         bool
-	convertBooleans        bool
-	enableAnchors bool
-	indent                 int
-	mode                   string
-	mergeStrategy          string
-	chroot                 string
+	dir             string
+	output          string
+	check           bool
+	format          string
+	enableIncludes  bool
+	convertBooleans bool
+	enableAnchors   bool
+	indent          int
+	mode            string
+	mergeStrategy   string
+	chroot          string
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -98,16 +98,16 @@ Examples:
 
 		// Build PackOptions from flags
 		opts := fyaml.PackOptions{
-			Dir:                    targetDir,
-			Format:                 parsedFormat,
-			Mode:                   parsedMode,
-			MergeStrategy:          parsedMergeStrategy,
-			EnableIncludes:         enableIncludes,
-			ConvertBooleans:        convertBooleans,
-			EnableAnchors: enableAnchors,
-			Indent:                 indent,
-			Chroot:                 chroot,
-			Logger:                 log,
+			Dir:             targetDir,
+			Format:          parsedFormat,
+			Mode:            parsedMode,
+			MergeStrategy:   parsedMergeStrategy,
+			EnableIncludes:  enableIncludes,
+			ConvertBooleans: convertBooleans,
+			EnableAnchors:   enableAnchors,
+			Indent:          indent,
+			Chroot:          chroot,
+			Logger:          log,
 		}
 
 		// Call the public API

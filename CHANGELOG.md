@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.15.1](https://github.com/jksmth/fyaml/compare/v1.15.0...v1.15.1) (2026-01-15)
+
+
+### Bug Fixes
+
+* clarify preserve mode and remove !!str from include-text ([#82](https://github.com/jksmth/fyaml/issues/82)) ([d4d9020](https://github.com/jksmth/fyaml/commit/d4d9020b1183cfde7c9c89ac54467e835c3dcbc4))
+
 ## [1.15.0](https://github.com/jksmth/fyaml/compare/v1.14.2...v1.15.0) (2026-01-15)
 
 

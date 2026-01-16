@@ -22,16 +22,29 @@ fyaml                     # Same as above
 
 ## Preserve Mode
 
-Preserve mode maintains the authored structure:
+Preserve mode maintains the authored structure where possible:
 
 - **Authored key order**: Keys appear in the order they were written in source files
 - **Comments preserved**: All YAML comments are maintained in the output
-- **Deterministic output**
+- **Deterministic output**: Same input always produces same output
+
+**What Preserve Mode Guarantees:**
+
+- Structure and comments are preserved where possible
+- Deterministic output (same input = same output)
+- Key ordering from source files is maintained
+- Comments are preserved in YAML output
+
+**What Preserve Mode Does NOT Guarantee:**
+
+- Exact byte-for-byte preservation of YAML syntax
+- Some YAML syntax may be normalized (e.g., merge keys may be emitted with explicit `!!merge` tags, even if not present in source)
 
 This mode is ideal for:
 
 - Maintaining documentation in comments
 - Preserving the authored key order from source files
+- When you need deterministic output but can accept some YAML syntax normalization
 
 ```bash
 fyaml --mode preserve     # Preserve order and comments
