@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.15.2](https://github.com/jksmth/fyaml/compare/v1.15.1...v1.15.2) (2026-01-16)
+
+
+### Bug Fixes
+
+* process includes before anchor collection ([#84](https://github.com/jksmth/fyaml/issues/84)) ([218197e](https://github.com/jksmth/fyaml/commit/218197ee6fbdecfcd9128fe21d917f68da161307))
+
 ## [1.15.1](https://github.com/jksmth/fyaml/compare/v1.15.0...v1.15.1) (2026-01-15)
 
 
