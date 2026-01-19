@@ -79,7 +79,9 @@ FROM ghcr.io/jksmth/fyaml:latest AS fyaml
 
 # Your application stage
 FROM your-base-image:latest
+# For scratch-based image, binary is at /fyaml
 COPY --from=fyaml /fyaml /usr/local/bin/fyaml
+# For alpine-based image, use: COPY --from=fyaml /usr/local/bin/fyaml /usr/local/bin/fyaml
 
 # Use fyaml in your build process
 COPY config/ /config/
@@ -88,8 +90,17 @@ RUN fyaml /config > /app/config.yml
 
 ### Available Tags
 
+Two image variants are available:
+
+**Scratch-based (default)** - Minimal image with no shell or utilities:
 - `latest` - Latest stable release
 - `v1.0.0` - Specific version (replace with desired version)
+
+**Alpine-based** - Includes Alpine Linux with shell access:
+- `latest-alpine` - Latest stable release
+- `v1.0.0-alpine` - Specific version (replace with desired version)
+
+Use the Alpine variant when you need shell access, debugging capabilities, or standard Linux utilities. The scratch variant is smaller and more secure for production use.
 
 ## Verify Installation
 
