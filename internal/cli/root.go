@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 
@@ -117,7 +118,16 @@ Examples:
 		}
 
 		if check {
-			return handleCheck(output, result, format)
+			err := handleCheck(output, result, format)
+			// For check mismatches, suppress usage/help output and error message
+			if errors.Is(err, fyaml.ErrCheckMismatch) {
+				cmd.SilenceUsage = true
+				cmd.SilenceErrors = true
+				// Print a clean message to stderr
+				fmt.Fprintf(os.Stderr, "output mismatch\n")
+				return err
+			}
+			return err
 		}
 
 		return writeOutput(output, result)

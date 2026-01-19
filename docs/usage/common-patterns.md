@@ -22,8 +22,8 @@ This is useful in CI/CD pipelines to ensure configuration hasn't changed unexpec
 
 **Exit codes:**
 
-- `0` - Output matches the file or stdin
-- `2` - Output differs from the file or stdin
+- `0` - Output matches the file or stdin (no output printed)
+- `2` - Output differs from the file or stdin (prints "output mismatch" to stderr)
 - `1` - Error occurred during packing
 
 **Note:** When using `--check` without `--output` or with `--output -`, fyaml reads from stdin. If stdin is a terminal (not piped or redirected), an error will be returned to prevent the program from blocking.

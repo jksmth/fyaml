@@ -182,6 +182,7 @@ fyaml -o output.yml --check
 - Requires `--output` to be specified
 - Reads the existing file (if it exists)
 - Compares byte-by-byte with generated output
+- Prints "output mismatch" to stderr if different (no output if same)
 - Exits with code 2 if different, exits with code 0 if same
 - Useful in CI/CD to verify configuration hasn't changed
 
