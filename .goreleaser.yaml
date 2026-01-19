@@ -74,7 +74,8 @@ sboms:
       - "spdx-json=$document"
 
 dockers_v2:
-  - images:
+  - id: scratch
+    images:
       - "ghcr.io/jksmth/fyaml"
     tags:
       - "{{ .Version }}"
@@ -83,7 +84,8 @@ dockers_v2:
       - linux/amd64
       - linux/arm64
     sbom: true
-  - images:
+  - id: alpine
+    images:
       - "ghcr.io/jksmth/fyaml"
     dockerfile: Dockerfile.alpine
     tags:
