@@ -1,5 +1,47 @@
 # Changelog
 
+## [1.16.0](https://github.com/jksmth/fyaml/compare/v1.15.3...v1.16.0) (2026-01-19)
+
+
+### Features
+
+* add --chroot flag for shared includes ([#80](https://github.com/jksmth/fyaml/issues/80)) ([31c6ebd](https://github.com/jksmth/fyaml/commit/31c6ebdf6b7cac732f061d5ee60fddaf44292a73))
+* add --convert-booleans flag and improve CLI organization ([#37](https://github.com/jksmth/fyaml/issues/37)) ([c0c14b5](https://github.com/jksmth/fyaml/commit/c0c14b58a508d505e1b31856df5788770c408f30))
+* add --indent flag for YAML/JSON output ([4766c2a](https://github.com/jksmth/fyaml/commit/4766c2a9812a35bed1f23c4eb26362258f497315))
+* add cross-file YAML anchor support ([#73](https://github.com/jksmth/fyaml/issues/73)) ([a63d40e](https://github.com/jksmth/fyaml/commit/a63d40e1be0895465fda9efdf5453bddd5c33f55))
+* add multi-document YAML support and refactor filetree ([#69](https://github.com/jksmth/fyaml/issues/69)) ([0133dc3](https://github.com/jksmth/fyaml/commit/0133dc3862d4f69a1c0c4613fd9451a6b997c751))
+* add public API for programmatic usage ([#67](https://github.com/jksmth/fyaml/issues/67)) ([0b2d079](https://github.com/jksmth/fyaml/commit/0b2d079558e787b34fd367e64a6deb7c9dbebec6))
+* add shallow and deep merge strategies ([#62](https://github.com/jksmth/fyaml/issues/62)) ([ce94ac6](https://github.com/jksmth/fyaml/commit/ce94ac6fdb43a2f4384dea77490a6c027f718e96))
+* add stdin support for --check command ([#64](https://github.com/jksmth/fyaml/issues/64)) ([c918a88](https://github.com/jksmth/fyaml/commit/c918a88f8fb8e2e7b0e7fb584b330e0d5d4a4970))
+* add support for file includes ([#29](https://github.com/jksmth/fyaml/issues/29)) ([674aca0](https://github.com/jksmth/fyaml/commit/674aca08bb61c949333868d2beaab427b4adb310))
+* add verbose logging with shared logger package ([#34](https://github.com/jksmth/fyaml/issues/34)) ([8428688](https://github.com/jksmth/fyaml/commit/842868805ebdfef82b7fddc14f70c9f272555d21))
+* **extensions:** add @ directory support ([#42](https://github.com/jksmth/fyaml/issues/42)) ([b25cc8a](https://github.com/jksmth/fyaml/commit/b25cc8a242019d17ad6837e5bb12f54676bc459e))
+* Improve documentation, add indent flag, and fix error handling ([#44](https://github.com/jksmth/fyaml/issues/44)) ([4766c2a](https://github.com/jksmth/fyaml/commit/4766c2a9812a35bed1f23c4eb26362258f497315))
+* Include path confinement ([#31](https://github.com/jksmth/fyaml/issues/31)) ([7980b7d](https://github.com/jksmth/fyaml/commit/7980b7d68776d3d0f884b1938679437b27976a83))
+* **includes:** add unified tag-based include system ([#39](https://github.com/jksmth/fyaml/issues/39)) ([9e927c2](https://github.com/jksmth/fyaml/commit/9e927c29de15834dfbd1fc2d6f9b9a308e2ea7fa))
+* **mode:** add preserve mode for comment and key order preservation ([#56](https://github.com/jksmth/fyaml/issues/56)) ([b6ea4af](https://github.com/jksmth/fyaml/commit/b6ea4afa2a43a10d63e76744d6d29565ec422aae))
+* move pack to rootCmd and update docs for default directory ([#54](https://github.com/jksmth/fyaml/issues/54)) ([57e1eaa](https://github.com/jksmth/fyaml/commit/57e1eaa0aed20e9df5e20f18ed54d5b065b61def))
+
+
+### Bug Fixes
+
+* add release-please and release automation ([#5](https://github.com/jksmth/fyaml/issues/5)) ([0f9a0a1](https://github.com/jksmth/fyaml/commit/0f9a0a10338325e3aff9435a2d9c2c6c35d74f76))
+* Add verbose debug logging for invalid YAML validation errors ([#78](https://github.com/jksmth/fyaml/issues/78)) ([6f65d8a](https://github.com/jksmth/fyaml/commit/6f65d8ac4367b969877c7f855da319a73aafde6b))
+* clarify preserve mode and remove !!str from include-text ([#82](https://github.com/jksmth/fyaml/issues/82)) ([d4d9020](https://github.com/jksmth/fyaml/commit/d4d9020b1183cfde7c9c89ac54467e835c3dcbc4))
+* normalize non-string map keys for canonical mode and JSON output ([#60](https://github.com/jksmth/fyaml/issues/60)) ([75557ad](https://github.com/jksmth/fyaml/commit/75557ad6f4dd493dce4236aa71ce30dc112c19e6))
+* process includes before anchor collection ([#84](https://github.com/jksmth/fyaml/issues/84)) ([218197e](https://github.com/jksmth/fyaml/commit/218197ee6fbdecfcd9128fe21d917f68da161307))
+* replace panic with error handling in mergeTree ([4766c2a](https://github.com/jksmth/fyaml/commit/4766c2a9812a35bed1f23c4eb26362258f497315))
+* resolve nested include paths relative to included file location ([#71](https://github.com/jksmth/fyaml/issues/71)) ([1ee7c58](https://github.com/jksmth/fyaml/commit/1ee7c58b81e9b639daba52b825f179000fca8907))
+* set ids for sign in goreleaser ([#11](https://github.com/jksmth/fyaml/issues/11)) ([27dfec2](https://github.com/jksmth/fyaml/commit/27dfec2c1b0a992a0e20ba3c6acbb415c481aaab))
+* suppress help output for --check mismatches ([#86](https://github.com/jksmth/fyaml/issues/86)) ([5ad4fc7](https://github.com/jksmth/fyaml/commit/5ad4fc7fbb8f39d6be670f732ab7675af23dbe1d))
+* update license date ([#24](https://github.com/jksmth/fyaml/issues/24)) ([9a668b4](https://github.com/jksmth/fyaml/commit/9a668b481307b4e9088fa60bd77f939bfc42bff0))
+* update release workflow to use goreleaser for the GH release ([#21](https://github.com/jksmth/fyaml/issues/21)) ([674e12b](https://github.com/jksmth/fyaml/commit/674e12b173c0eb20c73494ce9489052032db6539))
+* use config file for release-please ([#18](https://github.com/jksmth/fyaml/issues/18)) ([b35d2fe](https://github.com/jksmth/fyaml/commit/b35d2fe9d053d456f4fdc256668a4661ee16d2aa))
+* use default options for release-please ([#19](https://github.com/jksmth/fyaml/issues/19)) ([d1663ee](https://github.com/jksmth/fyaml/commit/d1663ee9d58647ee1612df63c206993d80c41226))
+* use keep-existing mode for goreleaser release ([#16](https://github.com/jksmth/fyaml/issues/16)) ([ef67007](https://github.com/jksmth/fyaml/commit/ef67007a3f548d8a96980ba3f84ec9de28211bd6))
+* use PAT for release-please ([#9](https://github.com/jksmth/fyaml/issues/9)) ([3c0dda8](https://github.com/jksmth/fyaml/commit/3c0dda8e0cd370213bf502a5cb14c30aa9264eae))
+* validate YAML output in preserve mode with anchors ([#76](https://github.com/jksmth/fyaml/issues/76)) ([918adbf](https://github.com/jksmth/fyaml/commit/918adbfe296bb946f591faa89a88c0a7551170dd))
+
 ## [1.15.3](https://github.com/jksmth/fyaml/compare/v1.15.2...v1.15.3) (2026-01-19)
 
 
