@@ -83,6 +83,16 @@ dockers_v2:
       - linux/amd64
       - linux/arm64
     sbom: true
+  - images:
+      - "ghcr.io/jksmth/fyaml"
+    dockerfile: Dockerfile.alpine
+    tags:
+      - "{{ .Version }}-alpine"
+      - latest-alpine
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    sbom: true
 
 docker_signs:
   - cmd: cosign
