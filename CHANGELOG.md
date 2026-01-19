@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.15.4](https://github.com/jksmth/fyaml/compare/v1.15.3...v1.15.4) (2026-01-19)
+
+
+### Bug Fixes
+
+* improve check message ([#91](https://github.com/jksmth/fyaml/issues/91)) ([dca41d9](https://github.com/jksmth/fyaml/commit/dca41d901ef8c3d7366257c9169630c042881d02))
+
 ## [1.15.2](https://github.com/jksmth/fyaml/compare/v1.15.1...v1.15.2) (2026-01-16)
 
 
