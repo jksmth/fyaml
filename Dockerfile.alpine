@@ -1,0 +1,12 @@
+FROM alpine:3.22
+
+ARG TARGETPLATFORM
+
+# Create non-root user
+RUN addgroup -S fyaml && adduser -S fyaml -G fyaml
+
+COPY --chown=fyaml:fyaml $TARGETPLATFORM/fyaml /usr/local/bin/fyaml
+
+USER fyaml
+
+ENTRYPOINT ["/usr/local/bin/fyaml"]
