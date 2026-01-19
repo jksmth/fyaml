@@ -1,12 +1,5 @@
 # Changelog
 
-## [1.15.3](https://github.com/jksmth/fyaml/compare/v1.15.2...v1.15.3) (2026-01-19)
-
-
-### Bug Fixes
-
-* suppress help output for --check mismatches ([#86](https://github.com/jksmth/fyaml/issues/86)) ([5ad4fc7](https://github.com/jksmth/fyaml/commit/5ad4fc7fbb8f39d6be670f732ab7675af23dbe1d))
-
 ## [1.15.2](https://github.com/jksmth/fyaml/compare/v1.15.1...v1.15.2) (2026-01-16)
 
 

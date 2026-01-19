@@ -124,7 +124,7 @@ Examples:
 				cmd.SilenceUsage = true
 				cmd.SilenceErrors = true
 				// Print a clean message to stderr
-				fmt.Fprintf(os.Stderr, "output mismatch\n")
+				fmt.Fprintf(os.Stderr, "fyaml check: output is not up to date\n")
 				return err
 			}
 			return err
